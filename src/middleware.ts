@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import { authConfig } from "@/lib/auth.config";
 import { canAccess } from "@/lib/rbac";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import type { Role } from "@prisma/client";
 
 const { auth } = NextAuth(authConfig);
@@ -38,6 +39,13 @@ export default auth((req) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  if (isApiRoute && ["POST", "PATCH", "DELETE"].includes(req.method)) {
+    const rl = checkRateLimit(`mutate:${getClientIp(req)}`, { limit: 60, windowMs: 60_000 });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
+    }
   }
 
   if (moduleSegment && !canAccess(session.user.role as Role, moduleSegment)) {

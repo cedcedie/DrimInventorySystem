@@ -4,6 +4,7 @@ import { requireModuleAccess } from "@/lib/apiAuth";
 import { getUsersData } from "@/lib/data/users";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import type { Role } from "@prisma/client";
 
 const VALID_ROLES: Role[] = ["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"];
@@ -22,6 +23,11 @@ export async function POST(req: Request) {
   // Only OWNER has "users" in MODULE_ACCESS, so reaching here already implies Owner.
   const auth = await requireModuleAccess("users");
   if ("error" in auth) return auth.error;
+
+  const rl = checkRateLimit(`create-user:${getClientIp(req)}`, { limit: 10, windowMs: 60_000 });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
+  }
 
   const body = await req.json();
   const name = (body.name ?? "").trim();

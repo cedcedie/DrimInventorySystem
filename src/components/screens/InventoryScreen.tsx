@@ -15,8 +15,7 @@ import {
 } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
 import { TableSkeleton } from "@/components/Skeleton";
-import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { useTheme } from "@mui/material/styles";
 import { patchJson, deleteJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { ProductModal, type ProductFormRow } from "@/components/modals/ProductModal";
@@ -54,8 +53,7 @@ export function InventoryScreen({
     // flashing back to a skeleton — filter clicks should feel instant.
     placeholderData: keepPreviousData,
   });
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["inventory"] });
@@ -146,7 +144,7 @@ export function InventoryScreen({
               }}
               sx={{
                 border: "none",
-                bgcolor: ACCENT,
+                bgcolor: t.primary.main,
                 color: "#fff",
                 borderRadius: "2px",
                 px: 1.625,
@@ -187,8 +185,8 @@ export function InventoryScreen({
               }}
               sx={{
                 border: "1px solid",
-                borderColor: active ? ACCENT : t.border,
-                bgcolor: active ? ACCENT : t.surface,
+                borderColor: active ? t.primary.main : t.border,
+                bgcolor: active ? t.primary.main : t.surface,
                 color: active ? "#fff" : t.text2,
                 borderRadius: "2px",
                 px: 1.5,
@@ -247,7 +245,7 @@ export function InventoryScreen({
                       py: 0.5,
                       fontSize: 12,
                       bgcolor: t.surface,
-                      color: t.text,
+                      color: t.text.primary,
                     }}
                   />
                 </TableCell>
@@ -280,14 +278,14 @@ export function InventoryScreen({
                       onClick={() => deleteMutation.mutate(r.id)}
                       sx={{
                         border: "1px solid",
-                        borderColor: t.danger,
+                        borderColor: t.error.main,
                         bgcolor: t.surface,
                         borderRadius: "2px",
                         px: 1.25,
                         py: 0.5,
                         fontSize: 11,
                         fontWeight: 600,
-                        color: t.danger,
+                        color: t.error.main,
                       }}
                     >
                       Delete

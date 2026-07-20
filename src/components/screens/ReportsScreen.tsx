@@ -7,8 +7,7 @@ import { fetchJson } from "@/lib/api";
 import { postJson } from "@/lib/mutate";
 import { queryKeys } from "@/lib/queryKeys";
 import { KpiSkeleton } from "@/components/Skeleton";
-import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { useTheme, type Palette } from "@mui/material/styles";
 import { useToast } from "@/components/Toast";
 import type { Role } from "@prisma/client";
 import type { DashboardData } from "@/lib/data/dashboard";
@@ -41,8 +40,7 @@ export function ReportsScreen({
     queryFn: () => fetchJson<DashboardData>("/api/dashboard"),
     initialData,
   });
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
@@ -128,7 +126,7 @@ export function ReportsScreen({
               disabled={exportMutation.isPending}
               sx={{
                 border: "none",
-                bgcolor: ACCENT,
+                bgcolor: t.primary.main,
                 color: "#fff",
                 borderRadius: "2px",
                 px: 1.625,
@@ -190,9 +188,9 @@ export function ReportsScreen({
               sx={{
                 bgcolor: t.surface,
                 border: "1px solid",
-                borderColor: selectedType === rp.title ? ACCENT : t.line,
+                borderColor: selectedType === rp.title ? t.primary.main : t.line,
                 borderTop: "3px solid",
-                borderTopColor: ACCENT,
+                borderTopColor: t.primary.main,
                 px: 2,
                 py: 1.75,
                 display: "flex",
@@ -210,7 +208,7 @@ export function ReportsScreen({
                   sx={{
                     fontSize: 11,
                     fontFamily: "'IBM Plex Mono', monospace",
-                    color: ACCENT,
+                    color: t.primary.main,
                     mt: 0.5,
                   }}
                 >
@@ -234,7 +232,7 @@ function DateField({
   label: string;
   value: string;
   onChange: (v: string) => void;
-  t: typeof lightTokens | typeof darkTokens;
+  t: Palette;
 }) {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>

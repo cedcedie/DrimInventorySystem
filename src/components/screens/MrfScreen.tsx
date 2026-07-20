@@ -9,8 +9,7 @@ import { formatDate } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
 import { TableSkeleton } from "@/components/Skeleton";
-import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { useTheme } from "@mui/material/styles";
 import { MrfModal } from "@/components/modals/MrfModal";
 import type { MrfListData } from "@/lib/data/mrf";
 
@@ -26,8 +25,7 @@ export function MrfScreen({
   position: string;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   const { data } = useQuery({
     queryKey: queryKeys.mrf,
@@ -48,7 +46,7 @@ export function MrfScreen({
             sx={{
               ml: "auto",
               border: "none",
-              bgcolor: ACCENT,
+              bgcolor: t.primary.main,
               color: "#fff",
               borderRadius: "2px",
               px: 1.625,
@@ -68,7 +66,7 @@ export function MrfScreen({
             <TableHeaderRow columns={COLS} headers={["MRF Number", "Date", "Item", "Qty", "Project", "Status"]} />
             {data.rows.map((r) => (
               <TableRow key={r.id} columns={COLS}>
-                <TableCell mono color={ACCENT}>
+                <TableCell mono color={t.primary.main}>
                   {r.mrf}
                 </TableCell>
                 <TableCell color={t.text2}>{formatDate(new Date(r.date))}</TableCell>
@@ -130,8 +128,7 @@ function ProfileField({
   bold?: boolean;
   mono?: boolean;
 }) {
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   return (
     <Box>

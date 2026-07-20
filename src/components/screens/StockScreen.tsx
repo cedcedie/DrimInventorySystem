@@ -8,8 +8,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
-import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { useTheme } from "@mui/material/styles";
 import { StockInModal } from "@/components/modals/StockInModal";
 import { StockOutModal } from "@/components/modals/StockOutModal";
 import type { Role } from "@prisma/client";
@@ -22,8 +21,7 @@ export function StockScreen({ role }: { role: Role }) {
   const [tab, setTab] = useState<"in" | "out">("in");
   const canStock = role === "ADMIN" || role === "WAREHOUSE_STAFF";
   const isOwner = role === "OWNER";
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   return (
     <Box>
@@ -42,8 +40,7 @@ export function StockScreen({ role }: { role: Role }) {
 }
 
 function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   return (
     <ButtonBase
@@ -55,9 +52,9 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
         py: 1,
         fontSize: 13,
         fontWeight: 600,
-        color: active ? ACCENT : t.muted,
+        color: active ? t.primary.main : t.muted,
         borderBottom: "2px solid",
-        borderColor: active ? ACCENT : "transparent",
+        borderColor: active ? t.primary.main : "transparent",
         mb: "-1px",
       }}
     >
@@ -67,8 +64,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
 }
 
 function ViewOnlyNotice({ text }: { text: string }) {
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
   return (
     <Box
       sx={{
@@ -89,8 +85,7 @@ function ViewOnlyNotice({ text }: { text: string }) {
 function StockInTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolean }) {
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   const { data, isFetching } = useQuery({
     queryKey: queryKeys.stockIn({ page }),
@@ -110,7 +105,7 @@ function StockInTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolean
             sx={{
               ml: "auto",
               border: "none",
-              bgcolor: ACCENT,
+              bgcolor: t.primary.main,
               color: "#fff",
               borderRadius: "2px",
               px: 1.625,
@@ -132,7 +127,7 @@ function StockInTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolean
           <TableHeaderRow columns={SI_COLS} headers={["Reference No.", "Date", "Supplier", "Item", "Quantity"]} />
           {data.rows.map((r) => (
             <TableRow key={r.id} columns={SI_COLS}>
-              <TableCell mono color={ACCENT}>
+              <TableCell mono color={t.primary.main}>
                 {r.ref}
               </TableCell>
               <TableCell color={t.text2}>{formatDate(new Date(r.date))}</TableCell>
@@ -169,8 +164,7 @@ function StockOutTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolea
   const [page, setPage] = useState(1);
   const [pickedIdx, setPickedIdx] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   const { data, isFetching } = useQuery({
     queryKey: queryKeys.stockOut({ page }),
@@ -193,7 +187,7 @@ function StockOutTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolea
               sx={{
                 ml: "auto",
                 border: "none",
-                bgcolor: ACCENT,
+                bgcolor: t.primary.main,
                 color: "#fff",
                 borderRadius: "2px",
                 px: 1.625,
@@ -218,7 +212,7 @@ function StockOutTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolea
             />
             {data.rows.map((r, i) => (
               <TableRow key={r.id} columns={SO_COLS} onClick={() => setPickedIdx(i)} selected={picked?.id === r.id}>
-                <TableCell mono color={ACCENT}>
+                <TableCell mono color={t.primary.main}>
                   {r.ref}
                 </TableCell>
                 <TableCell color={t.text2}>{formatDate(new Date(r.date))}</TableCell>
@@ -284,8 +278,7 @@ function ProfileField({
   bold?: boolean;
   mono?: boolean;
 }) {
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   return (
     <Box>

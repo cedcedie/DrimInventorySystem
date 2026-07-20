@@ -14,8 +14,7 @@ import {
   Pagination,
 } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
-import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { useTheme } from "@mui/material/styles";
 import { deleteJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { ProductModal, type ProductFormRow } from "@/components/modals/ProductModal";
@@ -42,8 +41,7 @@ export function ProductsScreen({
     initialData: page === 1 ? initialData : undefined,
     placeholderData: keepPreviousData,
   });
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteJson(`/api/products/${id}`),
@@ -85,7 +83,7 @@ export function ProductsScreen({
             sx={{
               ml: "auto",
               border: "none",
-              bgcolor: ACCENT,
+              bgcolor: t.primary.main,
               color: "#fff",
               borderRadius: "2px",
               px: 1.625,
@@ -144,14 +142,14 @@ export function ProductsScreen({
                       onClick={() => deleteMutation.mutate(r.id)}
                       sx={{
                         border: "1px solid",
-                        borderColor: t.danger,
+                        borderColor: t.error.main,
                         bgcolor: t.surface,
                         borderRadius: "2px",
                         px: 1.25,
                         py: 0.5,
                         fontSize: 11,
                         fontWeight: 600,
-                        color: t.danger,
+                        color: t.error.main,
                       }}
                     >
                       Delete

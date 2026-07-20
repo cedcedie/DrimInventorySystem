@@ -8,8 +8,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { formatDateTime } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
-import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { useTheme } from "@mui/material/styles";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import type { ActivityData } from "@/lib/data/activity";
 
@@ -23,8 +22,7 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
     initialData: page === 1 ? initialData : undefined,
     placeholderData: keepPreviousData,
   });
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   if (!data) {
     return <TableSkeleton label="Loading activity log…" columns={5} rows={9} />;
@@ -42,7 +40,7 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
           <TableCell bold>{a.user}</TableCell>
           <TableCell color={t.muted}>{ROLE_LABELS[a.role]}</TableCell>
           <TableCell sx={{ whiteSpace: "normal" }}>{a.action}</TableCell>
-          <TableCell mono color={ACCENT}>
+          <TableCell mono color={t.primary.main}>
             {a.ref}
           </TableCell>
         </TableRow>

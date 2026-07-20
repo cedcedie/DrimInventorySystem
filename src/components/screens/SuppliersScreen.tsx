@@ -8,8 +8,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
-import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { useTheme } from "@mui/material/styles";
 import { SupplierModal } from "@/components/modals/SupplierModal";
 import type { Role } from "@prisma/client";
 import type { SuppliersData } from "@/lib/data/suppliers";
@@ -31,8 +30,7 @@ export function SuppliersScreen({
     queryFn: () => fetchJson<SuppliersData>("/api/suppliers"),
     initialData,
   });
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   return (
     <Box>
@@ -46,7 +44,7 @@ export function SuppliersScreen({
             sx={{
               ml: "auto",
               border: "none",
-              bgcolor: ACCENT,
+              bgcolor: t.primary.main,
               color: "#fff",
               borderRadius: "2px",
               px: 1.625,

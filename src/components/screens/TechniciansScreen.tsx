@@ -7,8 +7,7 @@ import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
-import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { useTheme } from "@mui/material/styles";
 import { deleteJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { TechnicianModal, type TechnicianFormRow } from "@/components/modals/TechnicianModal";
@@ -33,8 +32,7 @@ export function TechniciansScreen({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTechnician, setEditingTechnician] = useState<TechnicianFormRow | null>(null);
   const isOwner = role === "OWNER";
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -66,7 +64,7 @@ export function TechniciansScreen({
             sx={{
               ml: "auto",
               border: "none",
-              bgcolor: ACCENT,
+              bgcolor: t.primary.main,
               color: "#fff",
               borderRadius: "2px",
               px: 1.625,
@@ -138,14 +136,14 @@ export function TechniciansScreen({
                         }}
                         sx={{
                           border: "1px solid",
-                          borderColor: t.danger,
+                          borderColor: t.error.main,
                           bgcolor: t.surface,
                           borderRadius: "2px",
                           px: 1.25,
                           py: 0.5,
                           fontSize: 11,
                           fontWeight: 600,
-                          color: t.danger,
+                          color: t.error.main,
                         }}
                       >
                         Delete
@@ -202,8 +200,7 @@ function ProfileField({
   bold?: boolean;
   mono?: boolean;
 }) {
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   return (
     <Box>

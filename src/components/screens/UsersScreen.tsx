@@ -18,8 +18,7 @@ import { formatDateTime } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
 import { TableSkeleton } from "@/components/Skeleton";
-import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { useTheme } from "@mui/material/styles";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import { UserModal } from "@/components/modals/UserModal";
 import type { Role, UserStatus } from "@prisma/client";
@@ -60,8 +59,7 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
     enabled: !!selectedUser,
   });
 
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   return (
     <Box>
@@ -74,7 +72,7 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
           sx={{
             ml: "auto",
             border: "none",
-            bgcolor: ACCENT,
+            bgcolor: t.primary.main,
             color: "#fff",
             borderRadius: "2px",
             px: 1.625,

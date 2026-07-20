@@ -9,8 +9,7 @@ import { KpiCard } from "@/components/KpiCard";
 import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
 import { KpiSkeleton, TableSkeleton } from "@/components/Skeleton";
-import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { useTheme } from "@mui/material/styles";
 import type { DashboardData } from "@/lib/data/dashboard";
 
 const TX_COLS = "126px 78px 88px minmax(0,1fr) 92px 96px";
@@ -22,8 +21,7 @@ export function DashboardScreen({ initialData }: { initialData?: DashboardData }
     queryFn: () => fetchJson<DashboardData>("/api/dashboard"),
     initialData,
   });
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   if (isLoading || !data) {
     return (
@@ -49,13 +47,13 @@ export function DashboardScreen({ initialData }: { initialData?: DashboardData }
       label: "Products Tracked",
       value: String(data.kpis.totalProducts),
       sub: `${data.kpis.categoryCount} categories`,
-      bar: ACCENT,
+      bar: t.primary.main,
     },
     {
       label: "Stock Value",
       value: peso(Math.round(data.kpis.totalValue)),
       sub: "across all items",
-      bar: ACCENT,
+      bar: t.primary.main,
     },
     {
       label: "Low Stock",
@@ -121,7 +119,7 @@ export function DashboardScreen({ initialData }: { initialData?: DashboardData }
                 </TableCell>
                 <TableCell sx={{ whiteSpace: "normal", fontSize: 12.5 }}>{tx.desc}</TableCell>
                 <TableCell color={t.text2}>{tx.user}</TableCell>
-                <TableCell mono color={ACCENT}>
+                <TableCell mono color={t.primary.main}>
                   {tx.link}
                 </TableCell>
               </TableRow>
@@ -139,13 +137,13 @@ export function DashboardScreen({ initialData }: { initialData?: DashboardData }
             title="Low Stock Alerts"
             dotColor="#c07d16"
             rows={data.lowAlerts}
-            qtyColor={t.warn}
+            qtyColor={t.warning.main}
           />
           <AlertPanel
             title="Out of Stock Alerts"
             dotColor="#a13230"
             rows={data.outAlerts}
-            qtyColor={t.danger}
+            qtyColor={t.error.main}
           />
         </Box>
       </Box>
@@ -164,8 +162,7 @@ function AlertPanel({
   rows: { product: string; category: string; qty: number; unit: string }[];
   qtyColor: string;
 }) {
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   return (
     <TableShell>

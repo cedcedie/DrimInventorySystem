@@ -5,8 +5,7 @@ import { Box, ButtonBase, InputBase, Select, MenuItem, Typography } from "@mui/m
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { TableSkeleton } from "@/components/Skeleton";
-import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { useTheme, type Palette } from "@mui/material/styles";
 import type { SettingsData } from "@/lib/data/settings";
 
 export function SettingsScreen({ initialData }: { initialData?: SettingsData }) {
@@ -15,8 +14,7 @@ export function SettingsScreen({ initialData }: { initialData?: SettingsData }) 
     queryFn: () => fetchJson<SettingsData>("/api/settings"),
     initialData,
   });
-  const { mode } = useColorMode();
-  const t = mode === "dark" ? darkTokens : lightTokens;
+  const t = useTheme().palette;
 
   if (!data) {
     return (
@@ -57,7 +55,7 @@ export function SettingsScreen({ initialData }: { initialData?: SettingsData }) 
             sx={{
               alignSelf: "flex-start",
               border: "none",
-              bgcolor: ACCENT,
+              bgcolor: t.primary.main,
               color: "#fff",
               opacity: 0.5,
               borderRadius: "2px",
@@ -109,7 +107,7 @@ function Field({
 }: {
   label: string;
   value: string;
-  t: typeof lightTokens | typeof darkTokens;
+  t: Palette;
 }) {
   return (
     <Box>
@@ -138,7 +136,7 @@ function FieldLabel({
   t,
 }: {
   children: React.ReactNode;
-  t: typeof lightTokens | typeof darkTokens;
+  t: Palette;
 }) {
   return (
     <Typography

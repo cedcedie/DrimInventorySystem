@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Box, Typography } from "@mui/material";
+import { Box, Drawer, Typography, useMediaQuery, useTheme } from "@mui/material";
 import type { Role } from "@prisma/client";
 import { MODULE_ACCESS } from "@/lib/rbac";
 import { NAV_GROUPS, screenTitleForRole } from "@/lib/navConfig";
@@ -12,9 +12,14 @@ import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
 export function SideNav({
   role,
   badges,
+  mobileOpen = false,
+  onMobileClose,
 }: {
   role: Role;
   badges: Record<string, string>;
+  /** Controls the temporary Drawer below the `md` breakpoint. */
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }) {
   const access = MODULE_ACCESS[role] ?? [];
   const pathname = usePathname();
@@ -22,6 +27,8 @@ export function SideNav({
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
   const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   // isPending flips true the instant a nav click fires, before any network
   // activity starts — that's the immediate feedback that was missing.
   const [isPending, startTransition] = useTransition();
@@ -34,6 +41,7 @@ export function SideNav({
   }, [pathname]);
 
   const go = (segment: string) => {
+    onMobileClose?.();
     if (segment === activeSegment) return;
     setPendingSegment(segment);
     startTransition(() => {
@@ -41,21 +49,8 @@ export function SideNav({
     });
   };
 
-  return (
-    <Box
-      sx={{
-        position: "fixed",
-        top: "46px",
-        left: 0,
-        width: 198,
-        bottom: 0,
-        bgcolor: t.bg2,
-        borderRight: "1px solid",
-        borderColor: t.line,
-        overflowY: "auto",
-        py: 1.5,
-      }}
-    >
+  const navContent = (
+    <>
       {NAV_GROUPS.map((group) => {
         const items = group.items.filter((item) => access.includes(item.segment));
         if (!items.length) return null;
@@ -123,6 +118,48 @@ export function SideNav({
           </Box>
         );
       })}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={onMobileClose}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          "& .MuiDrawer-paper": {
+            width: 198,
+            bgcolor: t.bg2,
+            borderRight: "1px solid",
+            borderColor: t.line,
+            boxSizing: "border-box",
+            py: 1.5,
+          },
+        }}
+      >
+        {navContent}
+      </Drawer>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        position: "fixed",
+        top: "46px",
+        left: 0,
+        width: 198,
+        bottom: 0,
+        bgcolor: t.bg2,
+        borderRight: "1px solid",
+        borderColor: t.line,
+        overflowY: "auto",
+        py: 1.5,
+      }}
+    >
+      {navContent}
     </Box>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Box, ButtonBase } from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
 import { signOut } from "next-auth/react";
 import type { Role } from "@prisma/client";
 import { useColorMode } from "@/theme/ThemeRegistry";
@@ -21,10 +22,13 @@ export function ChromeBar({
   userName,
   role,
   activeSegment,
+  onMenuClick,
 }: {
   userName: string;
   role: Role;
   activeSegment: string;
+  /** Opens the mobile nav drawer; the button is hidden at `md` and up. */
+  onMenuClick?: () => void;
 }) {
   const { mode, toggleMode } = useColorMode();
   const screenTitle = screenTitleForRole(activeSegment, role);
@@ -46,6 +50,22 @@ export function ChromeBar({
         zIndex: 1201,
       }}
     >
+      <ButtonBase
+        onClick={onMenuClick}
+        aria-label="Open navigation menu"
+        sx={{
+          display: { xs: "grid", md: "none" },
+          placeItems: "center",
+          width: 30,
+          height: 30,
+          color: "#aeb7c2",
+          borderRadius: "2px",
+          "&:hover": { color: "#fff" },
+        }}
+      >
+        <MenuIcon fontSize="small" />
+      </ButtonBase>
+
       <Box sx={{ display: "flex", alignItems: "center", gap: "9px" }}>
         <Box
           sx={{

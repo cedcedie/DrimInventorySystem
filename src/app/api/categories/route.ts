@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess, isOwnerOrAdmin } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { parseBody } from "@/lib/validate";
+import { categoryCreateSchema } from "@/lib/schemas";
 
 export async function POST(req: Request) {
   const auth = await requireModuleAccess("products");
@@ -10,11 +12,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Only Owner or Admin can add categories" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const name = (body.name ?? "").trim();
-  if (!name) {
-    return NextResponse.json({ error: "Category name is required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, categoryCreateSchema);
+  if ("error" in parsed) return parsed.error;
+  const { name } = parsed.data;
 
   try {
     const category = await prisma.$transaction(async (tx) => {

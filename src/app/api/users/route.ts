@@ -5,9 +5,8 @@ import { getUsersData } from "@/lib/data/users";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
-import type { Role } from "@prisma/client";
-
-const VALID_ROLES: Role[] = ["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"];
+import { parseBody } from "@/lib/validate";
+import { userCreateSchema } from "@/lib/schemas";
 
 export async function GET(req: Request) {
   const auth = await requireModuleAccess("users");
@@ -29,18 +28,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
   }
 
-  const body = await req.json();
-  const name = (body.name ?? "").trim();
-  const username = (body.username ?? "").trim();
-  const password = body.password ?? "";
-  const role = body.role as Role;
-
-  if (!name || !username || !password || !VALID_ROLES.includes(role)) {
-    return NextResponse.json({ error: "Name, username, password, and a valid role are required" }, { status: 400 });
-  }
-  if (password.length < 8) {
-    return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, userCreateSchema);
+  if ("error" in parsed) return parsed.error;
+  const { name, username, password, role } = parsed.data;
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);

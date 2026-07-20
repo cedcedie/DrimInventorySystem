@@ -4,6 +4,8 @@ import { getStockInData } from "@/lib/data/stock";
 import { prisma } from "@/lib/prisma";
 import { nextRefNo } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { parseBody } from "@/lib/validate";
+import { stockInSchema } from "@/lib/schemas";
 import type { Role } from "@prisma/client";
 
 function canRecordStock(role: Role): boolean {
@@ -27,13 +29,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Stock In requires Admin or Warehouse Staff role" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const { productId, supplierId, qty } = body;
-  const quantity = Number(qty);
-
-  if (!productId || !supplierId || !Number.isFinite(quantity) || quantity <= 0) {
-    return NextResponse.json({ error: "Product, supplier, and a positive quantity are required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, stockInSchema);
+  if ("error" in parsed) return parsed.error;
+  const { productId, supplierId, qty: quantity } = parsed.data;
 
   try {
     const result = await prisma.$transaction(

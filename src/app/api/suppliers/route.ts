@@ -3,6 +3,8 @@ import { requireModuleAccess } from "@/lib/apiAuth";
 import { getSuppliersData } from "@/lib/data/suppliers";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { parseBody } from "@/lib/validate";
+import { supplierCreateSchema } from "@/lib/schemas";
 
 export async function GET() {
   const auth = await requireModuleAccess("suppliers");
@@ -18,14 +20,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Only Owner can add suppliers" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const name = (body.name ?? "").trim();
-  const contact = (body.contact ?? "").trim() || "—";
-  const supplies = (body.supplies ?? "").trim() || "—";
-
-  if (!name) {
-    return NextResponse.json({ error: "Supplier name is required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, supplierCreateSchema);
+  if ("error" in parsed) return parsed.error;
+  const { name } = parsed.data;
+  const contact = parsed.data.contact || "—";
+  const supplies = parsed.data.supplies || "—";
 
   try {
     const supplier = await prisma.$transaction(async (tx) => {

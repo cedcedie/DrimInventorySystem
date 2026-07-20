@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess, isOwnerOrAdmin } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { parseBody } from "@/lib/validate";
+import { productUpdateSchema } from "@/lib/schemas";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireModuleAccess("products");
@@ -11,12 +13,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const { id } = await params;
-  const body = await req.json();
-  const { code, name, categoryId, unit, amount, stocks, minLevel, supplierId, imageKey } = body;
-
-  if (!code || !name || !categoryId || !unit) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, productUpdateSchema);
+  if ("error" in parsed) return parsed.error;
+  const { code, name, categoryId, unit, amount, stocks, minLevel, supplierId, imageKey } = parsed.data;
 
   try {
     const product = await prisma.$transaction(async (tx) => {
@@ -27,9 +26,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           name,
           categoryId,
           unit,
-          amount: Number(amount) || 0,
-          stocks: Number(stocks) || 0,
-          minLevel: Number(minLevel) || 0,
+          amount: amount ?? 0,
+          stocks: stocks ?? 0,
+          minLevel: minLevel ?? 0,
           supplierId: supplierId || null,
           imageKey: imageKey || null,
         },

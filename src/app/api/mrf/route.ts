@@ -4,6 +4,8 @@ import { getTechnicianForUser, getMrfsForTechnician } from "@/lib/data/mrf";
 import { prisma } from "@/lib/prisma";
 import { nextRefNo } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { parseBody } from "@/lib/validate";
+import { mrfCreateSchema } from "@/lib/schemas";
 
 export async function GET() {
   const auth = await requireModuleAccess("stock");
@@ -38,14 +40,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json();
-  const { productId, qty, project } = body;
-  const quantity = Number(qty);
-  const projectName = (project ?? "").trim();
-
-  if (!productId || !Number.isFinite(quantity) || quantity <= 0 || !projectName) {
-    return NextResponse.json({ error: "Item, a positive quantity, and project are required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, mrfCreateSchema);
+  if ("error" in parsed) return parsed.error;
+  const { productId, qty: quantity, project: projectName } = parsed.data;
 
   const product = await prisma.product.findUnique({ where: { id: productId } });
   if (!product) {

@@ -3,6 +3,8 @@ import { requireModuleAccess } from "@/lib/apiAuth";
 import { getTechniciansData } from "@/lib/data/technicians";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { parseBody } from "@/lib/validate";
+import { technicianSchema } from "@/lib/schemas";
 
 export async function GET() {
   const auth = await requireModuleAccess("technicians");
@@ -18,14 +20,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Only Owner can add technicians" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const empNo = (body.empNo ?? "").trim();
-  const name = (body.name ?? "").trim();
-  const position = (body.position ?? "").trim();
-
-  if (!empNo || !name || !position) {
-    return NextResponse.json({ error: "Employee number, name, and position are required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, technicianSchema);
+  if ("error" in parsed) return parsed.error;
+  const { empNo, name, position } = parsed.data;
 
   try {
     const technician = await prisma.$transaction(async (tx) => {

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
-import { buildReportData, REPORT_TYPES, type ReportType } from "@/lib/data/reports";
+import { buildReportData, type ReportType } from "@/lib/data/reports";
 import { generateReportPdf } from "@/lib/pdfReport";
 import { uploadToR2, getSignedR2Url } from "@/lib/r2";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { parseBody } from "@/lib/validate";
+import { reportExportSchema } from "@/lib/schemas";
 
 async function nextReportRefNo(): Promise<string> {
   const latest = await prisma.activityLog.findFirst({
@@ -23,14 +25,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Generate Report requires Admin role" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const type = body.type as ReportType;
-  const fromStr = body.from as string;
-  const toStr = body.to as string;
-
-  if (!REPORT_TYPES.includes(type) || !fromStr || !toStr) {
-    return NextResponse.json({ error: "Report type and date range are required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, reportExportSchema);
+  if ("error" in parsed) return parsed.error;
+  const { from: fromStr, to: toStr } = parsed.data;
+  const type = parsed.data.type as ReportType;
 
   const from = new Date(fromStr);
   const to = new Date(toStr);

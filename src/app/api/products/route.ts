@@ -3,6 +3,8 @@ import { requireModuleAccess, isOwnerOrAdmin } from "@/lib/apiAuth";
 import { getProductsData } from "@/lib/data/products";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { parseBody } from "@/lib/validate";
+import { productCreateSchema } from "@/lib/schemas";
 
 export async function GET(req: Request) {
   const auth = await requireModuleAccess("products");
@@ -21,12 +23,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Only Owner or Admin can add products" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const { code, name, categoryId, unit, amount, stocks, minLevel, supplierId, imageKey } = body;
-
-  if (!code || !name || !categoryId || !unit) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, productCreateSchema);
+  if ("error" in parsed) return parsed.error;
+  const { code, name, categoryId, unit, amount, stocks, minLevel, supplierId, imageKey } = parsed.data;
 
   try {
     const product = await prisma.$transaction(async (tx) => {
@@ -36,9 +35,9 @@ export async function POST(req: Request) {
           name,
           categoryId,
           unit,
-          amount: Number(amount) || 0,
-          stocks: Number(stocks) || 0,
-          minLevel: Number(minLevel) || 0,
+          amount: amount ?? 0,
+          stocks: stocks ?? 0,
+          minLevel: minLevel ?? 0,
           supplierId: supplierId || null,
           imageKey: imageKey || null,
         },

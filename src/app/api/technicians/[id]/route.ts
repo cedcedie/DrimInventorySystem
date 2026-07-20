@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { parseBody } from "@/lib/validate";
+import { technicianSchema } from "@/lib/schemas";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireModuleAccess("technicians");
@@ -11,14 +13,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const { id } = await params;
-  const body = await req.json();
-  const empNo = (body.empNo ?? "").trim();
-  const name = (body.name ?? "").trim();
-  const position = (body.position ?? "").trim();
-
-  if (!empNo || !name || !position) {
-    return NextResponse.json({ error: "Employee number, name, and position are required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, technicianSchema);
+  if ("error" in parsed) return parsed.error;
+  const { empNo, name, position } = parsed.data;
 
   try {
     const technician = await prisma.$transaction(async (tx) => {

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { parseBody } from "@/lib/validate";
+import { productMinLevelSchema } from "@/lib/schemas";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireModuleAccess("inventory");
@@ -11,11 +13,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const { id } = await params;
-  const body = await req.json();
-  const minLevel = Number(body.minLevel);
-  if (!Number.isFinite(minLevel) || minLevel < 0) {
-    return NextResponse.json({ error: "Invalid minimum stock level" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, productMinLevelSchema);
+  if ("error" in parsed) return parsed.error;
+  const { minLevel } = parsed.data;
 
   const product = await prisma.$transaction(async (tx) => {
     const updated = await tx.product.update({

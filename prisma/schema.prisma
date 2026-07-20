@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  WAREHOUSE_STAFF
+  TECHNICIAN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MrfStatus {
+  PENDING
+  FULFILLED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  activities   ActivityLog[]
+  stockIns     StockIn[]
+  stockOuts    StockOut[]
+  technician   Technician?
+  createdAt    DateTime @default(now())
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[]
+}
+
+model Supplier {
+  id       String @id @default(cuid())
+  name     String @unique
+  contact  String        // phone or email
+  supplies String        // free-text description
+  products Product[]
+  stockIns StockIn[]
+}
+
+model Product {
+  id         String  @id @default(cuid())
+  code       String  @unique   // e.g. PIP-012 (prefix per category)
+  name       String
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  unit       String            // Pcs | Meter | ...
+  amount     Decimal @db.Decimal(12,2)  // unit price, PHP
+  stocks     Int     @default(0)
+  minLevel   Int     @default(0)        // low-stock threshold
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+  imageKey   String?           // R2 object key
+  stockIns   StockIn[]
+  stockOuts  StockOut[]
+  mrfs       Mrf[]
+}
+
+model Technician {
+  id        String @id @default(cuid())
+  empNo     String @unique     // EMP-0147
+  name      String
+  position  String             // HVAC Technician, Refrigeration Engineer
+  userId    String? @unique    // links to the login account that files MRFs as this technician
+  user      User? @relation(fields: [userId], references: [id])
+  mrfs      Mrf[]
+  stockOuts StockOut[]
+}
+
+model Mrf {                    // Material Request Form
+  id           String @id @default(cuid())
+  refNo        String @unique  // MRF-118
+  technicianId String
+  technician   Technician @relation(fields: [technicianId], references: [id])
+  productId    String
+  product      Product @relation(fields: [productId], references: [id])
+  qty          Int
+  project      String          // e.g. Northgate Cold Storage
+  status       MrfStatus @default(PENDING)
+  createdAt    DateTime @default(now())
+  stockOut     StockOut?
+}
+
+model StockIn {
+  id         String @id @default(cuid())
+  refNo      String @unique   // SI-0442
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  qty        Int
+  byUserId   String
+  byUser     User @relation(fields: [byUserId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+model StockOut {
+  id           String @id @default(cuid())
+  refNo        String @unique // SO-0290
+  productId    String
+  product      Product @relation(fields: [productId], references: [id])
+  mrfId        String? @unique
+  mrf          Mrf?   @relation(fields: [mrfId], references: [id])
+  technicianId String
+  technician   Technician @relation(fields: [technicianId], references: [id])
+  qty          Int
+  byUserId     String
+  byUser       User @relation(fields: [byUserId], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String @id @default(cuid())
+  userId    String
+  user      User @relation(fields: [userId], references: [id])
+  action    String            // "Recorded Stock In — 24 × Galvanized Sheet 4x8"
+  refNo     String            // SI-0442 / SO-0290 / MRF-118 / RPT-088 / product code
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+}

@@ -28,6 +28,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {message && (
         <Box
+          role="status"
+          aria-live="polite"
           sx={{
             position: "fixed",
             bottom: 22,

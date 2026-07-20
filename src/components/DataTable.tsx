@@ -174,6 +174,7 @@ export function Pagination({
       <Typography sx={{ fontSize: 11.5, color: t.muted }}>{info}</Typography>
       <Box sx={{ ml: "auto", display: "flex", gap: 0.75 }}>
         <ButtonBase
+          aria-label="Previous page"
           onClick={onPrev}
           disabled={page <= 1}
           sx={{
@@ -192,6 +193,7 @@ export function Pagination({
           ‹ Prev
         </ButtonBase>
         <ButtonBase
+          aria-label="Next page"
           onClick={onNext}
           disabled={page >= totalPages}
           sx={{

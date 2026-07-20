@@ -127,9 +127,11 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
         open={!!selectedUser}
         onClose={() => setSelectedUser(null)}
         maxWidth={false}
+        aria-labelledby="user-history-modal-title"
         slotProps={{ paper: { sx: { width: 660, maxWidth: "92vw", bgcolor: t.surface } } }}
       >
         <DialogTitle
+          id="user-history-modal-title"
           sx={{
             display: "flex",
             alignItems: "center",
@@ -143,6 +145,7 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
         >
           Activity History — {selectedUser?.name}
           <IconButton
+            aria-label="Close dialog"
             onClick={() => setSelectedUser(null)}
             size="small"
             sx={{ ml: "auto", color: t.muted2 }}

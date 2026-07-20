@@ -110,6 +110,7 @@ export function TechniciansScreen({
                   <TableCell>
                     <Box sx={{ display: "flex", gap: 0.75 }}>
                       <ButtonBase
+                        aria-label={`Edit ${r.name}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           setEditingTechnician(r);
@@ -130,6 +131,7 @@ export function TechniciansScreen({
                         Edit
                       </ButtonBase>
                       <ButtonBase
+                        aria-label={`Delete ${r.name}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteMutation.mutate(r.id);

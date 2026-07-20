@@ -28,9 +28,11 @@ export function EntityModal({
       open={open}
       onClose={onClose}
       maxWidth={false}
+      aria-labelledby="entity-modal-title"
       slotProps={{ paper: { sx: { width, maxWidth: "92vw", bgcolor: t.surface } } }}
     >
       <DialogTitle
+        id="entity-modal-title"
         sx={{
           display: "flex",
           alignItems: "center",
@@ -43,7 +45,7 @@ export function EntityModal({
         }}
       >
         {title}
-        <IconButton onClick={onClose} size="small" sx={{ ml: "auto", color: t.muted2 }}>
+        <IconButton aria-label="Close dialog" onClick={onClose} size="small" sx={{ ml: "auto", color: t.muted2 }}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>

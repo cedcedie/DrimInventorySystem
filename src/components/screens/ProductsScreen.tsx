@@ -120,6 +120,7 @@ export function ProductsScreen({
                 <TableCell>
                   <Box sx={{ display: "flex", gap: 0.75 }}>
                     <ButtonBase
+                      aria-label={`Edit ${r.name}`}
                       onClick={() => {
                         setEditingProduct(r);
                         setModalOpen(true);
@@ -139,6 +140,7 @@ export function ProductsScreen({
                       Edit
                     </ButtonBase>
                     <ButtonBase
+                      aria-label={`Delete ${r.name}`}
                       onClick={() => deleteMutation.mutate(r.id)}
                       sx={{
                         border: "1px solid",

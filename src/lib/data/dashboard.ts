@@ -8,9 +8,43 @@ export const getDashboardData = unstable_cache(
 );
 
 async function fetchDashboardData() {
-  const [products, stockIns, stockOuts] = await Promise.all([
+  const [
+    totalProducts,
+    categoryCount,
+    totalValueRows,
+    lowStockCountRows,
+    outOfStockCount,
+    lowStockRows,
+    outOfStockRows,
+    stockIns,
+    stockOuts,
+  ] = await Promise.all([
+    prisma.product.count(),
+    prisma.product.findMany({ distinct: ["categoryId"], select: { categoryId: true } }).then((r) => r.length),
+    // Prisma can't sum a computed column (amount * stocks) via aggregate — read-only, no user input.
+    prisma.$queryRaw<{ total: number | null }[]>`
+      SELECT SUM(amount * stocks)::float8 AS total FROM "Product"
+    `,
+    // Prisma can't compare two columns (stocks <= "minLevel") in a where clause without raw SQL.
+    prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*)::bigint AS count FROM "Product" WHERE stocks > 0 AND stocks <= "minLevel"
+    `,
+    prisma.product.count({ where: { stocks: 0 } }),
+    prisma.$queryRaw<
+      { name: string; stocks: number; unit: string; category: string }[]
+    >`
+      SELECT p.name, p.stocks, p.unit, c.name AS category
+      FROM "Product" p
+      JOIN "Category" c ON c.id = p."categoryId"
+      WHERE p.stocks > 0 AND p.stocks <= p."minLevel"
+      ORDER BY p.name ASC
+      LIMIT 20
+    `,
     prisma.product.findMany({
-      select: { name: true, stocks: true, minLevel: true, unit: true, amount: true, category: { select: { name: true } } },
+      where: { stocks: 0 },
+      select: { name: true, stocks: true, unit: true, category: { select: { name: true } } },
+      orderBy: { name: "asc" },
+      take: 20,
     }),
     prisma.stockIn.findMany({
       orderBy: { createdAt: "desc" },
@@ -24,11 +58,8 @@ async function fetchDashboardData() {
     }),
   ]);
 
-  const totalProducts = products.length;
-  const lowStockList = products.filter((p) => p.stocks > 0 && p.stocks <= p.minLevel);
-  const outOfStockList = products.filter((p) => p.stocks === 0);
-  const totalValue = products.reduce((acc, p) => acc + Number(p.amount) * p.stocks, 0);
-  const categoryCount = new Set(products.map((p) => p.category.name)).size;
+  const totalValue = totalValueRows[0]?.total ?? 0;
+  const lowStockCount = Number(lowStockCountRows[0]?.count ?? 0);
 
   const transactions = [
     ...stockIns.map((si) => ({
@@ -56,17 +87,17 @@ async function fetchDashboardData() {
       totalProducts,
       categoryCount,
       totalValue,
-      lowStockCount: lowStockList.length,
-      outOfStockCount: outOfStockList.length,
+      lowStockCount,
+      outOfStockCount,
     },
     transactions,
-    lowAlerts: lowStockList.map((p) => ({
+    lowAlerts: lowStockRows.map((p) => ({
       product: p.name,
-      category: p.category.name,
+      category: p.category,
       qty: p.stocks,
       unit: p.unit,
     })),
-    outAlerts: outOfStockList.map((p) => ({
+    outAlerts: outOfStockRows.map((p) => ({
       product: p.name,
       category: p.category.name,
       qty: 0,

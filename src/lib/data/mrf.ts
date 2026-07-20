@@ -10,6 +10,7 @@ async function fetchMrfsForTechnician(technicianId: string) {
   const mrfs = await prisma.mrf.findMany({
     where: { technicianId },
     orderBy: { createdAt: "desc" },
+    take: 100,
     include: { product: true },
   });
 

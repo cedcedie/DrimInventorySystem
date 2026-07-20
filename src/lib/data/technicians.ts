@@ -11,6 +11,7 @@ async function fetchTechniciansData() {
         include: { product: true },
       },
     },
+    take: 500, // safety cap — see SYSTEM_REVIEW.md §4
   });
 
   return {

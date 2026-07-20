@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import type { Role } from "@prisma/client";
 import { Alert } from "@mui/material";
@@ -7,6 +8,10 @@ import { StockScreen } from "@/components/screens/StockScreen";
 import { MrfScreen } from "@/components/screens/MrfScreen";
 import { screenTitleForRole, screenSubtitleForRole, PERM_SUMMARY } from "@/lib/navConfig";
 import { getTechnicianForUser } from "@/lib/data/mrf";
+
+export const metadata: Metadata = {
+  title: "Stock — DRIM Inventory System",
+};
 
 export default async function StockPage() {
   const session = await auth();

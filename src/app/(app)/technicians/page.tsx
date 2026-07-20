@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import type { Role } from "@prisma/client";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -5,6 +6,10 @@ import { ScreenBody } from "@/components/ScreenBody";
 import { TechniciansScreen } from "@/components/screens/TechniciansScreen";
 import { screenTitleForRole, screenSubtitleForRole, PERM_SUMMARY } from "@/lib/navConfig";
 import { getTechniciansData } from "@/lib/data/technicians";
+
+export const metadata: Metadata = {
+  title: "Technicians — DRIM Inventory System",
+};
 
 export default async function TechniciansPage() {
   const [session, data] = await Promise.all([auth(), getTechniciansData()]);

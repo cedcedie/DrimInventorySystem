@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import type { Role } from "@prisma/client";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -5,6 +6,10 @@ import { ScreenBody } from "@/components/ScreenBody";
 import { SettingsScreen } from "@/components/screens/SettingsScreen";
 import { screenTitleForRole, screenSubtitleForRole, PERM_SUMMARY } from "@/lib/navConfig";
 import { getSettingsData } from "@/lib/data/settings";
+
+export const metadata: Metadata = {
+  title: "Settings — DRIM Inventory System",
+};
 
 export default async function SettingsPage() {
   const [session, data] = await Promise.all([auth(), getSettingsData()]);

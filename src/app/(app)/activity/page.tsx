@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import type { Role } from "@prisma/client";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -5,6 +6,10 @@ import { ScreenBody } from "@/components/ScreenBody";
 import { ActivityScreen } from "@/components/screens/ActivityScreen";
 import { screenTitleForRole, screenSubtitleForRole, PERM_SUMMARY } from "@/lib/navConfig";
 import { getActivityData } from "@/lib/data/activity";
+
+export const metadata: Metadata = {
+  title: "Activity — DRIM Inventory System",
+};
 
 export default async function ActivityPage() {
   const [session, data] = await Promise.all([auth(), getActivityData({})]);

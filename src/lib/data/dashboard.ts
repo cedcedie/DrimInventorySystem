@@ -18,6 +18,8 @@ async function fetchDashboardData() {
     outOfStockRows,
     stockIns,
     stockOuts,
+    pendingMrfCount,
+    recentActivity,
   ] = await Promise.all([
     prisma.product.count(),
     prisma.product.findMany({ distinct: ["categoryId"], select: { categoryId: true } }).then((r) => r.length),
@@ -56,6 +58,14 @@ async function fetchDashboardData() {
       take: 10,
       include: { product: true, technician: true, byUser: true, mrf: true },
     }),
+    // Uses the @@index([status]) added in Task 2.
+    prisma.mrf.count({ where: { status: "PENDING" } }),
+    // Uses the @@index([userId, createdAt]) — bounded to the 8 most recent.
+    prisma.activityLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      include: { user: { select: { name: true } } },
+    }),
   ]);
 
   const totalValue = totalValueRows[0]?.total ?? 0;
@@ -89,7 +99,14 @@ async function fetchDashboardData() {
       totalValue,
       lowStockCount,
       outOfStockCount,
+      pendingMrfCount,
     },
+    activity: recentActivity.map((a) => ({
+      dt: a.createdAt.toISOString(),
+      action: a.action,
+      refNo: a.refNo,
+      user: a.user.name,
+    })),
     transactions,
     lowAlerts: lowStockRows.map((p) => ({
       product: p.name,

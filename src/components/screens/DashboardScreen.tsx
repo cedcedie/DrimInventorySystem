@@ -5,7 +5,8 @@ import { Box, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { peso, formatDateTime } from "@/lib/format";
-import { KpiCard } from "@/components/KpiCard";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { BentoGrid } from "@/components/dashboard/BentoGrid";
 import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
 import { KpiSkeleton, TableSkeleton } from "@/components/Skeleton";
@@ -42,46 +43,40 @@ export function DashboardScreen({ initialData }: { initialData?: DashboardData }
     );
   }
 
-  const kpis = [
-    {
-      label: "Products Tracked",
-      value: String(data.kpis.totalProducts),
-      sub: `${data.kpis.categoryCount} categories`,
-      bar: t.primary.main,
-    },
-    {
-      label: "Stock Value",
-      value: peso(Math.round(data.kpis.totalValue)),
-      sub: "across all items",
-      bar: t.primary.main,
-    },
-    {
-      label: "Low Stock",
-      value: String(data.kpis.lowStockCount),
-      sub: "at or below min. level",
-      bar: "#c07d16",
-    },
-    {
-      label: "Out of Stock",
-      value: String(data.kpis.outOfStockCount),
-      sub: "needs replenishment",
-      bar: "#a13230",
-    },
-  ];
-
   return (
     <Box>
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-          gap: 1.5,
-          mb: 2,
-        }}
-      >
-        {kpis.map((k) => (
-          <KpiCard key={k.label} label={k.label} value={k.value} sub={k.sub} barColor={k.bar} />
-        ))}
+      <Box sx={{ mb: 2 }}>
+        <BentoGrid>
+          <StatCard
+            label="Stock Value"
+            value={peso(Math.round(data.kpis.totalValue))}
+            sub="total inventory value across all items"
+            span={2}
+          />
+          <StatCard
+            label="Products Tracked"
+            value={data.kpis.totalProducts}
+            sub={`${data.kpis.categoryCount} categories`}
+          />
+          <StatCard
+            label="Pending MRFs"
+            value={data.kpis.pendingMrfCount}
+            sub="awaiting fulfillment"
+            accent={t.primary.main}
+          />
+          <StatCard
+            label="Low Stock"
+            value={data.kpis.lowStockCount}
+            sub="at or below min. level"
+            accent="#c07d16"
+          />
+          <StatCard
+            label="Out of Stock"
+            value={data.kpis.outOfStockCount}
+            sub="needs replenishment"
+            accent="#a13230"
+          />
+        </BentoGrid>
       </Box>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
@@ -145,6 +140,7 @@ export function DashboardScreen({ initialData }: { initialData?: DashboardData }
             rows={data.outAlerts}
             qtyColor={t.error.main}
           />
+          <ActivityPanel rows={data.activity} />
         </Box>
       </Box>
     </Box>
@@ -196,6 +192,63 @@ function AlertPanel({
       {rows.length === 0 && (
         <Box sx={{ px: 1.75, py: 1.5, fontSize: 12, color: t.muted }}>None.</Box>
       )}
+    </TableShell>
+  );
+}
+
+function ActivityPanel({
+  rows,
+}: {
+  rows: { dt: string; action: string; refNo: string; user: string }[];
+}) {
+  const t = useTheme().palette;
+
+  return (
+    <TableShell>
+      <Box
+        sx={{
+          px: 1.75,
+          py: 1.25,
+          borderBottom: "1px solid",
+          borderColor: t.line,
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+        }}
+      >
+        <Box sx={{ width: 8, height: 8, bgcolor: t.primary.main }} />
+        <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>Recent Activity</Typography>
+      </Box>
+      <Box sx={{ display: "flex", flexDirection: "column" }}>
+        {rows.map((a, i) => (
+          <Box
+            key={`${a.refNo}-${i}`}
+            sx={{
+              px: 1.75,
+              py: 1,
+              borderBottom: i === rows.length - 1 ? "none" : "1px solid",
+              borderColor: t.line,
+              display: "flex",
+              flexDirection: "column",
+              gap: 0.25,
+            }}
+          >
+            <Typography sx={{ fontSize: 12, color: t.text.primary }}>{a.action}</Typography>
+            <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
+              <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: t.primary.main }}>
+                {a.refNo}
+              </Typography>
+              <Typography sx={{ fontSize: 11, color: t.muted }}>{a.user}</Typography>
+              <Typography sx={{ fontSize: 11, color: t.muted2, ml: "auto" }}>
+                {formatDateTime(new Date(a.dt))}
+              </Typography>
+            </Box>
+          </Box>
+        ))}
+        {rows.length === 0 && (
+          <Box sx={{ px: 1.75, py: 1.5, fontSize: 12, color: t.muted }}>No activity yet.</Box>
+        )}
+      </Box>
     </TableShell>
   );
 }

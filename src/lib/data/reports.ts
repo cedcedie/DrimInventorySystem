@@ -64,10 +64,13 @@ export async function buildReportData(type: ReportType, from: Date, to: Date) {
       ]),
     ].sort((a, b) => (a[0] < b[0] ? 1 : -1));
 
+    const transactionCapNote =
+      stockIns.length === REPORT_ROW_CAP || stockOuts.length === REPORT_ROW_CAP ? " (showing first 5000 rows)" : "";
+
     return {
       headers: ["Date", "Type", "Ref", "Description"],
       rows,
-      summary: `${rows.length} transactions · ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")}${capNote(rows.length)}`,
+      summary: `${rows.length} transactions · ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")}${transactionCapNote}`,
     };
   }
 

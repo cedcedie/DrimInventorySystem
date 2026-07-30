@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Box, ButtonBase, InputBase, MenuItem, Select, Typography, Alert, Link as MuiLink } from "@mui/material";
+import { Box, ButtonBase, InputBase, MenuItem, Select, Typography, Alert } from "@mui/material";
 import { fetchJson } from "@/lib/api";
-import { postJson } from "@/lib/mutate";
 import { queryKeys } from "@/lib/queryKeys";
 import { KpiSkeleton } from "@/components/Skeleton";
 import { useTheme, type Palette } from "@mui/material/styles";
@@ -47,21 +46,48 @@ export function ReportsScreen({
   const [from, setFrom] = useState(firstOfMonthIso());
   const [to, setTo] = useState(todayIso());
   const [selectedType, setSelectedType] = useState<(typeof REPORT_TYPES)[number]["title"]>("Stock Report");
-  const [lastExport, setLastExport] = useState<{ refNo: string; url: string } | null>(null);
+  const [lastExport, setLastExport] = useState<{ refNo: string; rows: string } | null>(null);
   const [error, setError] = useState("");
 
   const exportMutation = useMutation({
-    mutationFn: () =>
-      postJson<{ refNo: string; url: string }>("/api/reports/export", {
-        type: selectedType,
-        from,
-        to,
-      }),
+    // The route streams the PDF back as bytes rather than storing it and
+    // returning a link, so this reads a blob and saves it via a temporary
+    // object URL instead of parsing JSON.
+    mutationFn: async () => {
+      const res = await fetch("/api/reports/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: selectedType, from, to }),
+      });
+
+      if (!res.ok) {
+        const message = await res
+          .json()
+          .then((b) => b.error as string)
+          .catch(() => "Report export failed");
+        throw new Error(message);
+      }
+
+      const refNo = res.headers.get("X-Report-Ref") ?? "Report";
+      const rows = res.headers.get("X-Report-Rows") ?? "0";
+      const blob = await res.blob();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${refNo}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      return { refNo, rows };
+    },
     onSuccess: (result) => {
       setLastExport(result);
       setError("");
       queryClient.invalidateQueries({ queryKey: ["activity"] });
-      showToast(`${result.refNo} exported to PDF.`);
+      showToast(`${result.refNo} downloaded.`);
     },
     onError: (e: Error) => setError(e.message),
   });
@@ -163,11 +189,7 @@ export function ReportsScreen({
       )}
       {lastExport && (
         <Alert severity="success" sx={{ mb: 1.75 }}>
-          {lastExport.refNo} generated —{" "}
-          <MuiLink href={lastExport.url} target="_blank" rel="noopener noreferrer">
-            open PDF
-          </MuiLink>{" "}
-          (signed link, expires in 1 hour)
+          {lastExport.refNo} downloaded — {lastExport.rows} rows. Check your downloads folder.
         </Alert>
       )}
 

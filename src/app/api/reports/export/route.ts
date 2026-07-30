@@ -3,7 +3,6 @@ import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { buildReportData, type ReportType } from "@/lib/data/reports";
 import { generateReportPdf } from "@/lib/pdfReport";
-import { uploadToR2, getSignedR2Url } from "@/lib/r2";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { reportExportSchema } from "@/lib/schemas";
@@ -50,12 +49,11 @@ export async function POST(req: Request) {
   });
 
   const refNo = await nextReportRefNo();
-  const key = `reports/${refNo}.pdf`;
 
   try {
-    await uploadToR2(key, Buffer.from(pdfBytes), "application/pdf");
-    const signedUrl = await getSignedR2Url(key);
-
+    // The PDF is a view over the database, not data in its own right — it can be
+    // regenerated at any time. Streaming it straight to the browser avoids a
+    // storage round-trip, expiring signed URLs, and orphaned files in a bucket.
     await prisma.activityLog.create({
       data: {
         userId: auth.session.user.id,
@@ -65,7 +63,20 @@ export async function POST(req: Request) {
     });
 
     revalidateAfterMutation([]);
-    return NextResponse.json({ refNo, url: signedUrl, summary, rowCount: rows.length });
+
+    return new NextResponse(Buffer.from(pdfBytes), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${refNo}.pdf"`,
+        "Content-Length": String(pdfBytes.length),
+        // Report content reflects the data at generation time — never cache it.
+        "Cache-Control": "no-store",
+        // Surfaces the ref number and row count to the client without a second request.
+        "X-Report-Ref": refNo,
+        "X-Report-Rows": String(rows.length),
+      },
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Report export failed";
     return NextResponse.json({ error: message }, { status: 500 });

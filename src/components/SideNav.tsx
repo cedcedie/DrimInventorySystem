@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Box, Drawer, Typography, useMediaQuery, useTheme } from "@mui/material";
 import type { Role } from "@prisma/client";
 import { MODULE_ACCESS } from "@/lib/rbac";
@@ -26,28 +27,17 @@ export function SideNav({
   const activeSegment = pathname?.split("/").filter(Boolean)[0] ?? "";
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
-  const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  // isPending flips true the instant a nav click fires, before any network
-  // activity starts — that's the immediate feedback that was missing.
-  const [isPending, startTransition] = useTransition();
+  // Navigation is handled by next/link, which prefetches each route when the
+  // item scrolls into view. pendingSegment only drives the pressed-state
+  // styling between the click and the new route committing.
   const [pendingSegment, setPendingSegment] = useState<string | null>(null);
 
-  // Once the URL actually catches up to the click, drop the pending flag —
-  // covers the transition finishing after isPending itself already settled.
+  // Once the URL actually catches up to the click, drop the pending flag.
   useEffect(() => {
     setPendingSegment(null);
   }, [pathname]);
-
-  const go = (segment: string) => {
-    onMobileClose?.();
-    if (segment === activeSegment) return;
-    setPendingSegment(segment);
-    startTransition(() => {
-      router.push(`/${segment}`);
-    });
-  };
 
   const navContent = (
     <>
@@ -72,13 +62,19 @@ export function SideNav({
             </Typography>
             {items.map((item) => {
               const active = item.segment === activeSegment;
-              const pending = isPending && pendingSegment === item.segment;
+              const pending = pendingSegment === item.segment;
               const label = screenTitleForRole(item.segment, role);
               const badge = badges[item.segment] ?? "";
               return (
                 <Box
                   key={item.segment}
-                  onClick={() => go(item.segment)}
+                  component={Link}
+                  href={`/${item.segment}`}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => {
+                    onMobileClose?.();
+                    if (item.segment !== activeSegment) setPendingSegment(item.segment);
+                  }}
                   sx={{
                     display: "flex",
                     alignItems: "center",
@@ -97,6 +93,10 @@ export function SideNav({
                     opacity: pending ? 0.7 : 1,
                     transition: "opacity 0.1s ease, background-color 0.1s ease",
                     "&:hover": { bgcolor: active ? t.surface : t.hover },
+                    "&:focus-visible": {
+                      outline: `2px solid ${ACCENT}`,
+                      outlineOffset: "-2px",
+                    },
                   }}
                 >
                   <span>{label}</span>

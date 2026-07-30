@@ -22,10 +22,12 @@ const getBadgeCounts = unstable_cache(
 );
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+  // These are independent — the badge counts don't depend on who's logged in,
+  // so awaiting them in sequence added a needless round-trip to every navigation.
+  const [session, badgeCounts] = await Promise.all([auth(), getBadgeCounts()]);
   if (!session?.user) redirect("/login");
 
-  const { productCount, supplierCount, userCount, technicianCount } = await getBadgeCounts();
+  const { productCount, supplierCount, userCount, technicianCount } = badgeCounts;
 
   const badges: Record<string, string> = {
     inventory: String(productCount),

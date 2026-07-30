@@ -1,10 +1,12 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
+// Mutations call revalidateTag("dashboard"), so a short revalidate window buys
+// nothing but extra load — stale data is already invalidated on write.
 export const getDashboardData = unstable_cache(
   async () => fetchDashboardData(),
   ["dashboard-data"],
-  { revalidate: 20, tags: ["dashboard"] }
+  { revalidate: 60, tags: ["dashboard"] }
 );
 
 async function fetchDashboardData() {

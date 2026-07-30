@@ -367,4 +367,54 @@ These are yours, not mine. I've given a recommendation for each.
 
 ---
 
-**Nothing in this document has been implemented.** No application file has been modified during this audit. Awaiting your approval of §7 and answers to §8 before Phase 3.
+---
+
+## 10. Phase 3 — What Was Built (2026-07-30)
+
+All four tiers implemented and committed. Every item verified by typecheck, production build, and — where behavior mattered — a live probe against the database.
+
+### Tier 1 — performance (`24363ca`)
+| Change | Result |
+|---|---|
+| `SideNav` → `next/link` | **Routes prefetch again.** Also fixes middle/ctrl-click and adds `aria-current` + focus rings |
+| `stock/loading.tsx` | Last missing route skeleton |
+| Layout `Promise.all` | Removed a per-navigation round-trip |
+| Cache 20s → 60s | Tag revalidation already handled freshness |
+| PDFs stream directly | No R2 dependency, no expiring links, no orphaned files |
+
+### Tier 2 — account management (`1b2398c`)
+- `PATCH /api/me/password` — verifies current password, rate-limited 5/min (it is a password oracle)
+- `GET`/`PATCH /api/me` — self-service profile; username and role deliberately immutable
+- `PATCH /api/users/[id]` — Owner-only; **refuses to demote or deactivate the last active Owner**
+- `/profile` screen, reachable from the ChromeBar user block
+- Middleware `SELF_SERVICE_SEGMENTS` allowlist so self-scoped routes bypass module RBAC
+
+### Tier 3 — data integrity (`3625e4d`)
+- `StockAdjustment` + `AdjustmentReason` enum; stores `qtyBefore`/`qtyAfter`/`delta`
+- `POST /api/stock-adjustments` — serializable; updates product, writes adjustment and `ActivityLog` atomically
+- **`stocks` removed from `productUpdateSchema`** — verified: a payload with `stocks: 99999` is stripped before it reaches the database
+- `CompanySettings` singleton; the Settings form went from mockup to functional
+- Company name and address now print on the PDF letterhead
+
+### Tier 4 — interface (`ee35456`)
+- `stock` palette group (healthy/low/out/pending) replacing six hardcoded hexes, one of which had drifted from the token file and none of which adapted to dark mode
+- Stock-level meter bars in Inventory
+- Role-composed dashboard — stock valuation is Owner/Admin only; Technicians see "your open requests" in the wide slot
+- Empty states rewritten to say what fills the screen; Inventory distinguishes a filtered no-match from an empty catalog
+- `BlobStore` seam — `put`/`url`, Postgres adapter active, R2 adapter dormant. **Verified: correct adapter selected, bytes round-trip intact**
+
+### Verified by live probe
+- Adjustment: 46 → 44, delta −2, recorded and rolled back clean
+- Product update: `stocks` stripped from payload — integrity hole closed
+- BlobStore: Postgres adapter selected, bytes round-tripped, same-origin URL produced
+
+### Still yours to do
+1. **Rotate the Neon password** — it was pasted into a chat transcript
+2. Create the Cloudflare account (no card needed for Pages)
+3. Connect the repo in Pages and set env vars: `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `AUTH_URL`
+4. Generate a fresh production `AUTH_SECRET` (`npx auth secret`)
+5. Create a production Neon branch
+6. Optional: activate R2 and paste the four `R2_*` vars — images move to R2 with no code change
+
+### Not built (deferred by decision)
+Transfers (single warehouse), batch/lot/expiry, multi-location, barcode, supplier lead-time, structured `ActivityLog`, profile pictures, top-level error handler, magic-byte upload verification, motion polish.

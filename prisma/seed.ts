@@ -149,6 +149,19 @@ const activitySeed = activityBase.concat(
 async function main() {
   const passwordHash = await bcrypt.hash("demo1234", 10);
 
+  // Single-row company profile. Values match what used to be hardcoded in
+  // src/lib/data/settings.ts, so the Settings screen looks unchanged.
+  await prisma.companySettings.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: {
+      id: "singleton",
+      name: "DRIM Refrigeration & Industrial Services",
+      warehouseLocation: "Km. 7, Diversion Road, Davao City",
+      currency: "PHP — Philippine Peso (₱)",
+    },
+  });
+
   const categories = await Promise.all(
     CATEGORY_NAMES.map((name) => prisma.category.upsert({ where: { name }, update: {}, create: { name } }))
   );

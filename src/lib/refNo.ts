@@ -9,7 +9,7 @@ type Tx = PrismaClient | Prisma.TransactionClient;
  * mutations from generating the same ref). */
 export async function nextRefNo(
   tx: Tx,
-  model: "stockIn" | "stockOut" | "mrf",
+  model: "stockIn" | "stockOut" | "mrf" | "stockAdjustment",
   prefix: string,
   padLength = 4
 ): Promise<string> {

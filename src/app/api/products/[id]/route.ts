@@ -15,10 +15,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const parsed = await parseBody(req, productUpdateSchema);
   if ("error" in parsed) return parsed.error;
-  const { code, name, categoryId, unit, amount, stocks, minLevel, supplierId, imageKey } = parsed.data;
+  const { code, name, categoryId, unit, amount, minLevel, supplierId, imageKey } = parsed.data;
 
   try {
     const product = await prisma.$transaction(async (tx) => {
+      // `stocks` is intentionally not written here — see productUpdateSchema.
+      // Count changes go through Stock In/Out or POST /api/stock-adjustments.
       const updated = await tx.product.update({
         where: { id },
         data: {
@@ -27,7 +29,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           categoryId,
           unit,
           amount: amount ?? 0,
-          stocks: stocks ?? 0,
           minLevel: minLevel ?? 0,
           supplierId: supplierId || null,
           imageKey: imageKey || null,

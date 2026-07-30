@@ -26,6 +26,15 @@ enum MrfStatus {
   CANCELLED
 }
 
+enum AdjustmentReason {
+  MISCOUNT      // physical count didn't match the system
+  DAMAGED       // goods damaged or otherwise unusable
+  LOST          // missing, no explanation found
+  FOUND         // stock located that the system didn't know about
+  RETURN        // returned unused from a project
+  CORRECTION    // fixing a data-entry mistake
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -36,6 +45,8 @@ model User {
   activities   ActivityLog[]
   stockIns     StockIn[]
   stockOuts    StockOut[]
+  adjustments  StockAdjustment[]
+  settingsEdits CompanySettings[]
   technician   Technician?
   createdAt    DateTime @default(now())
 }
@@ -71,6 +82,7 @@ model Product {
   stockIns   StockIn[]
   stockOuts  StockOut[]
   mrfs       Mrf[]
+  adjustments StockAdjustment[]
   @@index([categoryId])
   @@index([supplierId])
 }
@@ -138,6 +150,39 @@ model StockOut {
   @@index([technicianId])
   @@index([byUserId])
   @@index([createdAt])
+}
+
+// A correction to a stock count that isn't a receipt or a release — a
+// physical recount, damage, or a data-entry fix. Recorded as a first-class
+// transaction so the count can never change without an attributable reason.
+model StockAdjustment {
+  id         String @id @default(cuid())
+  refNo      String @unique   // ADJ-0001
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  qtyBefore  Int              // what the system said at the time
+  qtyAfter   Int              // what it was corrected to
+  delta      Int              // qtyAfter - qtyBefore, signed
+  reason     AdjustmentReason
+  note       String?
+  byUserId   String
+  byUser     User @relation(fields: [byUserId], references: [id])
+  createdAt  DateTime @default(now())
+  @@index([productId])
+  @@index([byUserId])
+  @@index([createdAt])
+}
+
+// Single-row table: the id is pinned to "singleton" so the row can be
+// upserted safely and a second company profile can't be created by accident.
+model CompanySettings {
+  id                String @id @default("singleton")
+  name              String
+  warehouseLocation String
+  currency          String @default("PHP — Philippine Peso (₱)")
+  updatedAt         DateTime @updatedAt
+  updatedById       String?
+  updatedBy         User? @relation(fields: [updatedById], references: [id])
 }
 
 model ActivityLog {

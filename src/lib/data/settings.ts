@@ -1,17 +1,38 @@
+import { unstable_cache } from "next/cache";
+import { prisma } from "@/lib/prisma";
 import { PERM_SUMMARY, ROLE_LABELS } from "@/lib/navConfig";
 
-export async function getSettingsData() {
+const COMPANY_DEFAULTS = {
+  name: "DRIM Refrigeration & Industrial Services",
+  warehouseLocation: "Km. 7, Diversion Road, Davao City",
+  currency: "PHP — Philippine Peso (₱)",
+};
+
+/** The company profile is a single pinned row. Reads fall back to the seed
+ * defaults so a database that hasn't been seeded still renders sensibly. */
+export async function getCompanySettings() {
+  const row = await prisma.companySettings.findUnique({ where: { id: "singleton" } });
   return {
-    company: {
-      name: "DRIM Refrigeration & Industrial Services",
-      warehouseLocation: "Km. 7, Diversion Road, Davao City",
-      currency: "PHP — Philippine Peso (₱)",
-    },
+    name: row?.name ?? COMPANY_DEFAULTS.name,
+    warehouseLocation: row?.warehouseLocation ?? COMPANY_DEFAULTS.warehouseLocation,
+    currency: row?.currency ?? COMPANY_DEFAULTS.currency,
+  };
+}
+
+const getCachedSettingsData = unstable_cache(
+  async () => ({
+    company: await getCompanySettings(),
     permRows: (Object.keys(ROLE_LABELS) as Array<keyof typeof ROLE_LABELS>).map((role) => ({
       role: ROLE_LABELS[role],
       perms: PERM_SUMMARY[role],
     })),
-  };
+  }),
+  ["settings-data"],
+  { revalidate: 300, tags: ["settings"] }
+);
+
+export async function getSettingsData() {
+  return getCachedSettingsData();
 }
 
 export type SettingsData = Awaited<ReturnType<typeof getSettingsData>>;

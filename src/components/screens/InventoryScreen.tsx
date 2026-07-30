@@ -20,6 +20,7 @@ import { patchJson, deleteJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { ProductModal, type ProductFormRow } from "@/components/modals/ProductModal";
 import { CategoryModal } from "@/components/modals/CategoryModal";
+import { AdjustStockModal, type AdjustableProduct } from "@/components/modals/AdjustStockModal";
 import type { Role } from "@prisma/client";
 import type { InventoryData } from "@/lib/data/inventory";
 
@@ -36,6 +37,7 @@ export function InventoryScreen({
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductFormRow | null>(null);
+  const [adjustingProduct, setAdjustingProduct] = useState<AdjustableProduct | null>(null);
   const isOwner = role === "OWNER";
   const canManage = role === "OWNER" || role === "ADMIN";
   const isDefaultView = q === "" && category === "All" && page === 1;
@@ -80,10 +82,10 @@ export function InventoryScreen({
   // Owner-exclusive); Actions (Edit/Delete) shows for Owner or Admin.
   const columns = canManage
     ? isOwner
-      ? "90px minmax(0,1.4fr) minmax(0,1fr) 60px 58px 92px 108px 92px 78px 128px"
-      : "90px minmax(0,1.4fr) minmax(0,1fr) 60px 58px 92px 108px 92px 128px"
+      ? "90px minmax(0,1.4fr) minmax(0,1fr) 60px 58px 92px 108px 92px 78px 196px"
+      : "90px minmax(0,1.4fr) minmax(0,1fr) 60px 58px 92px 108px 92px 196px"
     : "100px minmax(0,1.5fr) minmax(0,1.1fr) 68px 66px 100px 118px 106px";
-  const minWidth = canManage ? (isOwner ? 1000 : 940) : 780;
+  const minWidth = canManage ? (isOwner ? 1068 : 1008) : 780;
   const headers = [
     "Product Code",
     "Product Name",
@@ -274,6 +276,31 @@ export function InventoryScreen({
                       Edit
                     </ButtonBase>
                     <ButtonBase
+                      aria-label={`Adjust stock for ${r.name}`}
+                      onClick={() =>
+                        setAdjustingProduct({
+                          id: r.id,
+                          name: r.name,
+                          code: r.code,
+                          unit: r.unit,
+                          stocks: r.stocks,
+                        })
+                      }
+                      sx={{
+                        border: "1px solid",
+                        borderColor: t.border,
+                        bgcolor: t.surface,
+                        borderRadius: "2px",
+                        px: 1.25,
+                        py: 0.5,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: t.text2,
+                      }}
+                    >
+                      Adjust
+                    </ButtonBase>
+                    <ButtonBase
                       aria-label={`Delete ${r.name}`}
                       onClick={() => deleteMutation.mutate(r.id)}
                       sx={{
@@ -327,6 +354,10 @@ export function InventoryScreen({
             open={categoryModalOpen}
             onClose={() => setCategoryModalOpen(false)}
             existingNames={data.categories}
+          />
+          <AdjustStockModal
+            product={adjustingProduct}
+            onClose={() => setAdjustingProduct(null)}
           />
         </>
       )}

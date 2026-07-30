@@ -37,7 +37,20 @@ const productBase = {
 };
 
 export const productCreateSchema = z.object(productBase);
-export const productUpdateSchema = z.object(productBase);
+
+// `stocks` is deliberately absent: on an existing product the count may only
+// move through Stock In, Stock Out, or a recorded StockAdjustment. Allowing it
+// here would let an edit silently overwrite the count with no audit of the delta.
+export const productUpdateSchema = z.object({
+  code: productBase.code,
+  name: productBase.name,
+  categoryId: productBase.categoryId,
+  unit: productBase.unit,
+  amount: productBase.amount,
+  minLevel: productBase.minLevel,
+  supplierId: productBase.supplierId,
+  imageKey: productBase.imageKey,
+});
 
 export const productMinLevelSchema = z.object({
   minLevel: nonNegativeNumber,
@@ -99,6 +112,23 @@ export const stockInSchema = z.object({
 export const stockOutSchema = z.object({
   mrfId: id,
   qty: positiveQty,
+});
+
+export const stockAdjustmentSchema = z.object({
+  productId: id,
+  // The corrected on-hand count, not a delta — the operator types what they
+  // physically counted, and the server derives the delta from current stock.
+  qtyAfter: nonNegativeNumber,
+  reason: z.enum(["MISCOUNT", "DAMAGED", "LOST", "FOUND", "RETURN", "CORRECTION"], {
+    message: "Select a reason for the adjustment",
+  }),
+  note: z.string().trim().max(300, "Note is too long").optional(),
+});
+
+export const companySettingsSchema = z.object({
+  name: name("Company name", 200),
+  warehouseLocation: name("Warehouse location", 300),
+  currency: name("Currency", 60),
 });
 
 export const reportExportSchema = z.object({

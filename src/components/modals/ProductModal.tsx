@@ -91,16 +91,17 @@ export function ProductModal({
         categoryId,
         unit,
         amount: Number(amount),
-        stocks: Number(stocks),
         minLevel: Number(minLevel),
         supplierId: supplierId || null,
         imageKey,
       };
 
       if (isEdit) {
+        // No `stocks` on edit — the count only moves via Stock In/Out or a
+        // recorded adjustment, so the server rejects it here.
         return patchJson(`/api/products/${product!.id}`, payload);
       }
-      return postJson("/api/products", payload);
+      return postJson("/api/products", { ...payload, stocks: Number(stocks) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -176,14 +177,24 @@ export function ProductModal({
               ))}
             </Select>
           </FormField>
-          <FormField label="Stocks">
+          <FormField label={isEdit ? "Stocks (on hand)" : "Opening Stock"}>
             <Box
               component="input"
               type="number"
               value={stocks}
+              readOnly={isEdit}
+              title={isEdit ? "Use Adjust Stock to correct the count" : undefined}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStocks(e.target.value)}
-              sx={fieldInputSx(t)}
+              sx={{
+                ...fieldInputSx(t),
+                ...(isEdit && { bgcolor: t.hover, color: t.muted, cursor: "not-allowed" }),
+              }}
             />
+            {isEdit && (
+              <Box sx={{ fontSize: 10.5, color: t.muted2, mt: 0.5 }}>
+                Changes through Stock In/Out or Adjust Stock
+              </Box>
+            )}
           </FormField>
           <FormField label="Amount (₱)">
             <Box

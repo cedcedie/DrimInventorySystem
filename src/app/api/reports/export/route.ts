@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { buildReportData, type ReportType } from "@/lib/data/reports";
+import { getCompanySettings } from "@/lib/data/settings";
 import { generateReportPdf } from "@/lib/pdfReport";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
@@ -37,7 +38,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid date range" }, { status: 400 });
   }
 
-  const { headers, rows, summary } = await buildReportData(type, from, to);
+  const [{ headers, rows, summary }, company] = await Promise.all([
+    buildReportData(type, from, to),
+    getCompanySettings(),
+  ]);
   const generatedAt = new Date();
 
   const pdfBytes = await generateReportPdf({
@@ -46,6 +50,7 @@ export async function POST(req: Request) {
     headers,
     rows,
     generatedAt,
+    company,
   });
 
   const refNo = await nextReportRefNo();

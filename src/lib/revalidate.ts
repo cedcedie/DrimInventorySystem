@@ -10,7 +10,9 @@ export type CacheTag =
   | "activity"
   | "stock-in"
   | "stock-out"
-  | "mrf";
+  | "mrf"
+  | "adjustments"
+  | "settings";
 
 /** Every mutation writes an ActivityLog row, so "activity" + "dashboard"
  * (recent transactions feed) are revalidated alongside whichever module's

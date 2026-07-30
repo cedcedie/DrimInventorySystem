@@ -11,8 +11,10 @@ export async function generateReportPdf(params: {
   headers: string[];
   rows: string[][];
   generatedAt: Date;
+  /** Company profile for the letterhead; falls back to the product name. */
+  company?: { name: string; warehouseLocation: string };
 }): Promise<Uint8Array> {
-  const { title, summary, headers, rows, generatedAt } = params;
+  const { title, summary, headers, rows, generatedAt, company } = params;
 
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -21,7 +23,23 @@ export async function generateReportPdf(params: {
   let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   let y = PAGE_HEIGHT - MARGIN;
 
-  page.drawText("DRIM Inventory System", { x: MARGIN, y, size: 9, font, color: rgb(0.55, 0.6, 0.65) });
+  page.drawText(company?.name ?? "DRIM Inventory System", {
+    x: MARGIN,
+    y,
+    size: 10,
+    font: boldFont,
+    color: rgb(0.24, 0.28, 0.33),
+  });
+  if (company?.warehouseLocation) {
+    y -= 11;
+    page.drawText(company.warehouseLocation, {
+      x: MARGIN,
+      y,
+      size: 8.5,
+      font,
+      color: rgb(0.55, 0.6, 0.65),
+    });
+  }
   y -= 20;
   page.drawText(title, { x: MARGIN, y, size: 18, font: boldFont, color: rgb(0.14, 0.16, 0.2) });
   y -= 16;

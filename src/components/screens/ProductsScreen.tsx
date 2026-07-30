@@ -161,7 +161,7 @@ export function ProductsScreen({
           ))}
           {data.rows.length === 0 && (
             <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-              No products in the catalog yet.
+              No products yet. Use + Add Product to create the first catalog entry.
             </Box>
           )}
           {data.totalPages > 1 && (

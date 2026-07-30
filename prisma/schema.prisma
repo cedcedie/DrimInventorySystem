@@ -185,6 +185,16 @@ model CompanySettings {
   updatedBy         User? @relation(fields: [updatedById], references: [id])
 }
 
+// Bytes for uploaded files while the Postgres BlobStore adapter is active.
+// Rows here become dead weight once R2 is configured; see src/lib/storage.
+model StoredBlob {
+  key         String @id            // products/<uuid>.webp — same shape as an R2 object key
+  contentType String
+  size        Int
+  bytes       Bytes
+  createdAt   DateTime @default(now())
+}
+
 model ActivityLog {
   id        String @id @default(cuid())
   userId    String

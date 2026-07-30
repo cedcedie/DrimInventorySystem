@@ -23,7 +23,7 @@ export default async function DashboardPage() {
         permSummary={PERM_SUMMARY[role]}
       />
       <ScreenBody>
-        <DashboardScreen initialData={data} />
+        <DashboardScreen role={role} initialData={data} />
       </ScreenBody>
     </>
   );

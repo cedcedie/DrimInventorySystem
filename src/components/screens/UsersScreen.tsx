@@ -132,7 +132,7 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
           ))}
           {data.rows.length === 0 && (
             <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-              No user accounts yet.
+              No accounts yet. Use + Add User to create the first one.
             </Box>
           )}
           {data.totalPages > 1 && (

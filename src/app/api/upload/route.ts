@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireModuleAccess, isOwnerOrAdmin } from "@/lib/apiAuth";
-import { uploadToR2 } from "@/lib/r2";
+import { getBlobStore } from "@/lib/storage";
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -27,11 +27,12 @@ export async function POST(req: Request) {
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const extension = file.type.split("/")[1];
-  const key = `products/${crypto.randomUUID()}.${extension}`;
 
   try {
-    await uploadToR2(key, buffer, file.type);
-    return NextResponse.json({ imageKey: key });
+    // Postgres or R2 depending on whether the R2_* vars are set — this route
+    // doesn't know or care which.
+    const imageKey = await getBlobStore().put(buffer, file.type, extension);
+    return NextResponse.json({ imageKey });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Upload failed";
     return NextResponse.json({ error: message }, { status: 500 });

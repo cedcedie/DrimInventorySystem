@@ -48,7 +48,7 @@ export function ScreenHeader({
             width: 7,
             height: 7,
             borderRadius: "50%",
-            bgcolor: "#2f8a4c",
+            bgcolor: t.success,
             flexShrink: 0,
           }}
         />

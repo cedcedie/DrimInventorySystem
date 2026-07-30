@@ -11,18 +11,26 @@ import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/Da
 import { StatusChip } from "@/components/StatusChip";
 import { KpiSkeleton, TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
+import type { Role } from "@prisma/client";
 import type { DashboardData } from "@/lib/data/dashboard";
 
 const TX_COLS = "126px 78px 88px minmax(0,1fr) 92px 96px";
 const ALERT_COLS = "minmax(0,1.5fr) 1fr 40px 52px";
 
-export function DashboardScreen({ initialData }: { initialData?: DashboardData }) {
+export function DashboardScreen({
+  role,
+  initialData,
+}: {
+  role: Role;
+  initialData?: DashboardData;
+}) {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.dashboard,
     queryFn: () => fetchJson<DashboardData>("/api/dashboard"),
     initialData,
   });
   const t = useTheme().palette;
+  const seesValuation = role === "OWNER" || role === "ADMIN";
 
   if (isLoading || !data) {
     return (
@@ -47,34 +55,40 @@ export function DashboardScreen({ initialData }: { initialData?: DashboardData }
     <Box>
       <Box sx={{ mb: 2 }}>
         <BentoGrid>
-          <StatCard
-            label="Stock Value"
-            value={peso(Math.round(data.kpis.totalValue))}
-            sub="total inventory value across all items"
-            span={2}
-          />
-          <StatCard
-            label="Products Tracked"
-            value={data.kpis.totalProducts}
-            sub={`${data.kpis.categoryCount} categories`}
-          />
+          {/* Stock valuation is financial data — Owner and Admin only. The
+              warehouse floor and technicians can't act on it, and leading
+              their dashboard with it buries what they can act on. */}
+          {seesValuation && (
+            <StatCard
+              label="Stock Value"
+              value={peso(Math.round(data.kpis.totalValue))}
+              sub="total inventory value across all items"
+              span={2}
+            />
+          )}
           <StatCard
             label="Pending MRFs"
             value={data.kpis.pendingMrfCount}
-            sub="awaiting fulfillment"
-            accent={t.primary.main}
-          />
-          <StatCard
-            label="Low Stock"
-            value={data.kpis.lowStockCount}
-            sub="at or below min. level"
-            accent="#c07d16"
+            sub={role === "TECHNICIAN" ? "your open requests" : "awaiting fulfillment"}
+            accent={t.stock.pending}
+            span={seesValuation ? 1 : 2}
           />
           <StatCard
             label="Out of Stock"
             value={data.kpis.outOfStockCount}
             sub="needs replenishment"
-            accent="#a13230"
+            accent={t.stock.out}
+          />
+          <StatCard
+            label="Low Stock"
+            value={data.kpis.lowStockCount}
+            sub="at or below min. level"
+            accent={t.stock.low}
+          />
+          <StatCard
+            label="Products Tracked"
+            value={data.kpis.totalProducts}
+            sub={`${data.kpis.categoryCount} categories`}
           />
         </BentoGrid>
       </Box>
@@ -121,7 +135,7 @@ export function DashboardScreen({ initialData }: { initialData?: DashboardData }
             ))}
             {data.transactions.length === 0 && (
               <Box sx={{ px: 1.75, py: 2, fontSize: 12.5, color: t.muted }}>
-                No transactions recorded yet.
+                No stock movements yet. Recording a Stock In or Stock Out will list it here.
               </Box>
             )}
           </TableShell>
@@ -130,15 +144,17 @@ export function DashboardScreen({ initialData }: { initialData?: DashboardData }
         <Box sx={{ flex: "1 1 280px", minWidth: 280, display: "flex", flexDirection: "column", gap: 2 }}>
           <AlertPanel
             title="Low Stock Alerts"
-            dotColor="#c07d16"
+            dotColor={t.stock.low}
             rows={data.lowAlerts}
-            qtyColor={t.warning.main}
+            qtyColor={t.stock.low}
+            emptyMessage="Every product is above its minimum level."
           />
           <AlertPanel
             title="Out of Stock Alerts"
-            dotColor="#a13230"
+            dotColor={t.stock.out}
             rows={data.outAlerts}
-            qtyColor={t.error.main}
+            qtyColor={t.stock.out}
+            emptyMessage="Nothing is out of stock."
           />
           <ActivityPanel rows={data.activity} />
         </Box>
@@ -152,11 +168,14 @@ function AlertPanel({
   dotColor,
   rows,
   qtyColor,
+  emptyMessage,
 }: {
   title: string;
   dotColor: string;
   rows: { product: string; category: string; qty: number; unit: string }[];
   qtyColor: string;
+  /** An empty alert panel is good news, so it says so rather than "None." */
+  emptyMessage: string;
 }) {
   const t = useTheme().palette;
 
@@ -190,7 +209,7 @@ function AlertPanel({
         </TableRow>
       ))}
       {rows.length === 0 && (
-        <Box sx={{ px: 1.75, py: 1.5, fontSize: 12, color: t.muted }}>None.</Box>
+        <Box sx={{ px: 1.75, py: 1.5, fontSize: 12, color: t.muted }}>{emptyMessage}</Box>
       )}
     </TableShell>
   );
@@ -246,7 +265,9 @@ function ActivityPanel({
           </Box>
         ))}
         {rows.length === 0 && (
-          <Box sx={{ px: 1.75, py: 1.5, fontSize: 12, color: t.muted }}>No activity yet.</Box>
+          <Box sx={{ px: 1.75, py: 1.5, fontSize: 12, color: t.muted }}>
+            Actions taken in the system will appear here.
+          </Box>
         )}
       </Box>
     </TableShell>

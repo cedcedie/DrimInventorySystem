@@ -14,6 +14,7 @@ import {
   Pagination,
 } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
+import { StockMeter } from "@/components/StockMeter";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
 import { patchJson, deleteJson } from "@/lib/mutate";
@@ -217,7 +218,10 @@ export function InventoryScreen({
                 {r.name}
               </TableCell>
               <TableCell color={t.muted}>{r.category}</TableCell>
-              <TableCell bold>{r.stocks}</TableCell>
+              <TableCell bold sx={{ overflow: "visible" }}>
+                {r.stocks}
+                <StockMeter stocks={r.stocks} minLevel={r.minLevel} />
+              </TableCell>
               <TableCell color={t.muted}>{r.unit}</TableCell>
               <TableCell mono>{peso(r.amount)}</TableCell>
               <TableCell mono bold>
@@ -324,7 +328,9 @@ export function InventoryScreen({
           ))}
           {data.rows.length === 0 && (
             <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-              No products match your filters.
+              {q || category !== "All"
+                ? `No products match ${q ? `"${q}"` : "this category"}. Clear the filters to see everything.`
+                : "No products yet. Add one from Products/Materials to start tracking stock."}
             </Box>
           )}
           {data.totalPages > 1 && (

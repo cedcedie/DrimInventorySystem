@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { Box } from "@mui/material";
+import { lightTokens } from "@/theme/tokens";
 
 const ToastContext = createContext<{ showToast: (msg: string) => void }>({
   showToast: () => {},
@@ -40,7 +41,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             py: 1.375,
             fontSize: "12.5px",
             fontWeight: 600,
-            borderLeft: "3px solid #2f8a4c",
+            // The toast sits on a fixed dark surface in both modes, so this
+            // uses the light-mode success value directly rather than the
+            // theme token, which would wash out against #1f2a35 in dark mode.
+            borderLeft: `3px solid ${lightTokens.success}`,
             boxShadow: "0 8px 30px rgba(0,0,0,0.3)",
             zIndex: 1400,
           }}

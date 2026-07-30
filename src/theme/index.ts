@@ -1,6 +1,16 @@
 import { createTheme, type ThemeOptions } from "@mui/material/styles";
 import { ACCENT, darkTokens, lightTokens } from "./tokens";
 
+/** The four states a product's stock level can be in. Named for the domain
+ * rather than by severity so a screen asks for `stock.low`, not `warning`,
+ * and both modes stay in step from one place. */
+interface StockPalette {
+  healthy: string;
+  low: string;
+  out: string;
+  pending: string;
+}
+
 declare module "@mui/material/styles" {
   interface Palette {
     surface: string;
@@ -13,6 +23,7 @@ declare module "@mui/material/styles" {
     text2: string;
     line: string;
     line2: string;
+    stock: StockPalette;
   }
   interface PaletteOptions {
     surface?: string;
@@ -25,6 +36,7 @@ declare module "@mui/material/styles" {
     text2?: string;
     line?: string;
     line2?: string;
+    stock?: StockPalette;
   }
 }
 
@@ -73,6 +85,12 @@ export const lightTheme = createTheme({
     text2: lightTokens.text2,
     line: lightTokens.line,
     line2: lightTokens.line2,
+    stock: {
+      healthy: lightTokens.success,
+      low: lightTokens.warn,
+      out: lightTokens.danger,
+      pending: ACCENT,
+    },
   },
 });
 
@@ -96,5 +114,11 @@ export const darkTheme = createTheme({
     text2: darkTokens.text2,
     line: darkTokens.line,
     line2: darkTokens.line2,
+    stock: {
+      healthy: darkTokens.success,
+      low: darkTokens.warn,
+      out: darkTokens.danger,
+      pending: "#8fbde8",
+    },
   },
 });

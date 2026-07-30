@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Generates the typed client from schema.prisma. No database connection
+      # is made — generate only reads the schema file.
+      - name: Generate Prisma client
+        run: pnpm prisma generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      # Placeholder values only. The build never connects to a database, but
+      # Prisma and Auth.js both refuse to initialise without their vars set.
+      - name: Build
+        run: pnpm build
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/placeholder
+          DIRECT_URL: postgresql://user:password@localhost:5432/placeholder
+          AUTH_SECRET: ci-placeholder-secret-not-used-at-runtime

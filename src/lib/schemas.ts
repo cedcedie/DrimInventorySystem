@@ -52,6 +52,38 @@ export const userCreateSchema = z.object({
   }),
 });
 
+export const profileUpdateSchema = z.object({
+  name: name("Name"),
+});
+
+export const passwordChangeSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password"),
+    newPassword: z
+      .string()
+      .min(8, "New password must be at least 8 characters")
+      .max(200, "New password is too long"),
+    confirmPassword: z.string().min(1, "Confirm your new password"),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, {
+    message: "New passwords do not match",
+    path: ["confirmPassword"],
+  })
+  .refine((v) => v.currentPassword !== v.newPassword, {
+    message: "New password must be different from the current one",
+    path: ["newPassword"],
+  });
+
+// Owner-only edit of another account. Username stays immutable — it's the
+// identity key that ActivityLog refNos and technician links resolve against.
+export const userUpdateSchema = z.object({
+  name: name("Name"),
+  role: z.enum(["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"], {
+    message: "A valid role is required",
+  }),
+  status: z.enum(["ACTIVE", "INACTIVE"], { message: "A valid status is required" }),
+});
+
 export const mrfCreateSchema = z.object({
   productId: id,
   qty: positiveQty,

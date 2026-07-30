@@ -2,6 +2,7 @@
 
 import { Box, ButtonBase } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
 import type { Role } from "@prisma/client";
 import { useColorMode } from "@/theme/ThemeRegistry";
@@ -104,15 +105,23 @@ export function ChromeBar({
 
       <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
         <Box
+          component={Link}
+          href="/profile"
+          title="My account"
           sx={{
             display: "flex",
             alignItems: "center",
             gap: "8px",
             borderLeft: "1px solid #3a4855",
             pl: "12px",
+            color: "inherit",
+            textDecoration: "none",
+            "&:hover .chrome-avatar": { bgcolor: ACCENT },
+            "&:focus-visible": { outline: `2px solid ${ACCENT}`, outlineOffset: "2px" },
           }}
         >
           <Box
+            className="chrome-avatar"
             sx={{
               width: 26,
               height: 26,
@@ -122,6 +131,7 @@ export function ChromeBar({
               placeItems: "center",
               fontSize: "10.5px",
               fontWeight: 700,
+              transition: "background-color 0.12s ease",
             }}
           >
             {initialsOf(userName)}

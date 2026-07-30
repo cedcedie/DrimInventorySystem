@@ -39,6 +39,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   users: "Users",
   activity: "Activity Log",
   settings: "Settings",
+  profile: "My Account",
 };
 
 export const SCREEN_SUBTITLES: Record<string, string> = {
@@ -52,6 +53,7 @@ export const SCREEN_SUBTITLES: Record<string, string> = {
   users: "System accounts and roles",
   activity: "Complete audit trail of system actions",
   settings: "Company profile and system configuration",
+  profile: "Your display name and password",
 };
 
 // Stock In/Out renders as Material Requests (MRF) for technicians per README RBAC note.

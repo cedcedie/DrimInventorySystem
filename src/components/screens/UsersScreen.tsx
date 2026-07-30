@@ -21,6 +21,7 @@ import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import { UserModal } from "@/components/modals/UserModal";
+import { EditUserModal, type EditableUser } from "@/components/modals/EditUserModal";
 import type { Role, UserStatus } from "@prisma/client";
 import type { UsersData } from "@/lib/data/users";
 
@@ -38,12 +39,13 @@ interface HistoryRow {
   ref: string;
 }
 
-const COLS = "minmax(0,1.1fr) 160px minmax(0,1.6fr) 90px";
+const COLS = "minmax(0,1.1fr) 160px minmax(0,1.6fr) 90px 64px";
 const HIST_COLS = "130px minmax(0,1fr) 96px";
 
 export function UsersScreen({ initialData }: { initialData?: UsersData }) {
   const [page, setPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+  const [editingUser, setEditingUser] = useState<EditableUser | null>(null);
   const [addUserOpen, setAddUserOpen] = useState(false);
 
   const { data, isFetching } = useQuery({
@@ -89,7 +91,10 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
         <TableSkeleton label="Loading user accounts…" columns={4} rows={6} />
       ) : (
         <TableShell minWidth={600} dimmed={isFetching}>
-          <TableHeaderRow columns={COLS} headers={["Name", "Role", "Recent Activity", "Status"]} />
+          <TableHeaderRow
+            columns={COLS}
+            headers={["Name", "Role", "Recent Activity", "Status", ""]}
+          />
           {data.rows.map((r) => (
             <TableRow key={r.id} columns={COLS} onClick={() => setSelectedUser(r)}>
               <TableCell bold>{r.name}</TableCell>
@@ -99,6 +104,29 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
               </TableCell>
               <TableCell>
                 <StatusChip label={r.status === "ACTIVE" ? "Active" : "Inactive"} />
+              </TableCell>
+              <TableCell>
+                <ButtonBase
+                  aria-label={`Edit account for ${r.name}`}
+                  onClick={(e) => {
+                    // The row itself opens activity history — don't trigger both.
+                    e.stopPropagation();
+                    setEditingUser({ id: r.id, name: r.name, role: r.role, status: r.status });
+                  }}
+                  sx={{
+                    border: "1px solid",
+                    borderColor: t.border,
+                    borderRadius: "2px",
+                    px: 1,
+                    py: 0.375,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: t.text2,
+                    "&:hover": { borderColor: t.primary.main, color: t.primary.main },
+                  }}
+                >
+                  Edit
+                </ButtonBase>
               </TableCell>
             </TableRow>
           ))}
@@ -177,6 +205,7 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
       </Dialog>
 
       <UserModal open={addUserOpen} onClose={() => setAddUserOpen(false)} />
+      <EditUserModal user={editingUser} onClose={() => setEditingUser(null)} />
     </Box>
   );
 }

@@ -9,6 +9,7 @@ export const queryKeys = {
   userHistory: (userId: string) => ["users", userId, "history"] as const,
   activity: (params: { page?: number }) => ["activity", params] as const,
   settings: ["settings"] as const,
+  profile: ["profile"] as const,
   reports: ["reports"] as const,
   stockIn: (params: { page?: number }) => ["stock-in", params] as const,
   stockOut: (params: { page?: number }) => ["stock-out", params] as const,

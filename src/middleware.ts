@@ -9,6 +9,12 @@ const { auth } = NextAuth(authConfig);
 
 const PUBLIC_PATHS = ["/login"];
 
+// Segments that any signed-in user may reach regardless of role, because they
+// act on that user's own account rather than on a nav module. These sit
+// outside MODULE_ACCESS by design — gating them by role would lock every
+// non-Owner out of their own profile.
+const SELF_SERVICE_SEGMENTS = new Set(["profile", "me"]);
+
 // Some API routes don't share a literal path segment with their owning nav
 // module (e.g. /api/stock-in belongs to the "stock" module, /api/categories
 // and /api/upload belong to "products"). Map those explicitly; anything not
@@ -46,6 +52,10 @@ export default auth((req) => {
     if (!rl.allowed) {
       return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
     }
+  }
+
+  if (SELF_SERVICE_SEGMENTS.has(moduleSegment)) {
+    return NextResponse.next();
   }
 
   if (moduleSegment && !canAccess(session.user.role as Role, moduleSegment)) {

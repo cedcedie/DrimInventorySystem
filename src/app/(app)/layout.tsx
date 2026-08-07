@@ -1,31 +1,56 @@
 import { redirect } from "next/navigation";
-import { unstable_cache } from "next/cache";
+import { headers } from "next/headers";
 import type { Role } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
+import { PermissionsProvider } from "@/components/PermissionsProvider";
+import { MODULE_ACCESS } from "@/lib/rbac";
+import { getEffectivePermissions, isConfigurableModule } from "@/lib/effectivePermissions";
+import { NAV_GROUPS } from "@/lib/navConfig";
+import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
-// Sidebar badge counts rarely change and cost a DB round-trip each; cache them
-// for a minute instead of re-querying on every navigation.
-const getBadgeCounts = unstable_cache(
-  async () => {
-    const [productCount, supplierCount, userCount, technicianCount] = await Promise.all([
-      prisma.product.count(),
-      prisma.supplier.count(),
-      prisma.user.count(),
-      prisma.technician.count(),
-    ]);
-    return { productCount, supplierCount, userCount, technicianCount };
-  },
-  ["sidebar-badge-counts"],
-  { revalidate: 60 }
-);
+/** Tagged with entity tags so product/supplier/user/tech mutations refresh badges. */
+async function getBadgeCounts() {
+  "use cache";
+  tagAndLife(["products", "suppliers", "users", "technicians"], CACHE_SECONDS.dashboard);
+
+  const [productCount, supplierCount, userCount, technicianCount] = await Promise.all([
+    prisma.product.count(),
+    prisma.supplier.count(),
+    prisma.user.count(),
+    prisma.technician.count(),
+  ]);
+  return { productCount, supplierCount, userCount, technicianCount };
+}
+
+function canViewSegment(
+  segment: string,
+  role: Role,
+  perms: Awaited<ReturnType<typeof getEffectivePermissions>>
+): boolean {
+  if (isConfigurableModule(segment)) {
+    return perms[segment]?.canView || (segment === "stock" && perms.mrf?.canView) || false;
+  }
+  return MODULE_ACCESS[role]?.includes(segment) ?? false;
+}
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  // These are independent — the badge counts don't depend on who's logged in,
-  // so awaiting them in sequence added a needless round-trip to every navigation.
-  const [session, badgeCounts] = await Promise.all([auth(), getBadgeCounts()]);
+  const [session, badgeCounts, hdrs] = await Promise.all([auth(), getBadgeCounts(), headers()]);
   if (!session?.user) redirect("/login");
+
+  const role = session.user.role as Role;
+  const perms = await getEffectivePermissions(session.user.id, role);
+
+  const pathname = hdrs.get("x-pathname") ?? "";
+  const pageSegment = pathname.split("/").filter(Boolean)[0] ?? "";
+  if (pageSegment && pageSegment !== "api" && !canViewSegment(pageSegment, role, perms)) {
+    redirect("/dashboard");
+  }
+
+  const accessSegments = NAV_GROUPS.flatMap((g) => g.items.map((i) => i.segment)).filter((segment) =>
+    canViewSegment(segment, role, perms)
+  );
 
   const { productCount, supplierCount, userCount, technicianCount } = badgeCounts;
 
@@ -37,12 +62,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <AppShell
-      userName={session.user.name ?? session.user.username}
-      role={session.user.role as Role}
-      badges={badges}
-    >
-      {children}
-    </AppShell>
+    <PermissionsProvider permissions={perms}>
+      <AppShell
+        userName={session.user.name ?? session.user.username}
+        role={role}
+        badges={badges}
+        accessSegments={accessSegments}
+      >
+        {children}
+      </AppShell>
+    </PermissionsProvider>
   );
 }

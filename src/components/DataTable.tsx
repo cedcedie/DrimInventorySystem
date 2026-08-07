@@ -1,6 +1,11 @@
 "use client";
 
 import { Box, ButtonBase, Typography } from "@mui/material";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
+import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
 
@@ -24,6 +29,8 @@ export function TableShell({
         bgcolor: t.surface,
         border: "1px solid",
         borderColor: t.line,
+        borderRadius: "8px",
+        overflow: "hidden",
         overflowX: "auto",
         opacity: dimmed ? 0.55 : 1,
         transition: "opacity 0.12s ease",
@@ -58,13 +65,11 @@ export function TableHeaderRow({
         <Box
           key={h}
           sx={{
-            px: 1.5,
-            py: 0.875,
-            fontSize: 10,
+            px: 1.75,
+            py: 1.375,
+            fontSize: 13,
             fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.6px",
-            color: t.muted,
+            color: t.text,
           }}
         >
           {h}
@@ -99,6 +104,8 @@ export function TableRow({
         alignItems: "center",
         cursor: onClick ? "pointer" : "default",
         bgcolor: selected ? t.rowSel : "transparent",
+        transition: "background-color 0.12s ease",
+        "&:last-of-type": { borderBottom: "none" },
         "&:hover": onClick || selected !== undefined ? { bgcolor: t.rowSel } : { bgcolor: t.hover },
       }}
     >
@@ -123,10 +130,10 @@ export function TableCell({
   return (
     <Box
       sx={{
-        px: 1.5,
-        py: "var(--row-pad, 8px)",
-        fontSize: mono ? 11 : 12.5,
-        fontWeight: bold ? 700 : 400,
+        px: 1.75,
+        py: "var(--row-pad, 12px)",
+        fontSize: mono ? 12.5 : 13.5,
+        fontWeight: bold ? 700 : 500,
         fontFamily: mono ? "'IBM Plex Mono', monospace" : undefined,
         color,
         overflow: "hidden",
@@ -137,6 +144,54 @@ export function TableCell({
     >
       {children}
     </Box>
+  );
+}
+
+/** DreamsPOS-style bordered square icon button for row actions (edit / delete). */
+export function RowActionButton({
+  kind,
+  label,
+  onClick,
+  disabled,
+}: {
+  kind: "edit" | "delete" | "adjust";
+  /** Accessible label, e.g. "Edit Copper Tube". Shown as tooltip via title. */
+  label: string;
+  onClick: (e: React.MouseEvent) => void;
+  disabled?: boolean;
+}) {
+  const { mode } = useColorMode();
+  const t = mode === "dark" ? darkTokens : lightTokens;
+  const isDelete = kind === "delete";
+
+  return (
+    <ButtonBase
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      disabled={disabled}
+      sx={{
+        width: 30,
+        height: 30,
+        borderRadius: "6px",
+        border: "1px solid",
+        borderColor: t.line,
+        bgcolor: t.surface,
+        color: isDelete ? "#EF3826" : t.muted,
+        opacity: disabled ? 0.5 : 1,
+        "&:hover": isDelete
+          ? { borderColor: "#EF3826", bgcolor: "rgba(239,56,38,0.06)" }
+          : { borderColor: ACCENT, color: ACCENT },
+      }}
+    >
+      {kind === "delete" ? (
+        <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+      ) : kind === "adjust" ? (
+        <TuneOutlinedIcon sx={{ fontSize: 16 }} />
+      ) : (
+        <EditOutlinedIcon sx={{ fontSize: 16 }} />
+      )}
+    </ButtonBase>
   );
 }
 
@@ -156,60 +211,61 @@ export function Pagination({
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
 
+  const navButtonSx = (enabled: boolean) =>
+    ({
+      width: 30,
+      height: 30,
+      borderRadius: "50%",
+      border: "1px solid",
+      borderColor: t.line,
+      bgcolor: t.surface,
+      color: enabled ? t.text2 : t.muted3,
+      "&:hover": enabled ? { borderColor: ACCENT, color: ACCENT } : undefined,
+    }) as const;
+
   return (
     <Box
       sx={{
         display: "flex",
         alignItems: "center",
         gap: 1.25,
-        px: 1.5,
-        py: 0.875,
-        bgcolor: t.bg2,
+        px: 1.75,
+        py: 1.25,
         borderTop: "1px solid",
         borderColor: t.line,
         position: "sticky",
         left: 0,
+        bgcolor: t.surface,
       }}
     >
-      <Typography sx={{ fontSize: 11.5, color: t.muted }}>{info}</Typography>
-      <Box sx={{ ml: "auto", display: "flex", gap: 0.75 }}>
-        <ButtonBase
-          aria-label="Previous page"
-          onClick={onPrev}
-          disabled={page <= 1}
+      <Typography sx={{ fontSize: 12.5, color: t.muted }}>{info}</Typography>
+      <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1 }}>
+        <ButtonBase aria-label="Previous page" onClick={onPrev} disabled={page <= 1} sx={navButtonSx(page > 1)}>
+          <ChevronLeftIcon sx={{ fontSize: 18 }} />
+        </ButtonBase>
+        <Box
           sx={{
-            border: "1px solid",
-            borderColor: t.border,
-            bgcolor: t.surface,
-            borderRadius: "2px",
-            px: 1.5,
-            py: 0.5,
-            fontSize: 11.5,
-            fontWeight: 600,
-            color: page > 1 ? t.text2 : t.muted3,
-            "&:hover": page > 1 ? { borderColor: ACCENT } : undefined,
+            width: 30,
+            height: 30,
+            borderRadius: "50%",
+            bgcolor: ACCENT,
+            color: "#fff",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 12.5,
+            fontWeight: 700,
           }}
         >
-          ‹ Prev
-        </ButtonBase>
+          {page}
+        </Box>
+        <Typography sx={{ fontSize: 12.5, color: t.muted }}>of {totalPages}</Typography>
         <ButtonBase
           aria-label="Next page"
           onClick={onNext}
           disabled={page >= totalPages}
-          sx={{
-            border: "1px solid",
-            borderColor: t.border,
-            bgcolor: t.surface,
-            borderRadius: "2px",
-            px: 1.5,
-            py: 0.5,
-            fontSize: 11.5,
-            fontWeight: 600,
-            color: page < totalPages ? t.text2 : t.muted3,
-            "&:hover": page < totalPages ? { borderColor: ACCENT } : undefined,
-          }}
+          sx={navButtonSx(page < totalPages)}
         >
-          Next ›
+          <ChevronRightIcon sx={{ fontSize: 18 }} />
         </ButtonBase>
       </Box>
     </Box>

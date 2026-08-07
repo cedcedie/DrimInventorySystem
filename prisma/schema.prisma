@@ -22,33 +22,36 @@ enum UserStatus {
 
 enum MrfStatus {
   PENDING
+  PARTIAL // NEW: Some items fulfilled, some pending
   FULFILLED
   CANCELLED
 }
 
 enum AdjustmentReason {
-  MISCOUNT      // physical count didn't match the system
-  DAMAGED       // goods damaged or otherwise unusable
-  LOST          // missing, no explanation found
-  FOUND         // stock located that the system didn't know about
-  RETURN        // returned unused from a project
-  CORRECTION    // fixing a data-entry mistake
+  MISCOUNT // physical count didn't match the system
+  DAMAGED // goods damaged or otherwise unusable
+  LOST // missing, no explanation found
+  FOUND // stock located that the system didn't know about
+  RETURN // returned unused from a project
+  CORRECTION // fixing a data-entry mistake
 }
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  name         String
-  role         Role
-  status       UserStatus @default(ACTIVE)
-  activities   ActivityLog[]
-  stockIns     StockIn[]
-  stockOuts    StockOut[]
-  adjustments  StockAdjustment[]
-  settingsEdits CompanySettings[]
-  technician   Technician?
-  createdAt    DateTime @default(now())
+  id                  String            @id @default(cuid())
+  username            String            @unique
+  passwordHash        String
+  name                String
+  role                Role
+  status              UserStatus        @default(ACTIVE)
+  permissionOverrides Json? // NEW: User-specific permission overrides
+  activities          ActivityLog[]
+  stockIns            StockIn[]
+  stockOuts           StockOut[]
+  adjustments         StockAdjustment[]
+  settingsEdits       CompanySettings[]
+  technician          Technician?
+  permissions         Permission[] // NEW: Direct permissions
+  createdAt           DateTime          @default(now())
 }
 
 model Category {
@@ -58,75 +61,95 @@ model Category {
 }
 
 model Supplier {
-  id       String @id @default(cuid())
-  name     String @unique
-  contact  String        // phone or email
-  supplies String        // free-text description
+  id       String    @id @default(cuid())
+  name     String    @unique
+  contact  String // phone or email
+  supplies String // free-text description
   products Product[]
   stockIns StockIn[]
 }
 
 model Product {
-  id         String  @id @default(cuid())
-  code       String  @unique   // e.g. PIP-012 (prefix per category)
-  name       String
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
-  unit       String            // Pcs | Meter | ...
-  amount     Decimal @db.Decimal(12,2)  // unit price, PHP
-  stocks     Int     @default(0)
-  minLevel   Int     @default(0)        // low-stock threshold
-  supplierId String?
-  supplier   Supplier? @relation(fields: [supplierId], references: [id])
-  imageKey   String?           // R2 object key
-  stockIns   StockIn[]
-  stockOuts  StockOut[]
-  mrfs       Mrf[]
+  id          String            @id @default(cuid())
+  code        String            @unique // e.g. PIP-012 (prefix per category)
+  name        String
+  description String?           @db.Text // NEW: Detailed product description/specs
+  categoryId  String
+  category    Category          @relation(fields: [categoryId], references: [id])
+  unit        String // Pcs | Meter | ...
+  amount      Decimal?          @db.Decimal(12, 2) // CHANGED: Optional unit price (hidden from most users)
+  stocks      Int               @default(0)
+  minLevel    Int               @default(0) // low-stock threshold
+  supplierId  String?
+  supplier    Supplier?         @relation(fields: [supplierId], references: [id])
+  imageKey    String? // R2 object key
+  stockIns    StockIn[]
+  stockOuts   StockOut[]
+  mrfItems    MrfItem[] // NEW: Changed from mrfs to mrfItems
   adjustments StockAdjustment[]
+
   @@index([categoryId])
   @@index([supplierId])
 }
 
 model Technician {
-  id        String @id @default(cuid())
-  empNo     String @unique     // EMP-0147
+  id        String     @id @default(cuid())
+  empNo     String     @unique // EMP-0147
   name      String
-  position  String             // HVAC Technician, Refrigeration Engineer
-  userId    String? @unique    // links to the login account that files MRFs as this technician
-  user      User? @relation(fields: [userId], references: [id])
+  position  String // HVAC Technician, Refrigeration Engineer
+  userId    String?    @unique // links to the login account that files MRFs as this technician
+  user      User?      @relation(fields: [userId], references: [id])
   mrfs      Mrf[]
   stockOuts StockOut[]
 }
 
-model Mrf {                    // Material Request Form
-  id           String @id @default(cuid())
-  refNo        String @unique  // MRF-118
-  technicianId String
-  technician   Technician @relation(fields: [technicianId], references: [id])
-  productId    String
-  product      Product @relation(fields: [productId], references: [id])
-  qty          Int
-  project      String          // e.g. Northgate Cold Storage
-  status       MrfStatus @default(PENDING)
-  createdAt    DateTime @default(now())
-  stockOut     StockOut?
+model Mrf {
+  id            String     @id @default(cuid())
+  refNo         String     @unique // MRF-118 (system-generated)
+  externalRefNo String? // NEW: Optional external/manual MRF number
+  technicianId  String
+  technician    Technician @relation(fields: [technicianId], references: [id])
+  project       String // e.g. Northgate Cold Storage
+  description   String?    @db.Text // NEW: MRF-level notes/description
+  status        MrfStatus  @default(PENDING)
+  items         MrfItem[] // NEW: Multiple items per MRF
+  stockOuts     StockOut[] // NEW: Can have multiple fulfillments
+  createdAt     DateTime   @default(now())
+
   @@index([technicianId])
-  @@index([productId])
   @@index([status])
   @@index([createdAt])
+  @@index([externalRefNo])
+}
+
+// NEW: Individual items within an MRF (supports multi-item requests)
+model MrfItem {
+  id           String     @id @default(cuid())
+  mrfId        String
+  mrf          Mrf        @relation(fields: [mrfId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id])
+  qtyRequested Int // What the technician asked for
+  qtyFulfilled Int        @default(0) // What has been fulfilled so far (can be partial)
+  notes        String? // Item-specific notes
+  stockOuts    StockOut[] // Fulfillments for this item
+
+  @@index([mrfId])
+  @@index([productId])
 }
 
 model StockIn {
-  id         String @id @default(cuid())
-  refNo      String @unique   // SI-0442
+  id         String   @id @default(cuid())
+  refNo      String   @unique // SI-0442
   productId  String
-  product    Product @relation(fields: [productId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
   supplierId String
   supplier   Supplier @relation(fields: [supplierId], references: [id])
   qty        Int
   byUserId   String
-  byUser     User @relation(fields: [byUserId], references: [id])
+  byUser     User     @relation(fields: [byUserId], references: [id])
   createdAt  DateTime @default(now())
+
   @@index([productId])
   @@index([supplierId])
   @@index([byUserId])
@@ -134,21 +157,26 @@ model StockIn {
 }
 
 model StockOut {
-  id           String @id @default(cuid())
-  refNo        String @unique // SO-0290
+  id           String     @id @default(cuid())
+  refNo        String     @unique // SO-0290
   productId    String
-  product      Product @relation(fields: [productId], references: [id])
-  mrfId        String? @unique
-  mrf          Mrf?   @relation(fields: [mrfId], references: [id])
+  product      Product    @relation(fields: [productId], references: [id])
+  mrfId        String? // CHANGED: Non-unique (multiple stock-outs per MRF)
+  mrf          Mrf?       @relation(fields: [mrfId], references: [id])
+  mrfItemId    String? // NEW: Link to specific MRF item
+  mrfItem      MrfItem?   @relation(fields: [mrfItemId], references: [id])
   technicianId String
   technician   Technician @relation(fields: [technicianId], references: [id])
   qty          Int
   byUserId     String
-  byUser       User @relation(fields: [byUserId], references: [id])
-  createdAt    DateTime @default(now())
+  byUser       User       @relation(fields: [byUserId], references: [id])
+  createdAt    DateTime   @default(now())
+
   @@index([productId])
   @@index([technicianId])
   @@index([byUserId])
+  @@index([mrfId])
+  @@index([mrfItemId])
   @@index([createdAt])
 }
 
@@ -156,18 +184,19 @@ model StockOut {
 // physical recount, damage, or a data-entry fix. Recorded as a first-class
 // transaction so the count can never change without an attributable reason.
 model StockAdjustment {
-  id         String @id @default(cuid())
-  refNo      String @unique   // ADJ-0001
-  productId  String
-  product    Product @relation(fields: [productId], references: [id])
-  qtyBefore  Int              // what the system said at the time
-  qtyAfter   Int              // what it was corrected to
-  delta      Int              // qtyAfter - qtyBefore, signed
-  reason     AdjustmentReason
-  note       String?
-  byUserId   String
-  byUser     User @relation(fields: [byUserId], references: [id])
-  createdAt  DateTime @default(now())
+  id        String           @id @default(cuid())
+  refNo     String           @unique // ADJ-0001
+  productId String
+  product   Product          @relation(fields: [productId], references: [id])
+  qtyBefore Int // what the system said at the time
+  qtyAfter  Int // what it was corrected to
+  delta     Int // qtyAfter - qtyBefore, signed
+  reason    AdjustmentReason
+  note      String?
+  byUserId  String
+  byUser    User             @relation(fields: [byUserId], references: [id])
+  createdAt DateTime         @default(now())
+
   @@index([productId])
   @@index([byUserId])
   @@index([createdAt])
@@ -176,31 +205,78 @@ model StockAdjustment {
 // Single-row table: the id is pinned to "singleton" so the row can be
 // upserted safely and a second company profile can't be created by accident.
 model CompanySettings {
-  id                String @id @default("singleton")
+  id                String   @id @default("singleton")
   name              String
   warehouseLocation String
-  currency          String @default("PHP — Philippine Peso (₱)")
+  currency          String   @default("PHP — Philippine Peso (₱)")
   updatedAt         DateTime @updatedAt
   updatedById       String?
-  updatedBy         User? @relation(fields: [updatedById], references: [id])
+  updatedBy         User?    @relation(fields: [updatedById], references: [id])
 }
 
 // Bytes for uploaded files while the Postgres BlobStore adapter is active.
 // Rows here become dead weight once R2 is configured; see src/lib/storage.
 model StoredBlob {
-  key         String @id            // products/<uuid>.webp — same shape as an R2 object key
+  key         String   @id // products/<uuid>.webp — same shape as an R2 object key
   contentType String
   size        Int
   bytes       Bytes
   createdAt   DateTime @default(now())
 }
 
-model ActivityLog {
-  id        String @id @default(cuid())
+// NEW: Role definitions with configurable permissions
+model RoleDef {
+  id          String           @id @default(cuid())
+  name        String           @unique // OWNER, ADMIN, WAREHOUSE_STAFF, TECHNICIAN, or custom
+  displayName String
+  description String?
+  isSystem    Boolean          @default(false) // System roles can't be deleted
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+// NEW: Permission definitions for roles
+model RolePermission {
+  id        String  @id @default(cuid())
+  roleDefId String
+  roleDef   RoleDef @relation(fields: [roleDefId], references: [id], onDelete: Cascade)
+  module    String // dashboard, inventory, products, stock, etc.
+  canView   Boolean @default(false)
+  canCreate Boolean @default(false)
+  canEdit   Boolean @default(false)
+  canDelete Boolean @default(false)
+  canExport Boolean @default(false)
+
+  @@unique([roleDefId, module])
+  @@index([roleDefId])
+  @@index([module])
+}
+
+// NEW: User-specific permission overrides
+model Permission {
+  id        String  @id @default(cuid())
   userId    String
-  user      User @relation(fields: [userId], references: [id])
-  action    String            // "Recorded Stock In — 24 × Galvanized Sheet 4x8"
-  refNo     String            // SI-0442 / SO-0290 / MRF-118 / RPT-088 / product code
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module    String // Module this permission applies to
+  canView   Boolean @default(false)
+  canCreate Boolean @default(false)
+  canEdit   Boolean @default(false)
+  canDelete Boolean @default(false)
+  canExport Boolean @default(false)
+
+  @@unique([userId, module])
+  @@index([userId])
+  @@index([module])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String // "Recorded Stock In — 24 × Galvanized Sheet 4x8"
+  refNo     String // SI-0442 / SO-0290 / MRF-118 / RPT-088 / product code
   createdAt DateTime @default(now())
+
   @@index([userId, createdAt])
 }

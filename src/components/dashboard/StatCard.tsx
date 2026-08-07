@@ -1,72 +1,75 @@
 "use client";
 
 import { Box, Typography } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 import type { ReactNode } from "react";
 
+/**
+ * DreamsPOS-style solid summary card: colored background, white text,
+ * icon in a translucent rounded square on the left.
+ */
 export function StatCard({
   label,
   value,
   sub,
-  accent,
-  trend,
+  color = "#FE9F43",
   icon,
   span = 1,
 }: {
   label: string;
   value: string | number;
   sub?: string;
-  accent?: string;
-  trend?: { direction: "up" | "down"; value: string };
+  /** Solid background color of the card. */
+  color?: string;
   icon?: ReactNode;
   span?: 1 | 2;
 }) {
-  const t = useTheme().palette;
   return (
     <Box
       sx={{
         gridColumn: { xs: "span 1", sm: span === 2 ? "span 2" : "span 1" },
-        border: "1px solid",
-        borderColor: t.line,
-        borderTop: "3px solid",
-        borderTopColor: accent ?? t.primary.main,
-        bgcolor: t.surface,
-        px: 1.75,
-        py: 1.5,
+        bgcolor: color,
+        color: "#fff",
+        borderRadius: "8px",
+        px: 2.25,
+        py: 2,
         display: "flex",
-        flexDirection: "column",
-        gap: 0.5,
+        alignItems: "center",
+        gap: 1.75,
         minWidth: 0,
+        boxShadow: "0 4px 14px rgba(16, 24, 40, 0.08)",
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+      {icon && (
+        <Box
+          sx={{
+            width: 46,
+            height: 46,
+            borderRadius: "8px",
+            bgcolor: "rgba(255,255,255,0.2)",
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
+            "& svg": { fontSize: 24, color: "#fff" },
+          }}
+        >
+          {icon}
+        </Box>
+      )}
+      <Box sx={{ minWidth: 0 }}>
         <Typography
           sx={{
-            fontSize: 11,
+            fontSize: 12.5,
             fontWeight: 600,
-            letterSpacing: "0.6px",
-            textTransform: "uppercase",
-            color: t.muted,
+            color: "rgba(255,255,255,0.85)",
+            lineHeight: 1.3,
           }}
         >
           {label}
         </Typography>
-        {icon}
-      </Box>
-      <Typography sx={{ fontSize: span === 2 ? 30 : 24, fontWeight: 700, color: t.text.primary, lineHeight: 1.1 }}>
-        {value}
-      </Typography>
-      <Box sx={{ display: "flex", alignItems: "baseline", gap: 1, flexWrap: "wrap" }}>
-        {sub && <Typography sx={{ fontSize: 11, color: t.muted2 }}>{sub}</Typography>}
-        {trend && (
-          <Typography
-            sx={{
-              fontSize: 11.5,
-              fontWeight: 600,
-              color: trend.direction === "up" ? t.success.main : t.error.main,
-            }}
-          >
-            {trend.direction === "up" ? "↑" : "↓"} {trend.value}
+        <Typography sx={{ fontSize: 24, fontWeight: 800, lineHeight: 1.25 }}>{value}</Typography>
+        {sub && (
+          <Typography sx={{ fontSize: 11.5, color: "rgba(255,255,255,0.75)", lineHeight: 1.3 }}>
+            {sub}
           </Typography>
         )}
       </Box>

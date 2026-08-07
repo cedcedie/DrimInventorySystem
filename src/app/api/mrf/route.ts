@@ -26,7 +26,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireModuleAccess("stock");
+  const auth = await requireModuleAccess("mrf", "canCreate");
   if ("error" in auth) return auth.error;
   if (auth.role !== "TECHNICIAN") {
     return NextResponse.json({ error: "Only technicians file MRFs" }, { status: 403 });
@@ -55,9 +55,10 @@ export async function POST(req: Request) {
       data: {
         refNo,
         technicianId: technician.id,
-        productId,
-        qty: quantity,
         project: projectName,
+        items: {
+          create: [{ productId, qtyRequested: quantity, qtyFulfilled: 0 }],
+        },
       },
     });
     await tx.activityLog.create({

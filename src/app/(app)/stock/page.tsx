@@ -6,7 +6,6 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { ScreenBody } from "@/components/ScreenBody";
 import { StockScreen } from "@/components/screens/StockScreen";
 import { MrfScreen } from "@/components/screens/MrfScreen";
-import { screenTitleForRole, screenSubtitleForRole, PERM_SUMMARY } from "@/lib/navConfig";
 import { getTechnicianForUser } from "@/lib/data/mrf";
 
 export const metadata: Metadata = {
@@ -17,21 +16,22 @@ export default async function StockPage() {
   const session = await auth();
   const role = session!.user.role as Role;
 
+  if (role === "TECHNICIAN") {
+    return (
+      <>
+        <ScreenHeader
+          title="Material Requests"
+          subtitle="File and track your MRFs"
+        />
+        <ScreenBody>{await renderTechnicianView(session!.user.id)}</ScreenBody>
+      </>
+    );
+  }
+
   return (
-    <>
-      <ScreenHeader
-        title={screenTitleForRole("stock", role)}
-        subtitle={screenSubtitleForRole("stock", role)}
-        permSummary={PERM_SUMMARY[role]}
-      />
-      <ScreenBody>
-        {role === "TECHNICIAN" ? (
-          await renderTechnicianView(session!.user.id)
-        ) : (
-          <StockScreen role={role} />
-        )}
-      </ScreenBody>
-    </>
+    <ScreenBody>
+      <StockScreen role={role} />
+    </ScreenBody>
   );
 }
 

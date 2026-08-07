@@ -6,8 +6,7 @@ import { userUpdateSchema } from "@/lib/schemas";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  // Only OWNER has "users" in MODULE_ACCESS, so reaching here implies Owner.
-  const auth = await requireModuleAccess("users");
+  const auth = await requireModuleAccess("users", "canEdit");
   if ("error" in auth) return auth.error;
 
   const { id } = await params;

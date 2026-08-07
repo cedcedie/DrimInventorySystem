@@ -1,19 +1,17 @@
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
-// Mutations call revalidateTag("dashboard"), so a short revalidate window buys
-// nothing but extra load — stale data is already invalidated on write.
-export const getDashboardData = unstable_cache(
-  async () => fetchDashboardData(),
-  ["dashboard-data"],
-  { revalidate: 60, tags: ["dashboard"] }
-);
+export async function getDashboardData() {
+  "use cache";
+  tagAndLife("dashboard", CACHE_SECONDS.dashboard);
 
-async function fetchDashboardData() {
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 6);
+  weekAgo.setHours(0, 0, 0, 0);
+
   const [
     totalProducts,
     categoryCount,
-    totalValueRows,
     lowStockCountRows,
     outOfStockCount,
     lowStockRows,
@@ -21,57 +19,119 @@ async function fetchDashboardData() {
     stockIns,
     stockOuts,
     pendingMrfCount,
+    pendingMrfs,
     recentActivity,
+    weeklyIn,
+    weeklyOut,
   ] = await Promise.all([
     prisma.product.count(),
-    prisma.product.findMany({ distinct: ["categoryId"], select: { categoryId: true } }).then((r) => r.length),
-    // Prisma can't sum a computed column (amount * stocks) via aggregate — read-only, no user input.
-    prisma.$queryRaw<{ total: number | null }[]>`
-      SELECT SUM(amount * stocks)::float8 AS total FROM "Product"
-    `,
-    // Prisma can't compare two columns (stocks <= "minLevel") in a where clause without raw SQL.
+    prisma.category.count(),
     prisma.$queryRaw<{ count: bigint }[]>`
       SELECT COUNT(*)::bigint AS count FROM "Product" WHERE stocks > 0 AND stocks <= "minLevel"
     `,
     prisma.product.count({ where: { stocks: 0 } }),
-    prisma.$queryRaw<
-      { name: string; stocks: number; unit: string; category: string }[]
-    >`
+    prisma.$queryRaw<{ name: string; stocks: number; unit: string; category: string }[]>`
       SELECT p.name, p.stocks, p.unit, c.name AS category
       FROM "Product" p
       JOIN "Category" c ON c.id = p."categoryId"
       WHERE p.stocks > 0 AND p.stocks <= p."minLevel"
       ORDER BY p.name ASC
-      LIMIT 20
+      LIMIT 8
     `,
     prisma.product.findMany({
       where: { stocks: 0 },
       select: { name: true, stocks: true, unit: true, category: { select: { name: true } } },
       orderBy: { name: "asc" },
-      take: 20,
+      take: 8,
     }),
     prisma.stockIn.findMany({
       orderBy: { createdAt: "desc" },
-      take: 10,
-      include: { product: true, supplier: true, byUser: true },
+      take: 8,
+      select: {
+        createdAt: true,
+        refNo: true,
+        qty: true,
+        product: { select: { name: true } },
+        supplier: { select: { name: true } },
+        byUser: { select: { name: true } },
+      },
     }),
     prisma.stockOut.findMany({
       orderBy: { createdAt: "desc" },
-      take: 10,
-      include: { product: true, technician: true, byUser: true, mrf: true },
+      take: 8,
+      select: {
+        createdAt: true,
+        refNo: true,
+        qty: true,
+        product: { select: { name: true } },
+        byUser: { select: { name: true } },
+        mrf: { select: { refNo: true, project: true } },
+      },
     }),
-    // Uses the @@index([status]) added in Task 2.
-    prisma.mrf.count({ where: { status: "PENDING" } }),
-    // Uses the @@index([userId, createdAt]) — bounded to the 8 most recent.
+    prisma.mrf.count({ where: { status: { in: ["PENDING", "PARTIAL"] } } }),
+    prisma.mrf.findMany({
+      where: { status: { in: ["PENDING", "PARTIAL"] } },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: {
+        id: true,
+        refNo: true,
+        project: true,
+        status: true,
+        createdAt: true,
+        technician: { select: { name: true } },
+        items: { select: { qtyRequested: true, qtyFulfilled: true } },
+      },
+    }),
     prisma.activityLog.findMany({
       orderBy: { createdAt: "desc" },
-      take: 8,
-      include: { user: { select: { name: true } } },
+      take: 6,
+      select: {
+        createdAt: true,
+        action: true,
+        refNo: true,
+        user: { select: { name: true } },
+      },
+    }),
+    prisma.stockIn.findMany({
+      where: { createdAt: { gte: weekAgo } },
+      select: { createdAt: true, qty: true },
+    }),
+    prisma.stockOut.findMany({
+      where: { createdAt: { gte: weekAgo } },
+      select: { createdAt: true, qty: true },
     }),
   ]);
 
-  const totalValue = totalValueRows[0]?.total ?? 0;
   const lowStockCount = Number(lowStockCountRows[0]?.count ?? 0);
+
+  const dayKeys: string[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    dayKeys.push(d.toISOString().slice(0, 10));
+  }
+
+  const stockInByDay = Object.fromEntries(dayKeys.map((k) => [k, 0]));
+  const stockOutByDay = Object.fromEntries(dayKeys.map((k) => [k, 0]));
+  for (const row of weeklyIn) {
+    const k = row.createdAt.toISOString().slice(0, 10);
+    if (k in stockInByDay) stockInByDay[k] += row.qty;
+  }
+  for (const row of weeklyOut) {
+    const k = row.createdAt.toISOString().slice(0, 10);
+    if (k in stockOutByDay) stockOutByDay[k] += row.qty;
+  }
+
+  const weeklyMovement = dayKeys.map((k) => {
+    const d = new Date(k + "T12:00:00");
+    return {
+      day: d.toLocaleDateString("en-US", { weekday: "short" }),
+      date: k,
+      stockIn: stockInByDay[k],
+      stockOut: stockOutByDay[k],
+    };
+  });
 
   const transactions = [
     ...stockIns.map((si) => ({
@@ -98,11 +158,26 @@ async function fetchDashboardData() {
     kpis: {
       totalProducts,
       categoryCount,
-      totalValue,
       lowStockCount,
       outOfStockCount,
       pendingMrfCount,
     },
+    weeklyMovement,
+    pendingMrfs: pendingMrfs.map((m) => {
+      const requested = m.items.reduce((s, i) => s + i.qtyRequested, 0);
+      const fulfilled = m.items.reduce((s, i) => s + i.qtyFulfilled, 0);
+      return {
+        id: m.id,
+        refNo: m.refNo,
+        project: m.project,
+        status: m.status,
+        technician: m.technician.name,
+        itemCount: m.items.length,
+        requested,
+        fulfilled,
+        dt: m.createdAt.toISOString(),
+      };
+    }),
     activity: recentActivity.map((a) => ({
       dt: a.createdAt.toISOString(),
       action: a.action,

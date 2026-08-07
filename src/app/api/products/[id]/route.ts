@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireModuleAccess, isOwnerOrAdmin } from "@/lib/apiAuth";
+import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { productUpdateSchema } from "@/lib/schemas";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireModuleAccess("products");
+  const auth = await requireModuleAccess("products", "canEdit");
   if ("error" in auth) return auth.error;
-  if (!isOwnerOrAdmin(auth.role)) {
-    return NextResponse.json({ error: "Only Owner or Admin can edit products" }, { status: 403 });
-  }
 
   const { id } = await params;
   const parsed = await parseBody(req, productUpdateSchema);
@@ -55,11 +52,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireModuleAccess("products");
+  const auth = await requireModuleAccess("products", "canDelete");
   if ("error" in auth) return auth.error;
-  if (!isOwnerOrAdmin(auth.role)) {
-    return NextResponse.json({ error: "Only Owner or Admin can delete products" }, { status: 403 });
-  }
 
   const { id } = await params;
 

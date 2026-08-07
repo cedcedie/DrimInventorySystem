@@ -1,6 +1,6 @@
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { PERM_SUMMARY, ROLE_LABELS } from "@/lib/navConfig";
+import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const COMPANY_DEFAULTS = {
   name: "DRIM Refrigeration & Industrial Services",
@@ -19,20 +19,17 @@ export async function getCompanySettings() {
   };
 }
 
-const getCachedSettingsData = unstable_cache(
-  async () => ({
+export async function getSettingsData() {
+  "use cache";
+  tagAndLife("settings", CACHE_SECONDS.settings);
+
+  return {
     company: await getCompanySettings(),
     permRows: (Object.keys(ROLE_LABELS) as Array<keyof typeof ROLE_LABELS>).map((role) => ({
       role: ROLE_LABELS[role],
       perms: PERM_SUMMARY[role],
     })),
-  }),
-  ["settings-data"],
-  { revalidate: 300, tags: ["settings"] }
-);
-
-export async function getSettingsData() {
-  return getCachedSettingsData();
+  };
 }
 
 export type SettingsData = Awaited<ReturnType<typeof getSettingsData>>;

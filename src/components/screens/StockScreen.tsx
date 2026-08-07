@@ -11,6 +11,9 @@ import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
 import { StockInModal } from "@/components/modals/StockInModal";
 import { StockOutModal } from "@/components/modals/StockOutModal";
+import { PageChrome } from "@/components/PageChrome";
+import { EmptyState } from "@/components/EmptyState";
+import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@prisma/client";
 import type { StockInData, StockOutData } from "@/lib/data/stock";
 
@@ -19,21 +22,23 @@ const SO_COLS = "92px 96px minmax(0,1fr) minmax(0,1.1fr) 48px 84px minmax(0,1fr)
 
 export function StockScreen({ role }: { role: Role }) {
   const [tab, setTab] = useState<"in" | "out">("in");
-  const canStock = role === "ADMIN" || role === "WAREHOUSE_STAFF";
-  const isOwner = role === "OWNER";
+  const canStock = useCan("stock", "canCreate");
+  const viewOnly = !canStock;
+  void role;
   const t = useTheme().palette;
 
   return (
     <Box>
+      <PageChrome title="Stock In / Out" />
       <Box sx={{ display: "flex", gap: 0.25, mb: 1.75, borderBottom: "1px solid", borderColor: t.line }}>
         <TabButton label="Stock In" active={tab === "in"} onClick={() => setTab("in")} />
         <TabButton label="Stock Out" active={tab === "out"} onClick={() => setTab("out")} />
       </Box>
 
       {tab === "in" ? (
-        <StockInTab canStock={canStock} isOwner={isOwner} />
+        <StockInTab canStock={canStock} viewOnly={viewOnly} />
       ) : (
-        <StockOutTab canStock={canStock} isOwner={isOwner} />
+        <StockOutTab canStock={canStock} viewOnly={viewOnly} />
       )}
     </Box>
   );
@@ -82,7 +87,7 @@ function ViewOnlyNotice({ text }: { text: string }) {
   );
 }
 
-function StockInTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolean }) {
+function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boolean }) {
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const t = useTheme().palette;
@@ -117,7 +122,7 @@ function StockInTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolean
             + New Stock In
           </ButtonBase>
         )}
-        {isOwner && <ViewOnlyNotice text="View only — Stock In requires Admin or Warehouse Staff role" />}
+        {viewOnly && <ViewOnlyNotice text="View only — Stock In requires create permission" />}
       </Box>
 
       {!data ? (
@@ -137,9 +142,11 @@ function StockInTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolean
             </TableRow>
           ))}
           {data.rows.length === 0 && (
-            <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-              No stock-in deliveries recorded yet.
-            </Box>
+            <EmptyState
+              message="No stock-in deliveries recorded yet."
+              actionLabel={canStock ? "Record Stock In" : undefined}
+              onAction={canStock ? () => setModalOpen(true) : undefined}
+            />
           )}
           {data.totalPages > 1 && (
             <Pagination
@@ -160,7 +167,7 @@ function StockInTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolean
   );
 }
 
-function StockOutTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolean }) {
+function StockOutTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boolean }) {
   const [page, setPage] = useState(1);
   const [pickedIdx, setPickedIdx] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
@@ -199,7 +206,7 @@ function StockOutTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolea
               + New Stock Out
             </ButtonBase>
           )}
-          {isOwner && <ViewOnlyNotice text="View only — Stock Out requires Admin or Warehouse Staff role" />}
+          {viewOnly && <ViewOnlyNotice text="View only — Stock Out requires create permission" />}
         </Box>
 
         {!data ? (
@@ -224,9 +231,11 @@ function StockOutTab({ canStock, isOwner }: { canStock: boolean; isOwner: boolea
               </TableRow>
             ))}
             {data.rows.length === 0 && (
-              <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-                No stock-out releases recorded yet.
-              </Box>
+              <EmptyState
+                message="No stock-out releases recorded yet."
+                actionLabel={canStock ? "Record Stock Out" : undefined}
+                onAction={canStock ? () => setModalOpen(true) : undefined}
+              />
             )}
             {data.totalPages > 1 && (
               <Pagination

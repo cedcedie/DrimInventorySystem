@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import "@fontsource/heebo/400.css";
-import "@fontsource/heebo/500.css";
-import "@fontsource/heebo/600.css";
-import "@fontsource/heebo/700.css";
+import "@fontsource/nunito/400.css";
+import "@fontsource/nunito/500.css";
+import "@fontsource/nunito/600.css";
+import "@fontsource/nunito/700.css";
+import "@fontsource/nunito/800.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";

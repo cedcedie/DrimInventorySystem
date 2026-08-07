@@ -10,10 +10,10 @@ import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/Da
 import { StatusChip } from "@/components/StatusChip";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
-import { MrfModal } from "@/components/modals/MrfModal";
+import { MultiItemMrfModal } from "@/components/modals/MultiItemMrfModal";
 import type { MrfListData } from "@/lib/data/mrf";
 
-const COLS = "90px 100px minmax(0,1.2fr) 48px minmax(0,1.2fr) 90px";
+const COLS = "100px 100px minmax(0,1.2fr) 90px minmax(0,1.2fr) 100px";
 
 export function MrfScreen({
   technicianName,
@@ -62,19 +62,41 @@ export function MrfScreen({
         {!data ? (
           <TableSkeleton label="Loading your material requests…" columns={6} rows={4} />
         ) : (
-          <TableShell minWidth={560}>
-            <TableHeaderRow columns={COLS} headers={["MRF Number", "Date", "Item", "Qty", "Project", "Status"]} />
+          <TableShell minWidth={660}>
+            <TableHeaderRow columns={COLS} headers={["MRF Number", "Date", "Item(s)", "Qty (Fulfilled)", "Project", "Status"]} />
             {data.rows.map((r) => (
               <TableRow key={r.id} columns={COLS}>
                 <TableCell mono color={t.primary.main}>
                   {r.mrf}
                 </TableCell>
                 <TableCell color={t.text2}>{formatDate(new Date(r.date))}</TableCell>
-                <TableCell>{r.item}</TableCell>
-                <TableCell bold>{r.qty}</TableCell>
+                <TableCell>
+                  {r.item}
+                  {r.itemCount > 1 && (
+                    <Box component="span" sx={{ ml: 0.5, fontSize: 10, color: t.muted, fontWeight: 600 }}>
+                      ({r.itemCount})
+                    </Box>
+                  )}
+                </TableCell>
+                <TableCell bold>
+                  {r.qtyFulfilled > 0 ? (
+                    <Box component="span">
+                      {r.qty} <Box component="span" sx={{ color: t.primary.main }}>({r.qtyFulfilled})</Box>
+                    </Box>
+                  ) : (
+                    r.qty
+                  )}
+                </TableCell>
                 <TableCell color={t.text2}>{r.project}</TableCell>
                 <TableCell>
-                  <StatusChip label={r.status === "PENDING" ? "Pending" : r.status === "FULFILLED" ? "Fulfilled" : "Cancelled"} />
+                  <StatusChip 
+                    label={
+                      r.status === "PENDING" ? "Pending" : 
+                      r.status === "PARTIAL" ? "Partial" :
+                      r.status === "FULFILLED" ? "Fulfilled" : 
+                      "Cancelled"
+                    } 
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -108,7 +130,7 @@ export function MrfScreen({
         </Box>
       </Box>
 
-      <MrfModal
+      <MultiItemMrfModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         technicianLabel={`${technicianName} (${empNo})`}

@@ -23,7 +23,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireModuleAccess("stock");
+  const auth = await requireModuleAccess("stock", "canCreate");
   if ("error" in auth) return auth.error;
   if (!canRecordStock(auth.role)) {
     return NextResponse.json({ error: "Stock In requires Admin or Warehouse Staff role" }, { status: 403 });

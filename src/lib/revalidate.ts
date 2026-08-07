@@ -12,7 +12,8 @@ export type CacheTag =
   | "stock-out"
   | "mrf"
   | "adjustments"
-  | "settings";
+  | "settings"
+  | "permissions";
 
 /** Every mutation writes an ActivityLog row, so "activity" + "dashboard"
  * (recent transactions feed) are revalidated alongside whichever module's
@@ -21,4 +22,9 @@ export type CacheTag =
 export function revalidateAfterMutation(tags: CacheTag[], extraTags: string[] = []) {
   const unique = new Set<string>([...tags, ...extraTags, "activity", "dashboard"]);
   for (const tag of unique) revalidateTag(tag);
+}
+
+/** Permission toggles should not bust dashboard/activity — only the matrix. */
+export function revalidatePermissions() {
+  revalidateTag("permissions");
 }

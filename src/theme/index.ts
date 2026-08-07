@@ -1,14 +1,15 @@
 import { createTheme, type ThemeOptions } from "@mui/material/styles";
 import { ACCENT, darkTokens, lightTokens } from "./tokens";
+import { colors, borderRadius, shadows, typography } from "./designTokens";
 
-/** The four states a product's stock level can be in. Named for the domain
- * rather than by severity so a screen asks for `stock.low`, not `warning`,
- * and both modes stay in step from one place. */
+/** Stock status palette - domain-named states for product inventory levels.
+ * Includes partial status for multi-item MRF fulfillment. */
 interface StockPalette {
   healthy: string;
   low: string;
   out: string;
   pending: string;
+  partial: string;
 }
 
 declare module "@mui/material/styles" {
@@ -41,26 +42,59 @@ declare module "@mui/material/styles" {
 }
 
 const shared: ThemeOptions = {
-  shape: { borderRadius: 2 },
+  shape: { borderRadius: borderRadius.md },
   typography: {
-    fontFamily: "'Heebo', sans-serif",
-    button: { textTransform: "none" },
+    fontFamily: typography.body.family,
+    button: { 
+      textTransform: "none",
+      fontWeight: typography.body.weight.semibold,
+    },
+    h1: {
+      fontFamily: typography.display.family,
+      fontWeight: typography.display.weight.bold,
+    },
+    h2: {
+      fontFamily: typography.display.family,
+      fontWeight: typography.display.weight.bold,
+    },
+    h3: {
+      fontFamily: typography.display.family,
+      fontWeight: typography.display.weight.regular,
+    },
   },
   components: {
     MuiPaper: {
       styleOverrides: {
-        root: { backgroundImage: "none" },
+        root: { 
+          backgroundImage: "none",
+          boxShadow: shadows.md,
+        },
       },
     },
     MuiButton: {
       defaultProps: { disableElevation: true },
-      styleOverrides: { root: { borderRadius: 2 } },
+      styleOverrides: { 
+        root: { 
+          borderRadius: borderRadius.md,
+          transition: 'all 150ms ease-out',
+        },
+      },
     },
     MuiCard: {
-      styleOverrides: { root: { boxShadow: "none" } },
+      styleOverrides: { 
+        root: { 
+          boxShadow: shadows.sm,
+          borderRadius: borderRadius.lg,
+        } 
+      },
     },
     MuiAppBar: {
-      styleOverrides: { root: { boxShadow: "none" } },
+      styleOverrides: { 
+        root: { 
+          boxShadow: 'none',
+          borderBottom: '1px solid',
+        } 
+      },
     },
   },
 };
@@ -86,10 +120,11 @@ export const lightTheme = createTheme({
     line: lightTokens.line,
     line2: lightTokens.line2,
     stock: {
-      healthy: lightTokens.success,
-      low: lightTokens.warn,
-      out: lightTokens.danger,
-      pending: ACCENT,
+      healthy: colors.stock.healthy.main,
+      low: colors.stock.low.main,
+      out: colors.stock.out.main,
+      pending: colors.stock.pending.main,
+      partial: colors.stock.partial.main,
     },
   },
 });
@@ -115,10 +150,11 @@ export const darkTheme = createTheme({
     line: darkTokens.line,
     line2: darkTokens.line2,
     stock: {
-      healthy: darkTokens.success,
-      low: darkTokens.warn,
-      out: darkTokens.danger,
-      pending: "#8fbde8",
+      healthy: colors.stock.healthy.main,
+      low: colors.stock.low.main,
+      out: colors.stock.out.main,
+      pending: colors.stock.pending.main,
+      partial: colors.stock.partial.main,
     },
   },
 });

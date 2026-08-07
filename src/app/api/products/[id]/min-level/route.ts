@@ -6,7 +6,7 @@ import { parseBody } from "@/lib/validate";
 import { productMinLevelSchema } from "@/lib/schemas";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireModuleAccess("inventory");
+  const auth = await requireModuleAccess("inventory", "canEdit");
   if ("error" in auth) return auth.error;
   if (auth.role !== "OWNER") {
     return NextResponse.json({ error: "Only Owner can set the minimum stock level" }, { status: 403 });

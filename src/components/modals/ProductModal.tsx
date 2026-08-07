@@ -16,7 +16,6 @@ export interface ProductFormRow {
   name: string;
   categoryId: string;
   unit: string;
-  amount: number;
   stocks: number;
   minLevel: number;
   supplierId: string | null;
@@ -49,7 +48,6 @@ export function ProductModal({
   const [categoryId, setCategoryId] = useState("");
   const [unit, setUnit] = useState("Pcs");
   const [stocks, setStocks] = useState("0");
-  const [amount, setAmount] = useState("0");
   const [minLevel, setMinLevel] = useState("0");
   const [supplierId, setSupplierId] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -62,7 +60,6 @@ export function ProductModal({
       setCategoryId(product?.categoryId ?? categories[0]?.id ?? "");
       setUnit(product?.unit ?? "Pcs");
       setStocks(String(product?.stocks ?? 0));
-      setAmount(String(product?.amount ?? 0));
       setMinLevel(String(product?.minLevel ?? 0));
       setSupplierId(product?.supplierId ?? "");
       setImageFile(null);
@@ -90,7 +87,6 @@ export function ProductModal({
         name,
         categoryId,
         unit,
-        amount: Number(amount),
         minLevel: Number(minLevel),
         supplierId: supplierId || null,
         imageKey,
@@ -195,16 +191,6 @@ export function ProductModal({
                 Changes through Stock In/Out or Adjust Stock
               </Box>
             )}
-          </FormField>
-          <FormField label="Amount (₱)">
-            <Box
-              component="input"
-              type="number"
-              step="0.01"
-              value={amount}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value)}
-              sx={fieldInputSx(t)}
-            />
           </FormField>
           <FormField label="Min. Stock Level">
             <Box

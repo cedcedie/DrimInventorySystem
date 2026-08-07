@@ -1,5 +1,5 @@
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const PAGE_SIZE = 15;
 
@@ -33,17 +33,15 @@ async function fetchUsersData(page: number) {
   };
 }
 
-// Only page 1 is used for the page's server-rendered initial load; later
-// pages are fetched client-side via /api/users directly.
-const getCachedFirstPageUsersData = unstable_cache(
-  () => fetchUsersData(1),
-  ["users-data-page-1"],
-  { revalidate: 20, tags: ["users"] }
-);
+async function loadFirstPageUsers() {
+  "use cache";
+  tagAndLife("users", CACHE_SECONDS.list);
+  return fetchUsersData(1);
+}
 
 export async function getUsersData(params: { page?: number }) {
   const page = Math.max(1, params.page ?? 1);
-  if (page === 1) return getCachedFirstPageUsersData();
+  if (page === 1) return loadFirstPageUsers();
   return fetchUsersData(page);
 }
 

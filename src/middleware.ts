@@ -3,28 +3,30 @@ import { NextResponse } from "next/server";
 import { authConfig } from "@/lib/auth.config";
 import { canAccess } from "@/lib/rbac";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { PERMISSION_MODULES } from "@/lib/permissionDefaults";
 import type { Role } from "@prisma/client";
 
 const { auth } = NextAuth(authConfig);
 
 const PUBLIC_PATHS = ["/login"];
 
-// Segments that any signed-in user may reach regardless of role, because they
-// act on that user's own account rather than on a nav module. These sit
-// outside MODULE_ACCESS by design — gating them by role would lock every
-// non-Owner out of their own profile.
-const SELF_SERVICE_SEGMENTS = new Set(["profile", "me"]);
+// Segments any signed-in user may reach (own account / shared utilities).
+const SELF_SERVICE_SEGMENTS = new Set(["profile", "me", "search", "blobs"]);
 
-// Some API routes don't share a literal path segment with their owning nav
-// module (e.g. /api/stock-in belongs to the "stock" module, /api/categories
-// and /api/upload belong to "products"). Map those explicitly; anything not
-// listed here falls back to using its own first path segment as the module.
+// Configurable modules are gated by the Owner-managed matrix (DB). Edge
+// middleware can't read that cheaply, so for those we only require a session
+// and let layout + API enforce view/create/edit/delete/export.
+const CONFIGURABLE = new Set<string>(PERMISSION_MODULES);
+
+// API paths whose first segment doesn't match the owning nav module.
 const API_SEGMENT_TO_MODULE: Record<string, string> = {
   "stock-in": "stock",
   "stock-out": "stock",
-  mrf: "stock",
+  mrf: "mrf",
   categories: "products",
   upload: "products",
+  "stock-adjustments": "inventory",
+  permissions: "users",
 };
 
 export default auth((req) => {
@@ -55,9 +57,15 @@ export default auth((req) => {
   }
 
   if (SELF_SERVICE_SEGMENTS.has(moduleSegment)) {
-    return NextResponse.next();
+    return passWithPath(req, pathname);
   }
 
+  // Configurable modules: session is enough here; layout/API enforce the matrix.
+  if (CONFIGURABLE.has(moduleSegment)) {
+    return passWithPath(req, pathname);
+  }
+
+  // Static modules (settings, activity, permissions, …): role map still applies.
   if (moduleSegment && !canAccess(session.user.role as Role, moduleSegment)) {
     if (isApiRoute) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -65,9 +73,15 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  return NextResponse.next();
+  return passWithPath(req, pathname);
 });
 
+function passWithPath(req: { headers: Headers }, pathname: string) {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|images/).*)"],
 };

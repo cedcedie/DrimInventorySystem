@@ -2,9 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { signIn } from "next-auth/react";
 import { Box, ButtonBase, Typography, Alert } from "@mui/material";
-import { CHROME_COLOR, ACCENT } from "@/theme/tokens";
+import { ACCENT, ACCENT_HOVER, ACCENT_SOFT } from "@/theme/tokens";
+import { warmPostLogin } from "@/lib/warmPrefetch";
+
+const TEXT = "#212B36";
+const MUTED = "#646B72";
+const LINE = "#E8E8E8";
 
 const ROLE_OPTIONS = [
   { label: "Owner", demoUsername: "owner" },
@@ -13,8 +19,52 @@ const ROLE_OPTIONS = [
   { label: "Technician / Engineer", demoUsername: "technician" },
 ];
 
+function Field({
+  label,
+  type,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  type?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+      <Typography component="label" sx={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
+        {label} <Box component="span" sx={{ color: "#EF3826" }}>*</Box>
+      </Typography>
+      <Box
+        component="input"
+        type={type}
+        value={value}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+        placeholder={placeholder}
+        sx={{
+          border: `1px solid ${LINE}`,
+          borderRadius: "8px",
+          px: 1.5,
+          py: "10px",
+          fontSize: 14,
+          fontFamily: "inherit",
+          bgcolor: "#fff",
+          color: TEXT,
+          outline: "none",
+          transition: "border-color 0.12s ease",
+          "&:focus": { borderColor: ACCENT },
+          "&::placeholder": { color: "#B5BBC1" },
+        }}
+      />
+    </Box>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [selectedRole, setSelectedRole] = useState(ROLE_OPTIONS[0]);
   const [username, setUsername] = useState(ROLE_OPTIONS[0].demoUsername);
   const [password, setPassword] = useState("");
@@ -35,109 +85,157 @@ export default function LoginPage() {
       password,
       redirect: false,
     });
-    setLoading(false);
     if (result?.error) {
+      setLoading(false);
       setError("Invalid username or password.");
       return;
     }
+    // Warm dashboard (RSC + API) while the button still shows loading, then land.
+    await warmPostLogin(router, queryClient);
+    router.refresh();
     router.push("/dashboard");
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "grid",
-        gridTemplateColumns: { xs: "1fr", md: "minmax(0,1.1fr) minmax(420px,1fr)" },
-      }}
-    >
+    <Box sx={{ minHeight: "100vh", display: "flex" }}>
+      {/* Left brand panel — fixed dark so logo/motto never break with theme */}
       <Box
         sx={{
-          bgcolor: CHROME_COLOR,
-          color: "#fff",
           display: { xs: "none", md: "flex" },
+          width: "50%",
           flexDirection: "column",
-          justifyContent: "space-between",
-          p: 6,
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Box
-            sx={{
-              width: 34,
-              height: 34,
-              bgcolor: ACCENT,
-              display: "grid",
-              placeItems: "center",
-              fontWeight: 700,
-              fontSize: 15,
-              letterSpacing: "0.5px",
-            }}
-          >
-            DR
-          </Box>
-          <Box>
-            <Box sx={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.5px" }}>DRIM</Box>
-            <Box sx={{ fontSize: 11, color: "#93a1b0", letterSpacing: "0.4px" }}>
-              INVENTORY SYSTEM
-            </Box>
-          </Box>
-        </Box>
-
-        <Box>
-          <Typography sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.2, maxWidth: 420 }}>
-            One warehouse.
-            <br />
-            Four roles. Full trace.
-          </Typography>
-          <Typography sx={{ fontSize: "13.5px", color: "#93a1b0", mt: 1.5, maxWidth: 400, lineHeight: 1.55 }}>
-            Every stock movement is tagged, referenced, and tied to the person who made it —
-            from supplier delivery to technician MRF.
-          </Typography>
-        </Box>
-
-        <Box sx={{ fontSize: 11, color: "#5d6c7b", letterSpacing: "0.4px" }}>
-          DRIM ERP · REL 2.0 · WAREHOUSE MODULE
-        </Box>
-      </Box>
-
-      <Box
-        sx={{
-          display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          bgcolor: "#f5f6f7",
-          px: 3,
-          py: 6,
+          gap: 3,
+          px: 6,
+          position: "relative",
+          overflow: "hidden",
+          bgcolor: "#0B0B0C",
+          background: `
+            radial-gradient(ellipse 90% 70% at 20% 15%, rgba(254,159,67,0.22), transparent 55%),
+            radial-gradient(ellipse 70% 55% at 85% 85%, rgba(254,159,67,0.12), transparent 50%),
+            linear-gradient(165deg, #121214 0%, #0B0B0C 45%, #1a1208 100%)
+          `,
         }}
       >
-        <Box component="form" onSubmit={handleSubmit} sx={{ width: 360, maxWidth: "100%" }}>
-          <Typography sx={{ fontSize: 19, fontWeight: 700 }}>Log in</Typography>
-          <Typography sx={{ fontSize: "12.5px", color: "#6b7684", my: 0.5, mb: 2.5 }}>
-            Select your role, then log in. The role determines the modules and actions
-            available.
+        {/* Soft "warehouse bay" light bars */}
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            opacity: 0.35,
+            backgroundImage: `
+              linear-gradient(90deg, transparent 0%, transparent 48%, rgba(255,255,255,0.03) 49%, transparent 51%),
+              linear-gradient(0deg, transparent 0%, transparent 48%, rgba(255,255,255,0.02) 49%, transparent 51%)
+            `,
+            backgroundSize: "80px 80px",
+            pointerEvents: "none",
+          }}
+        />
+
+        <Box
+          component="img"
+          src="/images/drim-logo-white-text-transparent.png"
+          alt="DRIM Refrigeration Equipment Corp."
+          sx={{ width: "76%", maxWidth: 480, height: "auto", position: "relative", zIndex: 1 }}
+        />
+
+        <Typography
+          sx={{
+            position: "relative",
+            zIndex: 1,
+            fontSize: { md: 22, lg: 26 },
+            fontWeight: 800,
+            fontStyle: "italic",
+            color: "#fff",
+            letterSpacing: "-0.2px",
+            textAlign: "center",
+            maxWidth: 420,
+            lineHeight: 1.35,
+          }}
+        >
+          &ldquo;Your Refrigeration Solution Expert&rdquo;
+        </Typography>
+
+        <Typography
+          sx={{
+            position: "relative",
+            zIndex: 1,
+            fontSize: 13.5,
+            color: "rgba(255,255,255,0.5)",
+            textAlign: "center",
+            maxWidth: 380,
+            lineHeight: 1.55,
+          }}
+        >
+          Warehouse inventory, material requests, and field fulfillment — built for DRIM.
+        </Typography>
+
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: -24,
+            left: -48,
+            width: 280,
+            height: 48,
+            bgcolor: ACCENT,
+            opacity: 0.9,
+            transform: "skewY(-7deg)",
+          }}
+        />
+        <Box
+          sx={{
+            position: "absolute",
+            top: "22%",
+            right: -70,
+            width: 200,
+            height: 36,
+            bgcolor: "rgba(254,159,67,0.35)",
+            transform: "skewY(8deg)",
+          }}
+        />
+      </Box>
+
+      {/* Right login panel */}
+      <Box
+        sx={{
+          width: { xs: "100%", md: "50%" },
+          bgcolor: "#fff",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          px: { xs: 2.5, md: 6 },
+          py: 4,
+        }}
+      >
+        <Box component="form" onSubmit={handleSubmit} sx={{ width: 400, maxWidth: "100%" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 3.5 }}>
+            <Box
+              component="img"
+              src="/images/drim-d-transparent.png"
+              alt="DRIM"
+              sx={{ width: 42, height: 42 }}
+            />
+            <Typography sx={{ fontSize: 22, fontWeight: 800, color: TEXT }}>
+              DRIM{" "}
+              <Box component="span" sx={{ color: ACCENT }}>
+                IMS
+              </Box>
+            </Typography>
+          </Box>
+
+          <Typography sx={{ fontSize: 24, fontWeight: 800, color: TEXT, mb: 0.5 }}>
+            Sign In
+          </Typography>
+          <Typography sx={{ fontSize: 13.5, color: MUTED, mb: 3, lineHeight: 1.5 }}>
+            Access the DRIM panel using your role and credentials.
           </Typography>
 
-          <Typography
-            sx={{
-              fontSize: 11,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.8px",
-              color: "#8a93a0",
-              mb: 1,
-            }}
-          >
-            1 · Select role
+          <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 0.75 }}>
+            Role <Box component="span" sx={{ color: "#EF3826" }}>*</Box>
           </Typography>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 1,
-              mb: 2.25,
-            }}
-          >
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, mb: 2.5 }}>
             {ROLE_OPTIONS.map((role) => {
               const active = selectedRole.label === role.label;
               return (
@@ -145,15 +243,16 @@ export default function LoginPage() {
                   key={role.label}
                   onClick={() => handleRolePick(role)}
                   sx={{
-                    border: "1px solid",
-                    borderColor: active ? ACCENT : "#cdd2d8",
-                    bgcolor: active ? ACCENT : "#fff",
-                    color: active ? "#fff" : "#232a33",
-                    borderRadius: "2px",
+                    border: `1px solid ${active ? ACCENT : LINE}`,
+                    bgcolor: active ? ACCENT_SOFT : "#fff",
+                    color: active ? ACCENT : MUTED,
+                    borderRadius: "8px",
                     py: "9px",
                     px: 0.75,
-                    fontSize: "12.5px",
-                    fontWeight: 600,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    transition: "all 0.15s ease",
+                    "&:hover": { borderColor: ACCENT },
                   }}
                 >
                   {role.label}
@@ -162,66 +261,21 @@ export default function LoginPage() {
             })}
           </Box>
 
-          <Typography
-            sx={{
-              fontSize: 11,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.8px",
-              color: "#8a93a0",
-              mb: 1,
-            }}
-          >
-            2 · Enter credentials
-          </Typography>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.625 }}>
-              <Typography component="label" sx={{ fontSize: "11.5px", fontWeight: 600, color: "#4b5563" }}>
-                Username
-              </Typography>
-              <Box
-                component="input"
-                value={username}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
-                placeholder="e.g. m.santos"
-                sx={{
-                  border: "1px solid #cdd2d8",
-                  borderRadius: "2px",
-                  px: "11px",
-                  py: "9px",
-                  fontSize: 13,
-                  bgcolor: "#fff",
-                  fontFamily: "'Heebo', sans-serif",
-                  outline: "none",
-                  "&:focus": { borderColor: ACCENT },
-                }}
-              />
-            </Box>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.625 }}>
-              <Typography component="label" sx={{ fontSize: "11.5px", fontWeight: 600, color: "#4b5563" }}>
-                Password
-              </Typography>
-              <Box
-                component="input"
-                type="password"
-                value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                sx={{
-                  border: "1px solid #cdd2d8",
-                  borderRadius: "2px",
-                  px: "11px",
-                  py: "9px",
-                  fontSize: 13,
-                  bgcolor: "#fff",
-                  fontFamily: "'Heebo', sans-serif",
-                  outline: "none",
-                  "&:focus": { borderColor: ACCENT },
-                }}
-              />
-            </Box>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Field label="Username" value={username} onChange={setUsername} placeholder="e.g. m.santos" />
+            <Field
+              label="Password"
+              type="password"
+              value={password}
+              onChange={setPassword}
+              placeholder="••••••••"
+            />
 
-            {error && <Alert severity="error">{error}</Alert>}
+            {error && (
+              <Alert severity="error" sx={{ borderRadius: "8px", fontSize: 13 }}>
+                {error}
+              </Alert>
+            )}
 
             <ButtonBase
               type="submit"
@@ -230,19 +284,22 @@ export default function LoginPage() {
                 mt: 0.5,
                 bgcolor: ACCENT,
                 color: "#fff",
-                border: "none",
-                borderRadius: "2px",
-                py: "10px",
-                fontSize: "13.5px",
-                fontWeight: 600,
-                letterSpacing: "0.2px",
-                "&:hover": { filter: "brightness(1.12)" },
+                borderRadius: "8px",
+                py: "11px",
+                fontSize: 14.5,
+                fontWeight: 700,
+                transition: "background-color 0.15s ease",
+                "&:hover": { bgcolor: ACCENT_HOVER },
                 "&.Mui-disabled": { opacity: 0.6 },
               }}
             >
-              {loading ? "Logging in…" : `Log In as ${selectedRole.label}`}
+              {loading ? "Signing in…" : "Sign In"}
             </ButtonBase>
           </Box>
+
+          <Typography sx={{ mt: 4, fontSize: 12.5, color: MUTED, textAlign: "center" }}>
+            Copyright © {new Date().getFullYear()} — DRIM Refrigeration Equipment Corp.
+          </Typography>
         </Box>
       </Box>
     </Box>

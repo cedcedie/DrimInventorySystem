@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Box, MenuItem, Select, Alert } from "@mui/material";
 import { EntityModal, ModalFormActions, FormField, fieldInputSx } from "@/components/EntityModal";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens } from "@/theme/tokens";
+import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
 import { postJson } from "@/lib/mutate";
 import { fetchJson } from "@/lib/api";
 import { useToast } from "@/components/Toast";
@@ -23,15 +23,14 @@ export function StockOutModal({ open, onClose }: { open: boolean; onClose: () =>
     enabled: open,
   });
 
-  const [mrfId, setMrfId] = useState("");
+  const [mrfItemId, setMrfItemId] = useState("");
   const [qty, setQty] = useState("");
   const [error, setError] = useState("");
 
-  const selectedMrf = options?.pendingMrfs.find((m) => m.id === mrfId);
-  const selectedProduct = options?.products.find((p) => p.id === selectedMrf?.productId);
+  const selectedMrfItem = options?.pendingMrfItems.find((m) => m.id === mrfItemId);
 
   const mutation = useMutation({
-    mutationFn: () => postJson<{ refNo: string }>("/api/stock-out", { mrfId, qty }),
+    mutationFn: () => postJson<{ refNo: string }>("/api/stock-out", { mrfItemId, qty }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["stock-out"] });
       queryClient.invalidateQueries({ queryKey: ["stock-options"] });
@@ -39,8 +38,9 @@ export function StockOutModal({ open, onClose }: { open: boolean; onClose: () =>
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
+      queryClient.invalidateQueries({ queryKey: ["mrf"] });
       showToast(`Stock Out ${data.refNo} released.`);
-      setMrfId("");
+      setMrfItemId("");
       setQty("");
       onClose();
     },
@@ -50,13 +50,19 @@ export function StockOutModal({ open, onClose }: { open: boolean; onClose: () =>
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!mrfId || !qty || Number(qty) <= 0) {
-      setError("An MRF and a positive quantity are required.");
+    if (!mrfItemId || !qty || Number(qty) <= 0) {
+      setError("Select an MRF item and enter a positive quantity.");
       return;
     }
-    if (selectedProduct && Number(qty) > selectedProduct.stocks) {
-      setError(`Only ${selectedProduct.stocks} available`);
-      return;
+    if (selectedMrfItem) {
+      if (Number(qty) > selectedMrfItem.qtyRemaining) {
+        setError(`Only ${selectedMrfItem.qtyRemaining} remaining to fulfill for this item`);
+        return;
+      }
+      if (Number(qty) > selectedMrfItem.availableStock) {
+        setError(`Only ${selectedMrfItem.availableStock} available in stock`);
+        return;
+      }
     }
     mutation.mutate();
   };
@@ -65,11 +71,12 @@ export function StockOutModal({ open, onClose }: { open: boolean; onClose: () =>
     <EntityModal open={open} onClose={onClose} title="New Stock Out" width={560}>
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
-          <FormField label="MRF Number" span2>
+          <FormField label="MRF Item to Fulfill" span2>
             <Select
-              value={mrfId}
+              value={mrfItemId}
               onChange={(e) => {
-                setMrfId(e.target.value);
+                setMrfItemId(e.target.value);
+                setQty("");
                 setError("");
               }}
               size="small"
@@ -77,40 +84,75 @@ export function StockOutModal({ open, onClose }: { open: boolean; onClose: () =>
               sx={{ fontSize: 12.5, bgcolor: t.surface }}
             >
               <MenuItem value="" sx={{ fontSize: 12.5 }}>
-                Select a pending MRF
+                Select a pending MRF item
               </MenuItem>
-              {options?.pendingMrfs.map((m) => (
-                <MenuItem key={m.id} value={m.id} sx={{ fontSize: 12.5 }}>
-                  {m.refNo} · {m.technicianName} · {m.productName} × {m.qty}
+              {options?.pendingMrfItems.map((item) => (
+                <MenuItem key={item.id} value={item.id} sx={{ fontSize: 12.5 }}>
+                  {item.mrfRefNo} · {item.productName} · Need: {item.qtyRemaining} {item.unit}
                 </MenuItem>
               ))}
             </Select>
           </FormField>
-          {selectedMrf && (
+          {selectedMrfItem && (
             <>
-              <FormField label="Technician Name">
-                <Box sx={{ fontSize: 12.5, py: 1, color: t.text2 }}>{selectedMrf.technicianName}</Box>
+              <FormField label="MRF Number">
+                <Box sx={{ fontSize: 12.5, py: 1, color: ACCENT, fontFamily: "monospace", fontWeight: 600 }}>
+                  {selectedMrfItem.mrfRefNo}
+                </Box>
+              </FormField>
+              <FormField label="Technician">
+                <Box sx={{ fontSize: 12.5, py: 1, color: t.text2 }}>{selectedMrfItem.technicianName}</Box>
               </FormField>
               <FormField label="Project">
-                <Box sx={{ fontSize: 12.5, py: 1, color: t.text2 }}>{selectedMrf.project}</Box>
+                <Box sx={{ fontSize: 12.5, py: 1, color: t.text2 }}>{selectedMrfItem.project}</Box>
               </FormField>
               <FormField label="Item">
-                <Box sx={{ fontSize: 12.5, py: 1, color: t.text2 }}>{selectedMrf.productName}</Box>
+                <Box sx={{ fontSize: 12.5, py: 1, color: t.text, fontWeight: 600 }}>
+                  {selectedMrfItem.productName}
+                </Box>
+              </FormField>
+              <FormField label="Requested">
+                <Box sx={{ fontSize: 12.5, py: 1, color: t.text2 }}>
+                  {selectedMrfItem.qtyRequested} {selectedMrfItem.unit}
+                </Box>
+              </FormField>
+              <FormField label="Already Fulfilled">
+                <Box sx={{ 
+                  fontSize: 12.5, 
+                  py: 1, 
+                  color: selectedMrfItem.qtyFulfilled > 0 ? ACCENT : t.text2,
+                  fontWeight: selectedMrfItem.qtyFulfilled > 0 ? 600 : 400,
+                }}>
+                  {selectedMrfItem.qtyFulfilled} {selectedMrfItem.unit}
+                </Box>
+              </FormField>
+              <FormField label="Remaining to Fulfill">
+                <Box sx={{ fontSize: 12.5, py: 1, color: t.text, fontWeight: 700 }}>
+                  {selectedMrfItem.qtyRemaining} {selectedMrfItem.unit}
+                </Box>
+              </FormField>
+              <FormField label="Available in Stock">
+                <Box sx={{ 
+                  fontSize: 12.5, 
+                  py: 1, 
+                  color: selectedMrfItem.availableStock >= selectedMrfItem.qtyRemaining ? t.success : t.warn,
+                  fontWeight: 600,
+                }}>
+                  {selectedMrfItem.availableStock} {selectedMrfItem.unit}
+                </Box>
               </FormField>
             </>
           )}
-          <FormField label="Quantity">
+          <FormField label="Quantity to Release">
             <Box
               component="input"
               type="number"
               value={qty}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQty(e.target.value)}
-              placeholder={selectedMrf ? String(selectedMrf.qty) : "0"}
+              placeholder={selectedMrfItem ? String(selectedMrfItem.qtyRemaining) : "0"}
+              max={selectedMrfItem?.qtyRemaining}
               sx={fieldInputSx(t)}
             />
-            {selectedProduct && (
-              <Box sx={{ fontSize: 11, color: t.muted, mt: 0.5 }}>{selectedProduct.stocks} available</Box>
-            )}
           </FormField>
         </Box>
 

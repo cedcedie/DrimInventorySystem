@@ -8,6 +8,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { KpiSkeleton } from "@/components/Skeleton";
 import { useTheme, type Palette } from "@mui/material/styles";
 import { useToast } from "@/components/Toast";
+import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@prisma/client";
 import type { DashboardData } from "@/lib/data/dashboard";
 
@@ -33,7 +34,8 @@ export function ReportsScreen({
   role: Role;
   initialData?: DashboardData;
 }) {
-  const canReport = role === "ADMIN" || role === "OWNER";
+  const canReport = useCan("reports", "canExport");
+  void role;
   const { data } = useQuery({
     queryKey: queryKeys.dashboard,
     queryFn: () => fetchJson<DashboardData>("/api/dashboard"),
@@ -46,6 +48,7 @@ export function ReportsScreen({
   const [from, setFrom] = useState(firstOfMonthIso());
   const [to, setTo] = useState(todayIso());
   const [selectedType, setSelectedType] = useState<(typeof REPORT_TYPES)[number]["title"]>("Stock Report");
+  const [format, setFormat] = useState<"pdf" | "excel">("pdf");
   const [lastExport, setLastExport] = useState<{ refNo: string; rows: string } | null>(null);
   const [error, setError] = useState("");
 
@@ -57,7 +60,7 @@ export function ReportsScreen({
       const res = await fetch("/api/reports/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: selectedType, from, to }),
+        body: JSON.stringify({ type: selectedType, from, to, format }),
       });
 
       if (!res.ok) {
@@ -75,7 +78,7 @@ export function ReportsScreen({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${refNo}.pdf`;
+      a.download = `${refNo}.${format === "excel" ? "xlsx" : "pdf"}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -145,6 +148,29 @@ export function ReportsScreen({
             ))}
           </Select>
         </Box>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+          <Typography
+            component="label"
+            sx={{
+              fontSize: 10.5,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              color: t.muted,
+            }}
+          >
+            Format
+          </Typography>
+          <Select
+            value={format}
+            onChange={(e) => setFormat(e.target.value as "pdf" | "excel")}
+            size="small"
+            sx={{ fontSize: 12, bgcolor: t.surface, minWidth: 120 }}
+          >
+            <MenuItem value="pdf" sx={{ fontSize: 12.5 }}>PDF</MenuItem>
+            <MenuItem value="excel" sx={{ fontSize: 12.5 }}>Excel (.xlsx)</MenuItem>
+          </Select>
+        </Box>
         {canReport ? (
           <Box sx={{ display: "flex", gap: 1, ml: "auto" }}>
             <ButtonBase
@@ -162,7 +188,7 @@ export function ReportsScreen({
                 "&.Mui-disabled": { opacity: 0.6 },
               }}
             >
-              {exportMutation.isPending ? "Generating…" : "Export PDF"}
+              {exportMutation.isPending ? "Generating…" : `Export ${format === "pdf" ? "PDF" : "Excel"}`}
             </ButtonBase>
           </Box>
         ) : (

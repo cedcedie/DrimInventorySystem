@@ -1,5 +1,5 @@
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const PAGE_SIZE = 15;
 
@@ -56,14 +56,12 @@ async function fetchInventoryData(q: string, category: string, page: number) {
   };
 }
 
-// Only the unfiltered default view (q="", category="All", page=1) is used for
-// the page's server-rendered initial load, so that's the only combo worth
-// caching — client-side filter/search changes hit /api/inventory directly.
-const getCachedDefaultInventoryData = unstable_cache(
-  () => fetchInventoryData("", "All", 1),
-  ["inventory-data-default"],
-  { revalidate: 20, tags: ["inventory"] }
-);
+/** Default inventory view (no filters) — cached. Filtered views hit the DB. */
+async function loadDefaultInventory() {
+  "use cache";
+  tagAndLife("inventory", CACHE_SECONDS.list);
+  return fetchInventoryData("", "All", 1);
+}
 
 export async function getInventoryData(params: { q?: string; category?: string; page?: number }) {
   const q = params.q?.trim() ?? "";
@@ -71,7 +69,7 @@ export async function getInventoryData(params: { q?: string; category?: string; 
   const page = Math.max(1, params.page ?? 1);
 
   if (!q && category === "All" && page === 1) {
-    return getCachedDefaultInventoryData();
+    return loadDefaultInventory();
   }
   return fetchInventoryData(q, category, page);
 }

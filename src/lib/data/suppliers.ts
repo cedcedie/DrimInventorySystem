@@ -1,14 +1,17 @@
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
-async function fetchSuppliersData() {
+export async function getSuppliersData() {
+  "use cache";
+  tagAndLife("suppliers", CACHE_SECONDS.list);
+
   const suppliers = await prisma.supplier.findMany({
     orderBy: { name: "asc" },
     include: {
       stockIns: { orderBy: { createdAt: "desc" }, take: 1 },
       _count: { select: { stockIns: true } },
     },
-    take: 500, // safety cap — see SYSTEM_REVIEW.md §4
+    take: 500,
   });
 
   return {
@@ -22,10 +25,5 @@ async function fetchSuppliersData() {
     })),
   };
 }
-
-export const getSuppliersData = unstable_cache(fetchSuppliersData, ["suppliers-data"], {
-  revalidate: 20,
-  tags: ["suppliers"],
-});
 
 export type SuppliersData = Awaited<ReturnType<typeof getSuppliersData>>;

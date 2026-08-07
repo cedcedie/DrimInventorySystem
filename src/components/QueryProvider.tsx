@@ -13,8 +13,14 @@ export function QueryProvider({ children }: { children: ReactNode }) {
             // Data here comes from Neon over a real network hop — avoid
             // re-fetching (and re-showing a spinner) every time a screen
             // the user just visited is revisited within a short window.
-            staleTime: 30_000,
+            staleTime: 45_000,
+            gcTime: 5 * 60_000,
             refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
+          },
+          mutations: {
+            // Don't retry writes — inventory mutations aren't idempotent.
+            retry: 0,
           },
         },
       })

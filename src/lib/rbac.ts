@@ -11,6 +11,7 @@ export const MODULE_ACCESS: Record<Role, string[]> = {
     "technicians",
     "reports",
     "users",
+    "permissions",
     "activity",
     "settings",
   ],

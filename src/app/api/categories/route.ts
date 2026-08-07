@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireModuleAccess, isOwnerOrAdmin } from "@/lib/apiAuth";
+import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { categoryCreateSchema } from "@/lib/schemas";
 
 export async function POST(req: Request) {
-  const auth = await requireModuleAccess("products");
+  const auth = await requireModuleAccess("products", "canCreate");
   if ("error" in auth) return auth.error;
-  if (!isOwnerOrAdmin(auth.role)) {
-    return NextResponse.json({ error: "Only Owner or Admin can add categories" }, { status: 403 });
-  }
 
   const parsed = await parseBody(req, categoryCreateSchema);
   if ("error" in parsed) return parsed.error;

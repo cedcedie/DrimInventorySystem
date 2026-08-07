@@ -2,27 +2,34 @@ import type { Role } from "@prisma/client";
 
 export const NAV_GROUPS = [
   {
-    label: "Overview",
-    items: [
-      { segment: "dashboard", label: "Dashboard" },
-      { segment: "activity", label: "Activity Log" },
-    ],
+    label: "Main",
+    items: [{ segment: "dashboard", label: "Dashboard" }],
   },
   {
-    label: "Warehouse",
+    label: "Inventory",
     items: [
       { segment: "inventory", label: "Inventory" },
-      { segment: "products", label: "Products/Materials" },
+      { segment: "products", label: "Products" },
       { segment: "suppliers", label: "Suppliers" },
-      { segment: "stock", label: "Stock In/Out" },
     ],
   },
   {
-    label: "People & Admin",
+    label: "Stock",
+    items: [{ segment: "stock", label: "Stock In/Out" }],
+  },
+  {
+    label: "People",
     items: [
       { segment: "technicians", label: "Technicians" },
-      { segment: "reports", label: "Reports" },
       { segment: "users", label: "Users" },
+    ],
+  },
+  {
+    label: "Admin",
+    items: [
+      { segment: "reports", label: "Reports" },
+      { segment: "permissions", label: "Permissions" },
+      { segment: "activity", label: "Activity Log" },
       { segment: "settings", label: "Settings" },
     ],
   },
@@ -37,6 +44,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   technicians: "Technicians",
   reports: "Reports",
   users: "Users",
+  permissions: "Role Permissions",
   activity: "Activity Log",
   settings: "Settings",
   profile: "My Account",
@@ -51,6 +59,7 @@ export const SCREEN_SUBTITLES: Record<string, string> = {
   technicians: "Field personnel and their transactions",
   reports: "Generate and export operational reports",
   users: "System accounts and roles",
+  permissions: "Configure what each role can access",
   activity: "Complete audit trail of system actions",
   settings: "Company profile and system configuration",
   profile: "Your display name and password",

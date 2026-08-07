@@ -29,7 +29,20 @@ export function EntityModal({
       onClose={onClose}
       maxWidth={false}
       aria-labelledby="entity-modal-title"
-      slotProps={{ paper: { sx: { width, maxWidth: "92vw", bgcolor: t.surface } } }}
+      slotProps={{
+        paper: {
+          sx: {
+            width,
+            maxWidth: "92vw",
+            bgcolor: t.surface,
+            borderRadius: "12px",
+            border: `1px solid ${t.line}`,
+            boxShadow: "0 16px 48px rgba(16,24,40,0.14)",
+            overflow: "hidden",
+            transition: "opacity 0.15s ease",
+          },
+        },
+      }}
     >
       <DialogTitle
         id="entity-modal-title"

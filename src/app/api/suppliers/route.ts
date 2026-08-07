@@ -14,7 +14,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireModuleAccess("suppliers");
+  const auth = await requireModuleAccess("suppliers", "canCreate");
   if ("error" in auth) return auth.error;
   if (auth.role !== "OWNER") {
     return NextResponse.json({ error: "Only Owner can add suppliers" }, { status: 403 });

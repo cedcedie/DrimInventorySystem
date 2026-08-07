@@ -1,9 +1,12 @@
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const PAGE_SIZE = 15;
 
-async function fetchProductsData(page: number) {
+async function loadProductsPage(page: number) {
+  "use cache";
+  tagAndLife("products", CACHE_SECONDS.list);
+
   const [total, products, categories, suppliers] = await Promise.all([
     prisma.product.count(),
     prisma.product.findMany({
@@ -39,15 +42,9 @@ async function fetchProductsData(page: number) {
   };
 }
 
-const getCachedProductsData = unstable_cache(
-  (page: number) => fetchProductsData(page),
-  ["products-data"],
-  { revalidate: 20, tags: ["products"] }
-);
-
 export async function getProductsData(params: { page?: number }) {
   const page = Math.max(1, params.page ?? 1);
-  return getCachedProductsData(page);
+  return loadProductsPage(page);
 }
 
 export type ProductsData = Awaited<ReturnType<typeof getProductsData>>;

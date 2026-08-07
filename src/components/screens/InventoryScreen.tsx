@@ -5,23 +5,26 @@ import { useQuery, keepPreviousData, useMutation, useQueryClient } from "@tansta
 import { Box, ButtonBase, InputBase } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-import { peso } from "@/lib/format";
 import {
   TableShell,
   TableHeaderRow,
   TableRow,
   TableCell,
   Pagination,
+  RowActionButton,
 } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
 import { StockMeter } from "@/components/StockMeter";
 import { TableSkeleton } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
+import { PageChrome } from "@/components/PageChrome";
 import { useTheme } from "@mui/material/styles";
 import { patchJson, deleteJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { ProductModal, type ProductFormRow } from "@/components/modals/ProductModal";
 import { CategoryModal } from "@/components/modals/CategoryModal";
 import { AdjustStockModal, type AdjustableProduct } from "@/components/modals/AdjustStockModal";
+import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@prisma/client";
 import type { InventoryData } from "@/lib/data/inventory";
 
@@ -39,8 +42,13 @@ export function InventoryScreen({
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductFormRow | null>(null);
   const [adjustingProduct, setAdjustingProduct] = useState<AdjustableProduct | null>(null);
-  const isOwner = role === "OWNER";
-  const canManage = role === "OWNER" || role === "ADMIN";
+  const canCreateProduct = useCan("products", "canCreate");
+  const canEditProduct = useCan("products", "canEdit");
+  const canDeleteProduct = useCan("products", "canDelete");
+  const canEditInventory = useCan("inventory", "canEdit");
+  const canManage = canEditProduct || canDeleteProduct || canEditInventory;
+  const showMinLevel = canEditInventory;
+  void role;
   const isDefaultView = q === "" && category === "All" && page === 1;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -79,30 +87,73 @@ export function InventoryScreen({
     },
   });
 
-  // Min. Stock column only shows for Owner (README: "Set Min. Stock Level" is
-  // Owner-exclusive); Actions (Edit/Delete) shows for Owner or Admin.
   const columns = canManage
-    ? isOwner
-      ? "90px minmax(0,1.4fr) minmax(0,1fr) 60px 58px 92px 108px 92px 78px 196px"
-      : "90px minmax(0,1.4fr) minmax(0,1fr) 60px 58px 92px 108px 92px 196px"
-    : "100px minmax(0,1.5fr) minmax(0,1.1fr) 68px 66px 100px 118px 106px";
-  const minWidth = canManage ? (isOwner ? 1068 : 1008) : 780;
+    ? showMinLevel
+      ? "48px 84px minmax(0,1.4fr) minmax(0,0.9fr) 72px 64px 100px 80px 140px"
+      : "48px 84px minmax(0,1.4fr) minmax(0,0.9fr) 72px 64px 100px 140px"
+    : "48px 92px minmax(0,1.5fr) minmax(0,1fr) 80px 70px 110px";
+  const minWidth = canManage ? (showMinLevel ? 900 : 840) : 720;
   const headers = [
-    "Product Code",
+    "",
+    "Code",
     "Product Name",
     "Category",
     "Stocks",
     "Unit",
-    "Amount",
-    "Total Amount",
     "Status",
-    ...(isOwner ? ["Min. Stock"] : []),
+    ...(showMinLevel ? ["Min"] : []),
     ...(canManage ? ["Actions"] : []),
   ];
 
   return (
     <Box>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 1.5, flexWrap: "wrap" }}>
+      <PageChrome
+        title="Inventory"
+        addLabel={canCreateProduct ? "Add Product" : undefined}
+        onAdd={
+          canCreateProduct
+            ? () => {
+                setEditingProduct(null);
+                setProductModalOpen(true);
+              }
+            : undefined
+        }
+      >
+        {canCreateProduct && (
+          <ButtonBase
+            onClick={() => setCategoryModalOpen(true)}
+            sx={{
+              border: "1px solid",
+              borderColor: t.border,
+              bgcolor: t.surface,
+              borderRadius: "8px",
+              px: 1.5,
+              height: 38,
+              fontSize: 13,
+              fontWeight: 700,
+              color: t.text2,
+            }}
+          >
+            Categories
+          </ButtonBase>
+        )}
+      </PageChrome>
+
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1.25,
+          mb: 1.5,
+          flexWrap: "wrap",
+          px: 1.5,
+          py: 1.25,
+          bgcolor: t.surface,
+          border: "1px solid",
+          borderColor: t.line,
+          borderRadius: "8px",
+        }}
+      >
         <InputBase
           value={q}
           onChange={(e) => {
@@ -111,106 +162,80 @@ export function InventoryScreen({
           }}
           placeholder="Search by Product Code or Name"
           sx={{
-            flex: "1 1 230px",
-            maxWidth: 360,
+            flex: "1 1 200px",
             border: "1px solid",
             borderColor: t.border,
-            borderRadius: "2px",
+            borderRadius: "8px",
             px: 1.375,
-            py: 1,
-            fontSize: 12.5,
-            bgcolor: t.surface,
+            py: 0.75,
+            fontSize: 13,
+            bgcolor: t.mode === "dark" ? "background.default" : "#FAFBFE",
           }}
         />
-        {canManage ? (
-          <Box sx={{ display: "flex", gap: 1, ml: "auto" }}>
-            <ButtonBase
-              onClick={() => setCategoryModalOpen(true)}
-              sx={{
-                border: "1px solid",
-                borderColor: t.border,
-                bgcolor: t.surface,
-                borderRadius: "2px",
-                px: 1.625,
-                py: 1,
-                fontSize: 12,
-                fontWeight: 600,
-                color: t.text2,
-              }}
-            >
-              Choose / Add Category
-            </ButtonBase>
-            <ButtonBase
-              onClick={() => {
-                setEditingProduct(null);
-                setProductModalOpen(true);
-              }}
-              sx={{
-                border: "none",
-                bgcolor: t.primary.main,
-                color: "#fff",
-                borderRadius: "2px",
-                px: 1.625,
-                py: 1,
-                fontSize: 12,
-                fontWeight: 600,
-              }}
-            >
-              + Add Product
-            </ButtonBase>
-          </Box>
-        ) : (
-          <Box
-            sx={{
-              ml: "auto",
-              fontSize: 11,
-              color: t.muted2,
-              border: "1px dashed",
-              borderColor: t.border,
-              px: 1.375,
-              py: 0.75,
-            }}
-          >
-            View only — Add / Edit / Delete require Owner or Admin role
-          </Box>
-        )}
-      </Box>
-
-      <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mb: 1.5 }}>
-        {["All", ...(data?.categories ?? [])].map((c) => {
-          const active = category === c;
-          return (
-            <ButtonBase
-              key={c}
-              onClick={() => {
-                setCategory(c);
-                setPage(1);
-              }}
-              sx={{
-                border: "1px solid",
-                borderColor: active ? t.primary.main : t.border,
-                bgcolor: active ? t.primary.main : t.surface,
-                color: active ? "#fff" : t.text2,
-                borderRadius: "2px",
-                px: 1.5,
-                py: 0.625,
-                fontSize: 11.5,
-                fontWeight: 600,
-              }}
-            >
-              {c}
-            </ButtonBase>
-          );
-        })}
+        <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
+          {["All", ...(data?.categories ?? [])].slice(0, 10).map((c) => {
+            const active = category === c;
+            return (
+              <ButtonBase
+                key={c}
+                onClick={() => {
+                  setCategory(c);
+                  setPage(1);
+                }}
+                sx={{
+                  border: "1px solid",
+                  borderColor: active ? t.primary.main : t.border,
+                  bgcolor: active ? t.primary.main : t.surface,
+                  color: active ? "#fff" : t.text2,
+                  borderRadius: "8px",
+                  px: 1.25,
+                  py: 0.625,
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                {c}
+              </ButtonBase>
+            );
+          })}
+        </Box>
       </Box>
 
       {!data ? (
-        <TableSkeleton label="Loading inventory…" columns={canManage ? (isOwner ? 10 : 9) : 8} rows={8} />
+        <TableSkeleton label="Loading inventory…" columns={canManage ? (showMinLevel ? 9 : 8) : 7} rows={8} />
       ) : (
         <TableShell minWidth={minWidth} dimmed={isFetching}>
           <TableHeaderRow columns={columns} headers={headers} />
           {data.rows.map((r) => (
             <TableRow key={r.id} columns={columns}>
+              <TableCell sx={{ overflow: "visible" }}>
+                <Box
+                  sx={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: "6px",
+                    bgcolor: t.mode === "dark" ? "background.paper" : "#F4F6F8",
+                    border: "1px solid",
+                    borderColor: t.line,
+                    overflow: "hidden",
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  {r.imageKey ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`/api/blobs/${r.imageKey}`}
+                      alt=""
+                      width={34}
+                      height={34}
+                      style={{ objectFit: "cover" }}
+                    />
+                  ) : (
+                    <Box sx={{ fontSize: 9, fontWeight: 800, color: t.muted3 }}>{r.code.slice(0, 2)}</Box>
+                  )}
+                </Box>
+              </TableCell>
               <TableCell mono color={t.text2}>
                 {r.code}
               </TableCell>
@@ -223,14 +248,10 @@ export function InventoryScreen({
                 <StockMeter stocks={r.stocks} minLevel={r.minLevel} />
               </TableCell>
               <TableCell color={t.muted}>{r.unit}</TableCell>
-              <TableCell mono>{peso(r.amount)}</TableCell>
-              <TableCell mono bold>
-                {peso(r.total)}
-              </TableCell>
               <TableCell>
                 <StatusChip label={r.status} />
               </TableCell>
-              {isOwner && (
+              {showMinLevel && (
                 <TableCell sx={{ overflow: "visible" }}>
                   <Box
                     component="input"
@@ -246,7 +267,7 @@ export function InventoryScreen({
                       width: 56,
                       border: "1px solid",
                       borderColor: t.border,
-                      borderRadius: "2px",
+                      borderRadius: "8px",
                       px: 0.75,
                       py: 0.5,
                       fontSize: 12,
@@ -259,79 +280,60 @@ export function InventoryScreen({
               {canManage && (
                 <TableCell>
                   <Box sx={{ display: "flex", gap: 0.75 }}>
-                    <ButtonBase
-                      aria-label={`Edit ${r.name}`}
-                      onClick={() => {
-                        setEditingProduct(r);
-                        setProductModalOpen(true);
-                      }}
-                      sx={{
-                        border: "1px solid",
-                        borderColor: t.border,
-                        bgcolor: t.surface,
-                        borderRadius: "2px",
-                        px: 1.25,
-                        py: 0.5,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: t.text2,
-                      }}
-                    >
-                      Edit
-                    </ButtonBase>
-                    <ButtonBase
-                      aria-label={`Adjust stock for ${r.name}`}
-                      onClick={() =>
-                        setAdjustingProduct({
-                          id: r.id,
-                          name: r.name,
-                          code: r.code,
-                          unit: r.unit,
-                          stocks: r.stocks,
-                        })
-                      }
-                      sx={{
-                        border: "1px solid",
-                        borderColor: t.border,
-                        bgcolor: t.surface,
-                        borderRadius: "2px",
-                        px: 1.25,
-                        py: 0.5,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: t.text2,
-                      }}
-                    >
-                      Adjust
-                    </ButtonBase>
-                    <ButtonBase
-                      aria-label={`Delete ${r.name}`}
-                      onClick={() => deleteMutation.mutate(r.id)}
-                      sx={{
-                        border: "1px solid",
-                        borderColor: t.error.main,
-                        bgcolor: t.surface,
-                        borderRadius: "2px",
-                        px: 1.25,
-                        py: 0.5,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: t.error.main,
-                      }}
-                    >
-                      Delete
-                    </ButtonBase>
+                    {canEditProduct && (
+                      <RowActionButton
+                        kind="edit"
+                        label={`Edit ${r.name}`}
+                        onClick={() => {
+                          setEditingProduct(r);
+                          setProductModalOpen(true);
+                        }}
+                      />
+                    )}
+                    {canEditInventory && (
+                      <RowActionButton
+                        kind="adjust"
+                        label={`Adjust stock for ${r.name}`}
+                        onClick={() =>
+                          setAdjustingProduct({
+                            id: r.id,
+                            name: r.name,
+                            code: r.code,
+                            unit: r.unit,
+                            stocks: r.stocks,
+                          })
+                        }
+                      />
+                    )}
+                    {canDeleteProduct && (
+                      <RowActionButton
+                        kind="delete"
+                        label={`Delete ${r.name}`}
+                        onClick={() => deleteMutation.mutate(r.id)}
+                      />
+                    )}
                   </Box>
                 </TableCell>
               )}
             </TableRow>
           ))}
           {data.rows.length === 0 && (
-            <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-              {q || category !== "All"
-                ? `No products match ${q ? `"${q}"` : "this category"}. Clear the filters to see everything.`
-                : "No products yet. Add one from Products/Materials to start tracking stock."}
-            </Box>
+            <EmptyState
+              message={
+                q || category !== "All"
+                  ? "No products match your filters."
+                  : "No products yet — add one to start tracking stock."
+              }
+              actionLabel={canCreateProduct && !q && category === "All" ? "Add Product" : undefined}
+              onAction={
+                canCreateProduct
+                  ? () => {
+                      setEditingProduct(null);
+                      setProductModalOpen(true);
+                    }
+                  : undefined
+              }
+            />
           )}
           {data.totalPages > 1 && (
             <Pagination
@@ -347,24 +349,30 @@ export function InventoryScreen({
         </TableShell>
       )}
 
-      {canManage && data && (
+      {(canCreateProduct || canEditProduct || canEditInventory) && data && (
         <>
-          <ProductModal
-            open={productModalOpen}
-            onClose={() => setProductModalOpen(false)}
-            product={editingProduct}
-            categories={data.categoryList}
-            suppliers={data.supplierList}
-          />
-          <CategoryModal
-            open={categoryModalOpen}
-            onClose={() => setCategoryModalOpen(false)}
-            existingNames={data.categories}
-          />
-          <AdjustStockModal
-            product={adjustingProduct}
-            onClose={() => setAdjustingProduct(null)}
-          />
+          {(canCreateProduct || canEditProduct) && (
+            <ProductModal
+              open={productModalOpen}
+              onClose={() => setProductModalOpen(false)}
+              product={editingProduct}
+              categories={data.categoryList}
+              suppliers={data.supplierList}
+            />
+          )}
+          {canCreateProduct && (
+            <CategoryModal
+              open={categoryModalOpen}
+              onClose={() => setCategoryModalOpen(false)}
+              existingNames={data.categories}
+            />
+          )}
+          {canEditInventory && (
+            <AdjustStockModal
+              product={adjustingProduct}
+              onClose={() => setAdjustingProduct(null)}
+            />
+          )}
         </>
       )}
     </Box>

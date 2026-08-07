@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireModuleAccess, isOwnerOrAdmin } from "@/lib/apiAuth";
+import { requireModuleAccess } from "@/lib/apiAuth";
 import { getBlobStore } from "@/lib/storage";
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export async function POST(req: Request) {
-  const auth = await requireModuleAccess("products");
+  const auth = await requireModuleAccess("products", "canCreate");
   if ("error" in auth) return auth.error;
-  if (!isOwnerOrAdmin(auth.role)) {
-    return NextResponse.json({ error: "Only Owner or Admin can upload product images" }, { status: 403 });
-  }
 
   const formData = await req.formData();
   const file = formData.get("file");

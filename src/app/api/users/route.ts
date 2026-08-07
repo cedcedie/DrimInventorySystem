@@ -19,8 +19,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  // Only OWNER has "users" in MODULE_ACCESS, so reaching here already implies Owner.
-  const auth = await requireModuleAccess("users");
+  const auth = await requireModuleAccess("users", "canCreate");
   if ("error" in auth) return auth.error;
 
   const rl = checkRateLimit(`create-user:${getClientIp(req)}`, { limit: 10, windowMs: 60_000 });

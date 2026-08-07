@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Box, ButtonBase, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
@@ -10,6 +10,9 @@ import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/Da
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
 import { SupplierModal } from "@/components/modals/SupplierModal";
+import { PageChrome } from "@/components/PageChrome";
+import { EmptyState } from "@/components/EmptyState";
+import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@prisma/client";
 import type { SuppliersData } from "@/lib/data/suppliers";
 
@@ -23,7 +26,8 @@ export function SuppliersScreen({
   initialData?: SuppliersData;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
-  const isOwner = role === "OWNER";
+  const canCreate = useCan("suppliers", "canCreate");
+  void role;
 
   const { data } = useQuery({
     queryKey: queryKeys.suppliers,
@@ -34,29 +38,11 @@ export function SuppliersScreen({
 
   return (
     <Box>
-      <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
-        <Typography sx={{ fontSize: 12, color: t.muted }}>
-          Accredited suppliers and their delivery history.
-        </Typography>
-        {isOwner && (
-          <ButtonBase
-            onClick={() => setModalOpen(true)}
-            sx={{
-              ml: "auto",
-              border: "none",
-              bgcolor: t.primary.main,
-              color: "#fff",
-              borderRadius: "2px",
-              px: 1.625,
-              py: 1,
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            + Add Supplier
-          </ButtonBase>
-        )}
-      </Box>
+      <PageChrome
+        title="Suppliers"
+        addLabel={canCreate ? "Add Supplier" : undefined}
+        onAdd={canCreate ? () => setModalOpen(true) : undefined}
+      />
 
       {!data ? (
         <TableSkeleton label="Loading supplier registry…" columns={5} rows={5} />
@@ -80,14 +66,16 @@ export function SuppliersScreen({
             </TableRow>
           ))}
           {data.rows.length === 0 && (
-            <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-              No suppliers in the registry yet.
-            </Box>
+            <EmptyState
+              message="No suppliers in the registry yet."
+              actionLabel={canCreate ? "Add Supplier" : undefined}
+              onAction={canCreate ? () => setModalOpen(true) : undefined}
+            />
           )}
         </TableShell>
       )}
 
-      {isOwner && <SupplierModal open={modalOpen} onClose={() => setModalOpen(false)} />}
+      {canCreate && <SupplierModal open={modalOpen} onClose={() => setModalOpen(false)} />}
     </Box>
   );
 }

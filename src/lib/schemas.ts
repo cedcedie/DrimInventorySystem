@@ -110,7 +110,7 @@ export const stockInSchema = z.object({
 });
 
 export const stockOutSchema = z.object({
-  mrfId: id,
+  mrfItemId: id,
   qty: positiveQty,
 });
 
@@ -135,4 +135,5 @@ export const reportExportSchema = z.object({
   type: z.enum(REPORT_TYPES, { message: "A valid report type is required" }),
   from: z.string().min(1, "Start date is required"),
   to: z.string().min(1, "End date is required"),
+  format: z.enum(["pdf", "excel"], { message: "A valid format is required" }).default("pdf"),
 });

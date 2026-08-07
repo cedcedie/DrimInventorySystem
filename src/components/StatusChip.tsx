@@ -17,6 +17,8 @@ const TONE_BY_LABEL: Record<string, ChipTone> = {
   Cancelled: "danger",
   "Low Stock": "warn",
   Pending: "warn",
+  Partial: "info",
+  PARTIAL: "info",
   Inactive: "neutral",
   Return: "info",
 };
@@ -36,15 +38,16 @@ export function StatusChip({ label, tone }: { label: string; tone?: ChipTone }) 
       component="span"
       sx={{
         display: "inline-block",
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: 700,
-        padding: "2px 7px",
+        padding: "3px 10px",
+        borderRadius: "4px",
         border: "1px solid",
         borderColor: border,
         bgcolor: bg,
         color: fg,
         whiteSpace: "nowrap",
-        letterSpacing: "0.3px",
+        letterSpacing: "0.2px",
       }}
     >
       {label}

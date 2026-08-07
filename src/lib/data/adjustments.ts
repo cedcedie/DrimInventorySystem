@@ -1,5 +1,5 @@
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const PAGE_SIZE = 15;
 
@@ -47,15 +47,15 @@ async function fetchStockAdjustmentsData(page: number) {
   };
 }
 
-const getCachedFirstPage = unstable_cache(
-  () => fetchStockAdjustmentsData(1),
-  ["stock-adjustments-page-1"],
-  { revalidate: 60, tags: ["adjustments"] }
-);
+async function loadFirstPageAdjustments() {
+  "use cache";
+  tagAndLife("adjustments", CACHE_SECONDS.dashboard);
+  return fetchStockAdjustmentsData(1);
+}
 
 export async function getStockAdjustmentsData(params: { page?: number }) {
   const page = Math.max(1, params.page ?? 1);
-  if (page === 1) return getCachedFirstPage();
+  if (page === 1) return loadFirstPageAdjustments();
   return fetchStockAdjustmentsData(page);
 }
 

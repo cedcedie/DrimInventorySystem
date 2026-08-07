@@ -228,20 +228,33 @@ async function main() {
   const technicianIdByEmpNo = new Map(technicianRecords.map((t) => [t.empNo, t.id]));
 
   const mrfRecords = await Promise.all(
-    mrfsSeed.map((m) =>
-      prisma.mrf.upsert({
+    mrfsSeed.map(async (m) => {
+      const mrf = await prisma.mrf.upsert({
         where: { refNo: m.refNo },
         update: {},
         create: {
           refNo: m.refNo,
           technicianId: technicianIdByEmpNo.get(m.techEmpNo)!,
-          productId: productIdByCode.get(m.productCode)!,
-          qty: m.qty,
           project: m.project,
           status: m.status,
         },
-      })
-    )
+      });
+      const productId = productIdByCode.get(m.productCode)!;
+      const existingItem = await prisma.mrfItem.findFirst({
+        where: { mrfId: mrf.id, productId },
+      });
+      if (!existingItem) {
+        await prisma.mrfItem.create({
+          data: {
+            mrfId: mrf.id,
+            productId,
+            qtyRequested: m.qty,
+            qtyFulfilled: m.status === "FULFILLED" ? m.qty : 0,
+          },
+        });
+      }
+      return mrf;
+    })
   );
   const mrfIdByRef = new Map(mrfRecords.map((m) => [m.refNo, m.id]));
 

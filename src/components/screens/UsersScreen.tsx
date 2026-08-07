@@ -4,24 +4,25 @@ import { useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import {
   Box,
-  ButtonBase,
   CircularProgress,
   Dialog,
   DialogTitle,
   IconButton,
-  Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDateTime } from "@/lib/format";
-import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
+import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination, RowActionButton } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import { UserModal } from "@/components/modals/UserModal";
 import { EditUserModal, type EditableUser } from "@/components/modals/EditUserModal";
+import { PageChrome } from "@/components/PageChrome";
+import { EmptyState } from "@/components/EmptyState";
+import { useCan } from "@/components/PermissionsProvider";
 import type { Role, UserStatus } from "@prisma/client";
 import type { UsersData } from "@/lib/data/users";
 
@@ -47,6 +48,8 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [editingUser, setEditingUser] = useState<EditableUser | null>(null);
   const [addUserOpen, setAddUserOpen] = useState(false);
+  const canCreate = useCan("users", "canCreate");
+  const canEdit = useCan("users", "canEdit");
 
   const { data, isFetching } = useQuery({
     queryKey: queryKeys.users({ page }),
@@ -65,27 +68,11 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
 
   return (
     <Box>
-      <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
-        <Typography sx={{ fontSize: 12, color: t.muted }}>
-          Accounts and role assignments · select a user to view their full activity history
-        </Typography>
-        <ButtonBase
-          onClick={() => setAddUserOpen(true)}
-          sx={{
-            ml: "auto",
-            border: "none",
-            bgcolor: t.primary.main,
-            color: "#fff",
-            borderRadius: "2px",
-            px: 1.625,
-            py: 1,
-            fontSize: 12,
-            fontWeight: 600,
-          }}
-        >
-          + Add User
-        </ButtonBase>
-      </Box>
+      <PageChrome
+        title="Users"
+        addLabel={canCreate ? "Add User" : undefined}
+        onAdd={canCreate ? () => setAddUserOpen(true) : undefined}
+      />
 
       {!data ? (
         <TableSkeleton label="Loading user accounts…" columns={4} rows={6} />
@@ -106,34 +93,26 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
                 <StatusChip label={r.status === "ACTIVE" ? "Active" : "Inactive"} />
               </TableCell>
               <TableCell>
-                <ButtonBase
-                  aria-label={`Edit account for ${r.name}`}
+                {canEdit && (
+                  <RowActionButton
+                  kind="edit"
+                  label={`Edit account for ${r.name}`}
                   onClick={(e) => {
                     // The row itself opens activity history — don't trigger both.
                     e.stopPropagation();
                     setEditingUser({ id: r.id, name: r.name, role: r.role, status: r.status });
                   }}
-                  sx={{
-                    border: "1px solid",
-                    borderColor: t.border,
-                    borderRadius: "2px",
-                    px: 1,
-                    py: 0.375,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: t.text2,
-                    "&:hover": { borderColor: t.primary.main, color: t.primary.main },
-                  }}
-                >
-                  Edit
-                </ButtonBase>
+                />
+                )}
               </TableCell>
             </TableRow>
           ))}
           {data.rows.length === 0 && (
-            <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-              No accounts yet. Use + Add User to create the first one.
-            </Box>
+            <EmptyState
+              message="No accounts yet."
+              actionLabel={canCreate ? "Add User" : undefined}
+              onAction={canCreate ? () => setAddUserOpen(true) : undefined}
+            />
           )}
           {data.totalPages > 1 && (
             <Pagination
@@ -204,8 +183,8 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
         </Box>
       </Dialog>
 
-      <UserModal open={addUserOpen} onClose={() => setAddUserOpen(false)} />
-      <EditUserModal user={editingUser} onClose={() => setEditingUser(null)} />
+      {canCreate && <UserModal open={addUserOpen} onClose={() => setAddUserOpen(false)} />}
+      {canEdit && <EditUserModal user={editingUser} onClose={() => setEditingUser(null)} />}
     </Box>
   );
 }

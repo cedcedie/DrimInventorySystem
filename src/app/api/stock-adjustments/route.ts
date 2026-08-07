@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireModuleAccess, isOwnerOrAdmin } from "@/lib/apiAuth";
+import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { nextRefNo } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
@@ -29,14 +29,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireModuleAccess("inventory");
+  const auth = await requireModuleAccess("inventory", "canEdit");
   if ("error" in auth) return auth.error;
-  if (!isOwnerOrAdmin(auth.role)) {
-    return NextResponse.json(
-      { error: "Only Owner or Admin can adjust stock" },
-      { status: 403 }
-    );
-  }
 
   const parsed = await parseBody(req, stockAdjustmentSchema);
   if ("error" in parsed) return parsed.error;

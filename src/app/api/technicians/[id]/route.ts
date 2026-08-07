@@ -6,7 +6,7 @@ import { parseBody } from "@/lib/validate";
 import { technicianSchema } from "@/lib/schemas";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireModuleAccess("technicians");
+  const auth = await requireModuleAccess("technicians", "canEdit");
   if ("error" in auth) return auth.error;
   if (auth.role !== "OWNER") {
     return NextResponse.json({ error: "Only Owner can edit technicians" }, { status: 403 });
@@ -44,7 +44,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireModuleAccess("technicians");
+  const auth = await requireModuleAccess("technicians", "canDelete");
   if ("error" in auth) return auth.error;
   if (auth.role !== "OWNER") {
     return NextResponse.json({ error: "Only Owner can delete technicians" }, { status: 403 });

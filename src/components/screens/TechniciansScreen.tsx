@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Box, ButtonBase, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/DataTable";
+import { TableShell, TableHeaderRow, TableRow, TableCell, RowActionButton } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
 import { deleteJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { TechnicianModal, type TechnicianFormRow } from "@/components/modals/TechnicianModal";
+import { PageChrome } from "@/components/PageChrome";
+import { EmptyState } from "@/components/EmptyState";
+import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@prisma/client";
 import type { TechniciansData } from "@/lib/data/technicians";
 
@@ -31,7 +34,11 @@ export function TechniciansScreen({
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTechnician, setEditingTechnician] = useState<TechnicianFormRow | null>(null);
-  const isOwner = role === "OWNER";
+  const canCreate = useCan("technicians", "canCreate");
+  const canEdit = useCan("technicians", "canEdit");
+  const canDelete = useCan("technicians", "canDelete");
+  const canManage = canEdit || canDelete;
+  void role;
   const t = useTheme().palette;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -54,47 +61,36 @@ export function TechniciansScreen({
 
   return (
     <Box>
-      {isOwner && (
-        <Box sx={{ display: "flex", mb: 1.5 }}>
-          <ButtonBase
-            onClick={() => {
-              setEditingTechnician(null);
-              setModalOpen(true);
-            }}
-            sx={{
-              ml: "auto",
-              border: "none",
-              bgcolor: t.primary.main,
-              color: "#fff",
-              borderRadius: "2px",
-              px: 1.625,
-              py: 1,
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            + Add Technician
-          </ButtonBase>
-        </Box>
-      )}
+      <PageChrome
+        title="Technicians"
+        addLabel={canCreate ? "Add Technician" : undefined}
+        onAdd={
+          canCreate
+            ? () => {
+                setEditingTechnician(null);
+                setModalOpen(true);
+              }
+            : undefined
+        }
+      />
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
         <Box sx={{ flex: "2 1 420px", minWidth: 420 }}>
-          <TableShell minWidth={isOwner ? 680 : 560}>
+          <TableShell minWidth={canManage ? 680 : 560}>
             <TableHeaderRow
-              columns={isOwner ? COLS + " 128px" : COLS}
+              columns={canManage ? COLS + " 128px" : COLS}
               headers={[
                 "Name",
                 "Employee No.",
                 "Position",
                 "Recent Transaction",
-                ...(isOwner ? ["Actions"] : []),
+                ...(canManage ? ["Actions"] : []),
               ]}
             />
             {data.rows.map((r) => (
               <TableRow
                 key={r.id}
-                columns={isOwner ? COLS + " 128px" : COLS}
+                columns={canManage ? COLS + " 128px" : COLS}
                 onClick={() => setPickedId(r.id)}
                 selected={picked?.id === r.id}
               >
@@ -104,59 +100,48 @@ export function TechniciansScreen({
                 <TableCell color={t.muted} sx={{ whiteSpace: "normal" }}>
                   {r.recent}
                 </TableCell>
-                {isOwner && (
+                {canManage && (
                   <TableCell>
                     <Box sx={{ display: "flex", gap: 0.75 }}>
-                      <ButtonBase
-                        aria-label={`Edit ${r.name}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingTechnician(r);
-                          setModalOpen(true);
-                        }}
-                        sx={{
-                          border: "1px solid",
-                          borderColor: t.border,
-                          bgcolor: t.surface,
-                          borderRadius: "2px",
-                          px: 1.25,
-                          py: 0.5,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: t.text2,
-                        }}
-                      >
-                        Edit
-                      </ButtonBase>
-                      <ButtonBase
-                        aria-label={`Delete ${r.name}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteMutation.mutate(r.id);
-                        }}
-                        sx={{
-                          border: "1px solid",
-                          borderColor: t.error.main,
-                          bgcolor: t.surface,
-                          borderRadius: "2px",
-                          px: 1.25,
-                          py: 0.5,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: t.error.main,
-                        }}
-                      >
-                        Delete
-                      </ButtonBase>
+                      {canEdit && (
+                        <RowActionButton
+                          kind="edit"
+                          label={`Edit ${r.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingTechnician(r);
+                            setModalOpen(true);
+                          }}
+                        />
+                      )}
+                      {canDelete && (
+                        <RowActionButton
+                          kind="delete"
+                          label={`Delete ${r.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteMutation.mutate(r.id);
+                          }}
+                        />
+                      )}
                     </Box>
                   </TableCell>
                 )}
               </TableRow>
             ))}
             {data.rows.length === 0 && (
-              <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-                No technicians on roster yet.
-              </Box>
+              <EmptyState
+                message="No technicians on roster yet."
+                actionLabel={canCreate ? "Add Technician" : undefined}
+                onAction={
+                  canCreate
+                    ? () => {
+                        setEditingTechnician(null);
+                        setModalOpen(true);
+                      }
+                    : undefined
+                }
+              />
             )}
           </TableShell>
         </Box>
@@ -178,7 +163,7 @@ export function TechniciansScreen({
         </Box>
       </Box>
 
-      {isOwner && (
+      {(canCreate || canEdit) && (
         <TechnicianModal
           open={modalOpen}
           onClose={() => setModalOpen(false)}

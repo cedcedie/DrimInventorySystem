@@ -1,5 +1,5 @@
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const PAGE_SIZE = 15;
 
@@ -29,15 +29,15 @@ async function fetchStockInData(page: number) {
   };
 }
 
-const getCachedFirstPageStockInData = unstable_cache(
-  () => fetchStockInData(1),
-  ["stock-in-page-1"],
-  { revalidate: 15, tags: ["stock-in"] }
-);
+async function loadFirstPageStockIn() {
+  "use cache";
+  tagAndLife("stock-in", CACHE_SECONDS.short);
+  return fetchStockInData(1);
+}
 
 export async function getStockInData(params: { page?: number }) {
   const page = Math.max(1, params.page ?? 1);
-  if (page === 1) return getCachedFirstPageStockInData();
+  if (page === 1) return loadFirstPageStockIn();
   return fetchStockInData(page);
 }
 
@@ -73,29 +73,64 @@ async function fetchStockOutData(page: number) {
   };
 }
 
-const getCachedFirstPageStockOutData = unstable_cache(
-  () => fetchStockOutData(1),
-  ["stock-out-page-1"],
-  { revalidate: 15, tags: ["stock-out"] }
-);
+async function loadFirstPageStockOut() {
+  "use cache";
+  tagAndLife("stock-out", CACHE_SECONDS.short);
+  return fetchStockOutData(1);
+}
 
 export async function getStockOutData(params: { page?: number }) {
   const page = Math.max(1, params.page ?? 1);
-  if (page === 1) return getCachedFirstPageStockOutData();
+  if (page === 1) return loadFirstPageStockOut();
   return fetchStockOutData(page);
 }
 
 export type StockOutData = Awaited<ReturnType<typeof getStockOutData>>;
 
-async function fetchStockFormOptions() {
+async function loadStockFormOptions() {
+  "use cache";
+  tagAndLife(["stock-in", "stock-out", "mrf", "technicians", "products"], CACHE_SECONDS.short);
+
   const [products, suppliers, technicians, pendingMrfs] = await Promise.all([
-    prisma.product.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, code: true, stocks: true } }),
+    prisma.product.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, code: true, stocks: true, unit: true },
+    }),
     prisma.supplier.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    prisma.technician.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, empNo: true } }),
+    prisma.technician.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, empNo: true },
+    }),
     prisma.mrf.findMany({
-      where: { status: "PENDING" },
+      where: {
+        OR: [{ status: "PENDING" }, { status: "PARTIAL" }],
+      },
       orderBy: { createdAt: "desc" },
-      include: { product: true, technician: true },
+      include: {
+        items: {
+          where: {
+            qtyFulfilled: {
+              lt: prisma.mrfItem.fields.qtyRequested,
+            },
+          },
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                stocks: true,
+                unit: true,
+              },
+            },
+          },
+        },
+        technician: {
+          select: {
+            name: true,
+          },
+        },
+      },
     }),
   ]);
 
@@ -103,22 +138,28 @@ async function fetchStockFormOptions() {
     products,
     suppliers,
     technicians,
-    pendingMrfs: pendingMrfs.map((m) => ({
-      id: m.id,
-      refNo: m.refNo,
-      productId: m.productId,
-      productName: m.product.name,
-      qty: m.qty,
-      project: m.project,
-      technicianId: m.technicianId,
-      technicianName: m.technician.name,
-    })),
+    pendingMrfItems: pendingMrfs.flatMap((mrf) =>
+      mrf.items.map((item) => ({
+        id: item.id,
+        mrfId: mrf.id,
+        mrfRefNo: mrf.refNo,
+        productId: item.productId,
+        productName: item.product.name,
+        productCode: item.product.code,
+        qtyRequested: item.qtyRequested,
+        qtyFulfilled: item.qtyFulfilled,
+        qtyRemaining: item.qtyRequested - item.qtyFulfilled,
+        availableStock: item.product.stocks,
+        unit: item.product.unit,
+        project: mrf.project,
+        technicianName: mrf.technician.name,
+      }))
+    ),
   };
 }
 
-export const getStockFormOptions = unstable_cache(fetchStockFormOptions, ["stock-form-options"], {
-  revalidate: 15,
-  tags: ["stock-in", "stock-out", "mrf", "technicians", "products"],
-});
+export async function getStockFormOptions() {
+  return loadStockFormOptions();
+}
 
 export type StockFormOptions = Awaited<ReturnType<typeof getStockFormOptions>>;

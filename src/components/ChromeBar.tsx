@@ -2,12 +2,18 @@
 
 import { Box, ButtonBase } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
+import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
+import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
+import AddIcon from "@mui/icons-material/Add";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
 import type { Role } from "@prisma/client";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { CHROME_COLOR, ACCENT } from "@/theme/tokens";
-import { ROLE_LABELS, screenTitleForRole } from "@/lib/navConfig";
+import { lightTokens, darkTokens, ACCENT, ACCENT_HOVER, NAVY } from "@/theme/tokens";
+import { ROLE_LABELS } from "@/lib/navConfig";
+import { SIDENAV_WIDTH } from "@/components/SideNav";
+import { useCan } from "@/components/PermissionsProvider";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 function initialsOf(name: string): string {
   return name
@@ -32,22 +38,37 @@ export function ChromeBar({
   onMenuClick?: () => void;
 }) {
   const { mode, toggleMode } = useColorMode();
-  const screenTitle = screenTitleForRole(activeSegment, role);
+  const t = mode === "dark" ? darkTokens : lightTokens;
+  const canAddProducts = useCan("products", "canCreate");
+  void activeSegment;
+  void role;
+
+  const iconButtonSx = {
+    width: 38,
+    height: 38,
+    borderRadius: "8px",
+    border: "1px solid",
+    borderColor: t.line,
+    color: t.muted,
+    bgcolor: t.surface,
+    "&:hover": { borderColor: ACCENT, color: ACCENT },
+  } as const;
 
   return (
     <Box
       sx={{
         position: "fixed",
         top: 0,
-        left: 0,
+        left: { xs: 0, md: `${SIDENAV_WIDTH}px` },
         right: 0,
-        height: 46,
-        bgcolor: CHROME_COLOR,
-        color: "#fff",
+        height: 64,
+        bgcolor: t.surface,
+        borderBottom: "1px solid",
+        borderColor: t.line,
         display: "flex",
         alignItems: "center",
-        gap: "14px",
-        px: 2,
+        gap: 1.5,
+        px: 2.5,
         zIndex: 1201,
       }}
     >
@@ -57,53 +78,55 @@ export function ChromeBar({
         sx={{
           display: { xs: "grid", md: "none" },
           placeItems: "center",
-          width: 30,
-          height: 30,
-          color: "#aeb7c2",
-          borderRadius: "2px",
-          "&:hover": { color: "#fff" },
+          width: 38,
+          height: 38,
+          color: t.muted,
+          borderRadius: "8px",
+          "&:hover": { color: t.text },
         }}
       >
         <MenuIcon fontSize="small" />
       </ButtonBase>
 
-      <Box sx={{ display: "flex", alignItems: "center", gap: "9px" }}>
-        <Box
-          sx={{
-            width: 24,
-            height: 24,
-            bgcolor: ACCENT,
-            display: "grid",
-            placeItems: "center",
-            fontWeight: 700,
-            fontSize: 11,
-          }}
-        >
-          DR
-        </Box>
-        <Box sx={{ fontSize: "13.5px", fontWeight: 700, letterSpacing: "0.4px" }}>
-          DRIM{" "}
-          <Box component="span" sx={{ fontWeight: 400, color: "#93a1b0" }}>
-            Inventory System
-          </Box>
-        </Box>
-      </Box>
+      <GlobalSearch />
 
-      <Box
-        sx={{
-          fontSize: "11.5px",
-          color: "#93a1b0",
-          borderLeft: "1px solid #3a4855",
-          pl: "14px",
-        }}
-      >
-        Warehouse Module ·{" "}
-        <Box component="span" sx={{ color: "#c9d2db" }}>
-          {screenTitle}
-        </Box>
-      </Box>
+      <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.25 }}>
+        {canAddProducts && (
+          <ButtonBase
+            component={Link}
+            href="/products"
+            sx={{
+              display: { xs: "none", sm: "inline-flex" },
+              alignItems: "center",
+              gap: 0.5,
+              bgcolor: ACCENT,
+              color: "#fff",
+              borderRadius: "8px",
+              px: 1.75,
+              height: 38,
+              fontSize: 13.5,
+              fontWeight: 700,
+              "&:hover": { bgcolor: ACCENT_HOVER },
+            }}
+          >
+            <AddIcon sx={{ fontSize: 17 }} />
+            Add New
+          </ButtonBase>
+        )}
 
-      <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+        <ButtonBase onClick={toggleMode} title="Toggle dark mode" sx={iconButtonSx}>
+          {mode === "dark" ? (
+            <LightModeOutlinedIcon sx={{ fontSize: 19 }} />
+          ) : (
+            <DarkModeOutlinedIcon sx={{ fontSize: 19 }} />
+          )}
+        </ButtonBase>
+
+        <ButtonBase component={Link} href="/activity" title="Activity log" sx={iconButtonSx}>
+          <NotificationsNoneOutlinedIcon sx={{ fontSize: 20 }} />
+        </ButtonBase>
+
+        {/* Profile */}
         <Box
           component={Link}
           href="/profile"
@@ -111,68 +134,35 @@ export function ChromeBar({
           sx={{
             display: "flex",
             alignItems: "center",
-            gap: "8px",
-            borderLeft: "1px solid #3a4855",
-            pl: "12px",
+            gap: 1.25,
+            pl: 0.5,
             color: "inherit",
             textDecoration: "none",
             "&:hover .chrome-avatar": { bgcolor: ACCENT },
-            "&:focus-visible": { outline: `2px solid ${ACCENT}`, outlineOffset: "2px" },
           }}
         >
           <Box
             className="chrome-avatar"
             sx={{
-              width: 26,
-              height: 26,
+              width: 38,
+              height: 38,
               borderRadius: "50%",
-              bgcolor: "#3a4855",
+              bgcolor: NAVY,
+              color: "#fff",
               display: "grid",
               placeItems: "center",
-              fontSize: "10.5px",
+              fontSize: 13,
               fontWeight: 700,
               transition: "background-color 0.12s ease",
             }}
           >
             {initialsOf(userName)}
           </Box>
-          <Box sx={{ lineHeight: 1.2 }}>
-            <Box sx={{ fontSize: 12, fontWeight: 600 }}>{userName}</Box>
-            <Box sx={{ fontSize: 10, color: "#93a1b0" }}>{ROLE_LABELS[role]}</Box>
+          <Box sx={{ lineHeight: 1.25, display: { xs: "none", lg: "block" } }}>
+            <Box sx={{ fontSize: 13.5, fontWeight: 700, color: t.text }}>{userName}</Box>
+            <Box sx={{ fontSize: 11.5, color: t.muted }}>{ROLE_LABELS[role]}</Box>
           </Box>
         </Box>
-
-        <ButtonBase
-          onClick={toggleMode}
-          title="Toggle dark mode"
-          sx={{
-            border: "1px solid #3a4855",
-            color: "#aeb7c2",
-            borderRadius: "2px",
-            px: "10px",
-            py: "5px",
-            fontSize: 11,
-            fontWeight: 600,
-            "&:hover": { color: "#fff", borderColor: "#5a6a7a" },
-          }}
-        >
-          {mode === "dark" ? "Light mode" : "Dark mode"}
-        </ButtonBase>
-
-        <ButtonBase
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          sx={{
-            border: "1px solid #3a4855",
-            color: "#aeb7c2",
-            borderRadius: "2px",
-            px: "10px",
-            py: "5px",
-            fontSize: 11,
-            "&:hover": { color: "#fff", borderColor: "#5a6a7a" },
-          }}
-        >
-          Log out
-        </ButtonBase>
       </Box>
     </Box>
   );

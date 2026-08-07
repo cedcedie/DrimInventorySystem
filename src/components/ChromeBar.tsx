@@ -7,7 +7,7 @@ import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import Link from "next/link";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens, ACCENT, ACCENT_HOVER, NAVY } from "@/theme/tokens";
 import { ROLE_LABELS } from "@/lib/navConfig";

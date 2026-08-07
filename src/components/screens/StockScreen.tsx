@@ -14,7 +14,7 @@ import { StockOutModal } from "@/components/modals/StockOutModal";
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import type { StockInData, StockOutData } from "@/lib/data/stock";
 
 const SI_COLS = "110px 106px minmax(0,1.2fr) minmax(0,1.2fr) 80px";

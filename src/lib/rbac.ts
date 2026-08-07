@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 
 // README "RBAC (exact matrix from prototype)"
 export const MODULE_ACCESS: Record<Role, string[]> = {

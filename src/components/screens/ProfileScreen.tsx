@@ -10,7 +10,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { ROLE_LABELS } from "@/lib/navConfig";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 
 type ProfileData = {
   id: string;

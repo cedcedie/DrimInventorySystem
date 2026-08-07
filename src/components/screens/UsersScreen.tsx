@@ -23,7 +23,7 @@ import { EditUserModal, type EditableUser } from "@/components/modals/EditUserMo
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role, UserStatus } from "@prisma/client";
+import type { Role, UserStatus } from "@/generated/prisma";
 import type { UsersData } from "@/lib/data/users";
 
 interface UserRow {

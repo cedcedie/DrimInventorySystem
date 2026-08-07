@@ -21,7 +21,7 @@ import { deleteJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { ProductModal, type ProductFormRow } from "@/components/modals/ProductModal";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import type { ProductsData } from "@/lib/data/products";
 
 function thumbSrc(imageKey: string | null | undefined) {

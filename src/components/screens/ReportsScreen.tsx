@@ -9,7 +9,7 @@ import { KpiSkeleton } from "@/components/Skeleton";
 import { useTheme, type Palette } from "@mui/material/styles";
 import { useToast } from "@/components/Toast";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import type { DashboardData } from "@/lib/data/dashboard";
 
 const REPORT_TYPES = [

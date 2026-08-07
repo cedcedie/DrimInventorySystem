@@ -9,7 +9,7 @@ import { lightTokens, darkTokens } from "@/theme/tokens";
 import { patchJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { ROLE_LABELS } from "@/lib/navConfig";
-import type { Role, UserStatus } from "@prisma/client";
+import type { Role, UserStatus } from "@/generated/prisma";
 
 const ROLE_OPTIONS: Role[] = ["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"];
 

@@ -4,7 +4,7 @@ import { authConfig } from "@/lib/auth.config";
 import { canAccess } from "@/lib/rbac";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { PERMISSION_MODULES } from "@/lib/permissionDefaults";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 
 const { auth } = NextAuth(authConfig);
 

@@ -17,7 +17,7 @@ import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import { signOut } from "next-auth/react";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import { MODULE_ACCESS } from "@/lib/rbac";
 import { NAV_GROUPS, screenTitleForRole } from "@/lib/navConfig";
 import { useColorMode } from "@/theme/ThemeRegistry";

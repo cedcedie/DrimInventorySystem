@@ -14,7 +14,7 @@ import { TechnicianModal, type TechnicianFormRow } from "@/components/modals/Tec
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import type { TechniciansData } from "@/lib/data/technicians";
 
 const COLS = "minmax(0,1.1fr) 110px minmax(0,1fr) minmax(0,1.4fr)";

@@ -13,7 +13,7 @@ import { SupplierModal } from "@/components/modals/SupplierModal";
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import type { SuppliersData } from "@/lib/data/suppliers";
 
 const COLS = "minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.3fr) 110px 90px";

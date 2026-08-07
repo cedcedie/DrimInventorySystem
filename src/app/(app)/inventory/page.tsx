@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import { ScreenBody } from "@/components/ScreenBody";
 import { InventoryScreen } from "@/components/screens/InventoryScreen";
 import { getInventoryData } from "@/lib/data/inventory";

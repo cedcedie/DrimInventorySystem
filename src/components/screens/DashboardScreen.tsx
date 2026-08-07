@@ -20,7 +20,7 @@ import { StatusChip } from "@/components/StatusChip";
 import { EmptyState } from "@/components/EmptyState";
 import { KpiSkeleton, TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import type { DashboardData } from "@/lib/data/dashboard";
 
 const StockMovementChart = dynamic(

@@ -6,7 +6,7 @@ import { nextRefNo } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { stockOutSchema } from "@/lib/schemas";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 
 function canRecordStock(role: Role): boolean {
   return role === "ADMIN" || role === "WAREHOUSE_STAFF" || role === "OWNER";

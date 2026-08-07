@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";

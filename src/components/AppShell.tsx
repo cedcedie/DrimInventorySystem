@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Box } from "@mui/material";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import { ChromeBar } from "@/components/ChromeBar";
 import { SideNav, SIDENAV_WIDTH } from "@/components/SideNav";
 import { useColorMode } from "@/theme/ThemeRegistry";

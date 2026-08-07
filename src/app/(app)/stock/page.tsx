@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import { Alert } from "@mui/material";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { ScreenBody } from "@/components/ScreenBody";

@@ -1,5 +1,7 @@
 generator client {
   provider = "prisma-client-js"
+  // Custom output so types resolve under pnpm (default @prisma/client/.prisma path breaks).
+  output   = "../src/generated/prisma"
 }
 
 datasource db {

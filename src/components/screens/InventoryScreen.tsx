@@ -25,7 +25,7 @@ import { ProductModal, type ProductFormRow } from "@/components/modals/ProductMo
 import { CategoryModal } from "@/components/modals/CategoryModal";
 import { AdjustStockModal, type AdjustableProduct } from "@/components/modals/AdjustStockModal";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma";
 import type { InventoryData } from "@/lib/data/inventory";
 
 export function InventoryScreen({

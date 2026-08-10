@@ -5,19 +5,12 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { signIn } from "next-auth/react";
 import { Box, ButtonBase, Typography, Alert } from "@mui/material";
-import { ACCENT, ACCENT_HOVER, ACCENT_SOFT } from "@/theme/tokens";
+import { ACCENT, ACCENT_HOVER } from "@/theme/tokens";
 import { warmPostLogin } from "@/lib/warmPrefetch";
 
 const TEXT = "#212B36";
 const MUTED = "#646B72";
 const LINE = "#E8E8E8";
-
-const ROLE_OPTIONS = [
-  { label: "Owner", demoUsername: "owner" },
-  { label: "Admin", demoUsername: "admin" },
-  { label: "Warehouse Staff", demoUsername: "warehouse" },
-  { label: "Technician / Engineer", demoUsername: "technician" },
-];
 
 function Field({
   label,
@@ -65,16 +58,10 @@ function Field({
 export default function LoginPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [selectedRole, setSelectedRole] = useState(ROLE_OPTIONS[0]);
-  const [username, setUsername] = useState(ROLE_OPTIONS[0].demoUsername);
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const handleRolePick = (role: (typeof ROLE_OPTIONS)[number]) => {
-    setSelectedRole(role);
-    setUsername(role.demoUsername);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +94,7 @@ export default function LoginPage() {
           alignItems: "center",
           justifyContent: "center",
           gap: 3,
-          px: 6,
+          px: 4,
           position: "relative",
           overflow: "hidden",
           bgcolor: "#0B0B0C",
@@ -144,14 +131,15 @@ export default function LoginPage() {
           sx={{
             position: "relative",
             zIndex: 1,
-            fontSize: { md: 22, lg: 26 },
+            fontSize: { md: 18, lg: 22, xl: 24 },
             fontWeight: 800,
             fontStyle: "italic",
             color: "#fff",
             letterSpacing: "-0.2px",
             textAlign: "center",
-            maxWidth: 420,
-            lineHeight: 1.35,
+            whiteSpace: "nowrap",
+            lineHeight: 1.2,
+            px: 1,
           }}
         >
           &ldquo;Your Refrigeration Solution Expert&rdquo;
@@ -229,37 +217,8 @@ export default function LoginPage() {
             Sign In
           </Typography>
           <Typography sx={{ fontSize: 13.5, color: MUTED, mb: 3, lineHeight: 1.5 }}>
-            Access the DRIM panel using your role and credentials.
+            Enter your username and password to access the DRIM panel.
           </Typography>
-
-          <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 0.75 }}>
-            Role <Box component="span" sx={{ color: "#EF3826" }}>*</Box>
-          </Typography>
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, mb: 2.5 }}>
-            {ROLE_OPTIONS.map((role) => {
-              const active = selectedRole.label === role.label;
-              return (
-                <ButtonBase
-                  key={role.label}
-                  onClick={() => handleRolePick(role)}
-                  sx={{
-                    border: `1px solid ${active ? ACCENT : LINE}`,
-                    bgcolor: active ? ACCENT_SOFT : "#fff",
-                    color: active ? ACCENT : MUTED,
-                    borderRadius: "8px",
-                    py: "9px",
-                    px: 0.75,
-                    fontSize: 12.5,
-                    fontWeight: 700,
-                    transition: "all 0.15s ease",
-                    "&:hover": { borderColor: ACCENT },
-                  }}
-                >
-                  {role.label}
-                </ButtonBase>
-              );
-            })}
-          </Box>
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <Field label="Username" value={username} onChange={setUsername} placeholder="e.g. m.santos" />

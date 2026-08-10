@@ -26,7 +26,7 @@ type NotificationsPayload = {
   }>;
 };
 
-const POLL_MS = 20_000;
+import { liveQueryOptions } from "@/lib/liveQuery";
 
 export function NotificationBell({
   buttonSx,
@@ -41,8 +41,7 @@ export function NotificationBell({
   const { data } = useQuery({
     queryKey: queryKeys.notifications,
     queryFn: () => fetchJson<NotificationsPayload>("/api/notifications"),
-    refetchInterval: POLL_MS,
-    refetchIntervalInBackground: false,
+    ...liveQueryOptions,
   });
 
   const markRead = useMutation({

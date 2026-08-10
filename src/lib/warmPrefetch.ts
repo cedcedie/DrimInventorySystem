@@ -56,7 +56,7 @@ export function warmShellRoutes(
             fetchJson<InventoryData>(
               `/api/inventory?q=${encodeURIComponent("")}&category=${encodeURIComponent("All")}&page=1`
             ),
-          staleTime: 60_000,
+          staleTime: 8_000,
         });
       }, 1200);
     }
@@ -66,7 +66,7 @@ export function warmShellRoutes(
         void queryClient.prefetchQuery({
           queryKey: queryKeys.products({ page: 1 }),
           queryFn: () => fetchJson<ProductsData>("/api/products?page=1"),
-          staleTime: 60_000,
+          staleTime: 8_000,
         });
       }, 1800);
     }

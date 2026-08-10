@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
+import { liveQueryOptions } from "@/lib/liveQuery";
 import { formatDate } from "@/lib/format";
 import { parseStockTab, type StockTab } from "@/lib/stockTabs";
 import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
@@ -170,6 +171,7 @@ function OpenMrfsTab({
   const { data, isFetching } = useQuery({
     queryKey: queryKeys.openMrfs,
     queryFn: () => fetchJson<OpenMrfsQueueData>("/api/mrf/open"),
+    ...liveQueryOptions,
   });
 
   const flatRows =
@@ -291,6 +293,7 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
     queryKey: queryKeys.stockIn({ page }),
     queryFn: () => fetchJson<StockInData>(`/api/stock-in?page=${page}`),
     placeholderData: keepPreviousData,
+    ...liveQueryOptions,
   });
 
   return (
@@ -382,6 +385,7 @@ function StockOutTab({
     queryKey: queryKeys.stockOut({ page }),
     queryFn: () => fetchJson<StockOutData>(`/api/stock-out?page=${page}`),
     placeholderData: keepPreviousData,
+    ...liveQueryOptions,
   });
 
   const picked = data?.rows[pickedIdx] ?? data?.rows[0];

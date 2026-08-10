@@ -10,13 +10,12 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Data here comes from Neon over a real network hop — avoid
-            // re-fetching (and re-showing a spinner) every time a screen
-            // the user just visited is revisited within a short window.
-            staleTime: 45_000,
+            // Multi-user warehouse: prefer freshness over aggressive client caching.
+            // Screens that need continuous sync also set refetchInterval via liveQueryOptions.
+            staleTime: 4_000,
             gcTime: 5 * 60_000,
-            refetchOnWindowFocus: false,
-            refetchOnReconnect: false,
+            refetchOnWindowFocus: true,
+            refetchOnReconnect: true,
           },
           mutations: {
             // Don't retry writes — inventory mutations aren't idempotent.

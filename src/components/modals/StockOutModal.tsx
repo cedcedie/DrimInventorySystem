@@ -10,6 +10,7 @@ import { postJson } from "@/lib/mutate";
 import { fetchJson } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { queryKeys } from "@/lib/queryKeys";
+import { liveQueryOptions } from "@/lib/liveQuery";
 import type { StockFormOptions } from "@/lib/data/stock";
 
 export function StockOutModal({
@@ -30,6 +31,7 @@ export function StockOutModal({
     queryKey: queryKeys.stockOptions,
     queryFn: () => fetchJson<StockFormOptions>("/api/stock/options"),
     enabled: open,
+    ...liveQueryOptions,
   });
 
   const [mrfItemId, setMrfItemId] = useState("");

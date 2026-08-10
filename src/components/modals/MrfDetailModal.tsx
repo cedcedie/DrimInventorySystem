@@ -11,6 +11,7 @@ import { fetchJson } from "@/lib/api";
 import { patchJson, postJson } from "@/lib/mutate";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { queryKeys } from "@/lib/queryKeys";
+import { liveQueryOptions } from "@/lib/liveQuery";
 import { useToast } from "@/components/Toast";
 import { useCan } from "@/components/PermissionsProvider";
 import {
@@ -84,6 +85,7 @@ export function MrfDetailModal({
     queryKey: ["mrf-detail", mrfId],
     queryFn: () => fetchJson<MrfDetail>(`/api/mrf/${mrfId}`),
     enabled: open && Boolean(mrfId),
+    ...liveQueryOptions,
   });
 
   const invalidateMrf = () => {

@@ -5,6 +5,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Box } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
+import { liveQueryOptions } from "@/lib/liveQuery";
 import { formatDateTime } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
@@ -21,6 +22,7 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
     queryFn: () => fetchJson<ActivityData>(`/api/activity?page=${page}`),
     initialData: page === 1 ? initialData : undefined,
     placeholderData: keepPreviousData,
+    ...liveQueryOptions,
   });
   const t = useTheme().palette;
 

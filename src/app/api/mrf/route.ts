@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { getTechnicianForUser, getMrfsForTechnician } from "@/lib/data/mrf";
 import { prisma } from "@/lib/prisma";
+import { isProductRequestable } from "@/lib/mrfLifecycle";
 import { nextRefNo, withRefNoRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { mrfCreateSchema } from "@/lib/schemas";
 
 export async function GET() {
-  const auth = await requireModuleAccess("stock");
+  const auth = await requireModuleAccess("mrf");
   if ("error" in auth) return auth.error;
   if (auth.role !== "TECHNICIAN") {
     return NextResponse.json({ error: "Only technicians file MRFs" }, { status: 403 });
@@ -45,8 +46,8 @@ export async function POST(req: Request) {
   const { productId, qty: quantity, project: projectName } = parsed.data;
 
   const product = await prisma.product.findUnique({ where: { id: productId } });
-  if (!product) {
-    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  if (!product || !isProductRequestable(product.archivedAt)) {
+    return NextResponse.json({ error: "Product not found or archived" }, { status: 404 });
   }
 
   const mrf = await withRefNoRetry(() =>

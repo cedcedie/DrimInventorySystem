@@ -33,13 +33,11 @@ export default async function StockPage({
     );
   }
 
+  // Title/breadcrumb come from StockScreen's PageChrome — don't add ScreenHeader here.
   return (
-    <>
-      <ScreenHeader title="Stock & Material Requests" subtitle="Open requests, receipts (SI), and releases (SO)" />
-      <ScreenBody>
-        <StockScreen role={role} initialTab={params.tab} />
-      </ScreenBody>
-    </>
+    <ScreenBody>
+      <StockScreen role={role} initialTab={params.tab} />
+    </ScreenBody>
   );
 }
 

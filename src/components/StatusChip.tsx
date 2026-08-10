@@ -15,6 +15,7 @@ const TONE_BY_LABEL: Record<string, ChipTone> = {
   "Out of Stock": "danger",
   "Stock-Out": "danger",
   Cancelled: "danger",
+  "Closed remaining": "warn",
   "Low Stock": "warn",
   Pending: "warn",
   Partial: "info",

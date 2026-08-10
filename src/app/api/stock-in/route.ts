@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { getStockInData } from "@/lib/data/stock";
+import { isProductRequestable } from "@/lib/mrfLifecycle";
 import { prisma } from "@/lib/prisma";
-import { nextRefNo } from "@/lib/refNo";
+import { nextRefNo, withRefNoRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { stockInSchema } from "@/lib/schemas";
@@ -26,36 +27,40 @@ export async function POST(req: Request) {
   const { productId, supplierId, qty: quantity } = parsed.data;
 
   try {
-    const result = await prisma.$transaction(
-      async (tx) => {
-        const product = await tx.product.findUnique({ where: { id: productId } });
-        if (!product) throw new Error("Product not found");
+    const result = await withRefNoRetry(() =>
+      prisma.$transaction(
+        async (tx) => {
+          const product = await tx.product.findUnique({ where: { id: productId } });
+          if (!product || !isProductRequestable(product.archivedAt)) {
+            throw new Error("Product not found or archived");
+          }
 
-        const supplier = await tx.supplier.findUnique({ where: { id: supplierId } });
-        if (!supplier) throw new Error("Supplier not found");
+          const supplier = await tx.supplier.findUnique({ where: { id: supplierId } });
+          if (!supplier) throw new Error("Supplier not found");
 
-        const refNo = await nextRefNo(tx, "stockIn", "SI");
+          const refNo = await nextRefNo(tx, "stockIn", "SI");
 
-        const stockIn = await tx.stockIn.create({
-          data: { refNo, productId, supplierId, qty: quantity, byUserId: auth.session.user.id },
-        });
+          const stockIn = await tx.stockIn.create({
+            data: { refNo, productId, supplierId, qty: quantity, byUserId: auth.session.user.id },
+          });
 
-        await tx.product.update({
-          where: { id: productId },
-          data: { stocks: { increment: quantity } },
-        });
+          await tx.product.update({
+            where: { id: productId },
+            data: { stocks: { increment: quantity } },
+          });
 
-        await tx.activityLog.create({
-          data: {
-            userId: auth.session.user.id,
-            action: `Recorded Stock In — ${quantity} × ${product.name}`,
-            refNo,
-          },
-        });
+          await tx.activityLog.create({
+            data: {
+              userId: auth.session.user.id,
+              action: `Recorded Stock In — ${quantity} × ${product.name}`,
+              refNo,
+            },
+          });
 
-        return stockIn;
-      },
-      { isolationLevel: "Serializable", maxWait: 10000, timeout: 15000 }
+          return stockIn;
+        },
+        { isolationLevel: "Serializable", maxWait: 10000, timeout: 15000 }
+      )
     );
 
     revalidateAfterMutation(["inventory", "products", "stock-in"]);

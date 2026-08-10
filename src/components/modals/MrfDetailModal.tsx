@@ -12,6 +12,12 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { queryKeys } from "@/lib/queryKeys";
 import { useToast } from "@/components/Toast";
 import { useCan } from "@/components/PermissionsProvider";
+import {
+  mrfCancelButtonLabel,
+  mrfCancelConfirmMessage,
+  mrfCancelToast,
+  mrfStatusLabel,
+} from "@/lib/mrfLifecycle";
 
 export type MrfDetail = {
   id: string;
@@ -71,33 +77,29 @@ export function MrfDetailModal({
   });
 
   const cancelMutation = useMutation({
-    mutationFn: () => patchJson<{ refNo: string }>(`/api/mrf/${mrfId}`, { action: "cancel" }),
+    mutationFn: () =>
+      patchJson<{ refNo: string; anyReleased?: boolean }>(`/api/mrf/${mrfId}`, { action: "cancel" }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
       queryClient.invalidateQueries({ queryKey: queryKeys.mrf });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: ["mrf-detail", mrfId] });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
-      showToast(`Request ${res.refNo} cancelled.`);
+      showToast(mrfCancelToast(res.refNo, Boolean(res.anyReleased)));
       onClose();
     },
     onError: (e: Error) => showToast(e.message),
   });
 
+  const anyReleased = Boolean(data && data.totalFulfilled > 0);
+
   const canCancel =
     data &&
     data.status !== "CANCELLED" &&
     data.status !== "FULFILLED" &&
-    (canWarehouseCancel || (canTechFile && data.status === "PENDING" && data.totalFulfilled === 0));
+    (canWarehouseCancel || (canTechFile && data.status === "PENDING" && !anyReleased));
 
-  const statusLabel =
-    data?.status === "PARTIAL"
-      ? "Partial"
-      : data?.status === "FULFILLED"
-        ? "Fulfilled"
-        : data?.status === "CANCELLED"
-          ? "Cancelled"
-          : "Pending";
+  const statusLabel = data ? mrfStatusLabel(data.status, data.totalFulfilled) : "Pending";
 
   return (
     <EntityModal
@@ -241,7 +243,7 @@ export function MrfDetailModal({
               {canCancel && (
                 <ButtonBase
                   onClick={() => {
-                    if (confirm(`Cancel request ${data.refNo}? This cannot be undone.`)) {
+                    if (confirm(mrfCancelConfirmMessage(data.refNo, anyReleased))) {
                       cancelMutation.mutate();
                     }
                   }}
@@ -256,7 +258,11 @@ export function MrfDetailModal({
                     borderColor: t.warn,
                   }}
                 >
-                  {cancelMutation.isPending ? "Cancelling…" : "Cancel request"}
+                  {cancelMutation.isPending
+                    ? anyReleased
+                      ? "Closing…"
+                      : "Cancelling…"
+                    : mrfCancelButtonLabel(anyReleased)}
                 </ButtonBase>
               )}
               <ButtonBase

@@ -18,7 +18,7 @@ const REPORT_TYPES = [
   { title: "Low Stock Report", desc: "Items at or below their minimum stock level, plus out-of-stock items." },
   { title: "Supplier Report", desc: "Stock-In volume grouped by supplier for the date range." },
   { title: "MRF Status Report", desc: "Material requests filed in range — status, requested vs released qty." },
-  { title: "Stock Reconciliation", desc: "On-hand vs SI/SO/ADJ movements in range for audit spot-checks." },
+  { title: "Stock Reconciliation", desc: "Spot-check: SI−SO+ADJ movements in the date range vs current on-hand (not a lifetime balance)." },
 ] as const;
 
 function todayIso() {

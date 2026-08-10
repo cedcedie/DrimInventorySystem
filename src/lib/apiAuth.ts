@@ -9,7 +9,10 @@ import { isConfigurableModule, type PermissionAction } from "@/lib/permissionDef
  * checked against the Owner-managed permission matrix (user override → role
  * config → default); segments outside the matrix (settings, activity, …) fall
  * back to the static role map. Pass `action` to additionally require
- * create/edit/delete/export rights for mutations. */
+ * create/edit/delete/export rights for mutations.
+ *
+ * Technicians must use `mrf` (not `stock`) for their own request APIs. Stock
+ * routes stay warehouse-scoped — do not bridge tech `mrf.canView` into stock. */
 export async function requireModuleAccess(moduleSegment: string, action?: PermissionAction) {
   const session = await auth();
   if (!session?.user) {
@@ -19,12 +22,7 @@ export async function requireModuleAccess(moduleSegment: string, action?: Permis
 
   if (isConfigurableModule(moduleSegment)) {
     const perms = await getEffectivePermissions(session.user.id, role);
-    // Technicians use shared stock routes for MRF fulfillment.
-    const canView =
-      perms[moduleSegment]?.canView ||
-      (moduleSegment === "stock" && role === "TECHNICIAN" && perms.mrf?.canView) ||
-      false;
-    if (!canView) {
+    if (!perms[moduleSegment]?.canView) {
       return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) } as const;
     }
     if (action && action !== "canView" && !perms[moduleSegment]?.[action]) {

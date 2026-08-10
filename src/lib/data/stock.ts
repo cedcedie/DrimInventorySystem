@@ -164,3 +164,26 @@ export async function getStockFormOptions() {
 }
 
 export type StockFormOptions = Awaited<ReturnType<typeof getStockFormOptions>>;
+
+/** Products only — for technicians filing MRFs (no warehouse queue / SI options). */
+async function loadMrfFilingProducts(): Promise<StockFormOptions> {
+  "use cache";
+  tagAndLife(["products", "mrf"], CACHE_SECONDS.short);
+
+  const products = await prisma.product.findMany({
+    where: { archivedAt: null },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, code: true, stocks: true, unit: true },
+  });
+
+  return {
+    products,
+    suppliers: [],
+    technicians: [],
+    pendingMrfItems: [],
+  };
+}
+
+export async function getMrfFilingProductOptions() {
+  return loadMrfFilingProducts();
+}

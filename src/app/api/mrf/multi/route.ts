@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
+import { isProductRequestable } from "@/lib/mrfLifecycle";
 import { prisma } from "@/lib/prisma";
 import { isUniqueRefNoError, nextRefNo, withRefNoRetry } from "@/lib/refNo";
 import { getTechnicianForUser } from "@/lib/data/mrf";
@@ -41,15 +42,21 @@ export async function POST(req: Request) {
 
   const { items, project, externalRefNo, description } = parsed.data;
 
-  // Verify all products exist
+  // Verify all products exist and are not archived
   const productIds = items.map((item) => item.productId);
   const products = await prisma.product.findMany({
     where: { id: { in: productIds } },
-    select: { id: true, name: true },
+    select: { id: true, name: true, archivedAt: true },
   });
 
-  if (products.length !== productIds.length) {
-    return NextResponse.json({ error: "One or more products not found" }, { status: 400 });
+  if (
+    products.length !== productIds.length ||
+    products.some((p) => !isProductRequestable(p.archivedAt))
+  ) {
+    return NextResponse.json(
+      { error: "One or more products not found or archived" },
+      { status: 400 }
+    );
   }
 
   try {

@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import type { Role } from "@/generated/prisma";
-import { requireModuleAccess } from "@/lib/apiAuth";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getEffectivePermissions } from "@/lib/effectivePermissions";
-import { getTechnicianForUser } from "@/lib/data/mrf";
+import {
+  mrfCancelActivityAction,
+  techMayCancelMrf,
+  warehouseMayCancelMrf,
+} from "@/lib/mrfLifecycle";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { z } from "zod";
@@ -13,9 +17,27 @@ const mrfPatchSchema = z.object({
   reason: z.string().trim().max(300).optional(),
 });
 
+class HttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message);
+  }
+}
+
+/** Warehouse (stock.canView) or technician (mrf.canView, own rows only). */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireModuleAccess("stock");
-  if ("error" in auth) return auth.error;
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const role = session.user.role as Role;
+  const perms = await getEffectivePermissions(session.user.id, role);
+  if (!perms.stock?.canView && !perms.mrf?.canView) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const { id } = await params;
 
@@ -48,8 +70,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "MRF not found" }, { status: 404 });
   }
 
-  if (auth.role === "TECHNICIAN") {
-    const tech = await getTechnicianForUser(auth.session.user.id);
+  if (role === "TECHNICIAN" || !perms.stock?.canView) {
+    const tech = await prisma.technician.findFirst({
+      where: { userId: session.user.id },
+      select: { id: true },
+    });
     if (!tech || tech.id !== mrf.technicianId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -94,66 +119,106 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireModuleAccess("stock");
-  if ("error" in auth) return auth.error;
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const role = session.user.role as Role;
+  const perms = await getEffectivePermissions(session.user.id, role);
+  const canWarehouseCancel = Boolean(perms.stock?.canEdit);
+  const canTechCancel = role === "TECHNICIAN" && Boolean(perms.mrf?.canCreate);
+
+  if (!canWarehouseCancel && !canTechCancel) {
+    return NextResponse.json(
+      { error: "Your permissions don't allow cancelling MRFs" },
+      { status: 403 }
+    );
+  }
 
   const { id } = await params;
   const parsed = await parseBody(req, mrfPatchSchema);
   if ("error" in parsed) return parsed.error;
 
-  const mrf = await prisma.mrf.findUnique({
-    where: { id },
-    include: { items: { select: { qtyFulfilled: true } } },
-  });
-  if (!mrf) {
-    return NextResponse.json({ error: "MRF not found" }, { status: 404 });
-  }
-  if (mrf.status === "CANCELLED") {
-    return NextResponse.json({ error: "This MRF is already cancelled" }, { status: 409 });
-  }
-  if (mrf.status === "FULFILLED") {
-    return NextResponse.json({ error: "Fully fulfilled MRFs cannot be cancelled" }, { status: 409 });
-  }
-
-  const perms = await getEffectivePermissions(auth.session.user.id, auth.role as Role);
-  const canWarehouseCancel = Boolean(perms.stock?.canEdit);
-  const anyReleased = mrf.items.some((i) => i.qtyFulfilled > 0);
-
-  if (!canWarehouseCancel) {
-    if (auth.role !== "TECHNICIAN" || !perms.mrf?.canCreate) {
-      return NextResponse.json(
-        { error: "Your permissions don't allow cancelling MRFs" },
-        { status: 403 }
-      );
-    }
-    const tech = await getTechnicianForUser(auth.session.user.id);
-    if (!tech || tech.id !== mrf.technicianId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-    if (anyReleased || mrf.status === "PARTIAL") {
-      return NextResponse.json(
-        { error: "Partially fulfilled requests can only be cancelled by warehouse staff" },
-        { status: 403 }
-      );
-    }
-  }
-
   const reason = parsed.data.reason?.trim();
-  const updated = await prisma.$transaction(async (tx) => {
-    const row = await tx.mrf.update({
-      where: { id },
-      data: { status: "CANCELLED" },
-    });
-    await tx.activityLog.create({
-      data: {
-        userId: auth.session.user.id,
-        action: reason ? `Cancelled MRF ${mrf.refNo} — ${reason}` : `Cancelled MRF ${mrf.refNo}`,
-        refNo: mrf.refNo,
-      },
-    });
-    return row;
-  });
 
-  revalidateAfterMutation(["mrf"], [`mrf-tech-${mrf.technicianId}`]);
-  return NextResponse.json({ id: updated.id, status: updated.status, refNo: updated.refNo });
+  try {
+    const updated = await prisma.$transaction(
+      async (tx) => {
+        const mrf = await tx.mrf.findUnique({
+          where: { id },
+          include: { items: { select: { qtyFulfilled: true } } },
+        });
+        if (!mrf) throw new HttpError("MRF not found", 404);
+        if (mrf.status === "CANCELLED") {
+          throw new HttpError("This MRF is already cancelled", 409);
+        }
+        if (mrf.status === "FULFILLED") {
+          throw new HttpError("Fully fulfilled MRFs cannot be cancelled", 409);
+        }
+
+        const anyReleased = mrf.items.some((i) => i.qtyFulfilled > 0);
+
+        if (!canWarehouseCancel) {
+          const tech = await tx.technician.findFirst({
+            where: { userId: session.user.id },
+            select: { id: true },
+          });
+          if (!tech || tech.id !== mrf.technicianId) {
+            throw new HttpError("Forbidden", 403);
+          }
+          if (!techMayCancelMrf(mrf.status, anyReleased)) {
+            throw new HttpError(
+              "Partially fulfilled requests can only be closed by warehouse staff",
+              403
+            );
+          }
+        } else if (!warehouseMayCancelMrf(mrf.status)) {
+          throw new HttpError("This MRF cannot be cancelled in its current status", 409);
+        }
+
+        const result = await tx.mrf.updateMany({
+          where: canWarehouseCancel
+            ? { id, status: { in: ["PENDING", "PARTIAL"] } }
+            : { id, status: "PENDING" },
+          data: { status: "CANCELLED" },
+        });
+
+        if (result.count === 0) {
+          throw new HttpError("MRF could not be cancelled — status changed concurrently", 409);
+        }
+
+        await tx.activityLog.create({
+          data: {
+            userId: session.user.id,
+            action: mrfCancelActivityAction(mrf.refNo, anyReleased, reason),
+            refNo: mrf.refNo,
+          },
+        });
+
+        return {
+          id: mrf.id,
+          status: "CANCELLED" as const,
+          refNo: mrf.refNo,
+          technicianId: mrf.technicianId,
+          anyReleased,
+        };
+      },
+      { isolationLevel: "Serializable", maxWait: 10000, timeout: 15000 }
+    );
+
+    revalidateAfterMutation(["mrf"], [`mrf-tech-${updated.technicianId}`]);
+    return NextResponse.json({
+      id: updated.id,
+      status: updated.status,
+      refNo: updated.refNo,
+      anyReleased: updated.anyReleased,
+    });
+  } catch (e) {
+    if (e instanceof HttpError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    const message = e instanceof Error ? e.message : "Cancel failed";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }

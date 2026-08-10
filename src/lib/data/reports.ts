@@ -215,7 +215,7 @@ export async function buildReportData(
           String(net),
         ];
       }),
-      summary: `${products.length} products · movements ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")} · net = SI − SO + ADJ (compare to on-hand for anomalies)${capNote(products.length)}`,
+      summary: `${products.length} products · range ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")} · Net movement = SI−SO+ADJ in range only (not opening balance); compare to On hand as a spot-check, not a full reconcile${capNote(products.length)}`,
     };
   }
 

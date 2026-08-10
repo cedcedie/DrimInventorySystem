@@ -13,6 +13,7 @@ import { useTheme } from "@mui/material/styles";
 import { MultiItemMrfModal } from "@/components/modals/MultiItemMrfModal";
 import { MrfDetailModal } from "@/components/modals/MrfDetailModal";
 import type { MrfListData } from "@/lib/data/mrf";
+import { mrfStatusLabel } from "@/lib/mrfLifecycle";
 
 const COLS = "100px 100px minmax(0,1.2fr) 90px minmax(0,1.2fr) 100px";
 const FILE_HIGHLIGHT_KEY = "drim-mrf-filed";
@@ -106,14 +107,7 @@ export function MrfScreen({
                 </TableCell>
                 <TableCell color={t.text2}>{r.project}</TableCell>
                 <TableCell>
-                  <StatusChip 
-                    label={
-                      r.status === "PENDING" ? "Pending" : 
-                      r.status === "PARTIAL" ? "Partial" :
-                      r.status === "FULFILLED" ? "Fulfilled" : 
-                      "Cancelled"
-                    } 
-                  />
+                  <StatusChip label={mrfStatusLabel(r.status, r.qtyFulfilled)} />
                 </TableCell>
               </TableRow>
             ))}

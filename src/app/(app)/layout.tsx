@@ -2,27 +2,13 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type { Role } from "@/generated/prisma";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/AppShell";
 import { PermissionsProvider } from "@/components/PermissionsProvider";
 import { MODULE_ACCESS } from "@/lib/rbac";
-import { getEffectivePermissions, isConfigurableModule } from "@/lib/effectivePermissions";
+import { getEffectivePermissions } from "@/lib/effectivePermissions";
+import { isConfigurableModule } from "@/lib/permissionDefaults";
 import { NAV_GROUPS } from "@/lib/navConfig";
-import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
-
-/** Tagged with entity tags so product/supplier/user/tech mutations refresh badges. */
-async function getBadgeCounts() {
-  "use cache";
-  tagAndLife(["products", "suppliers", "users", "technicians"], CACHE_SECONDS.dashboard);
-
-  const [productCount, supplierCount, userCount, technicianCount] = await Promise.all([
-    prisma.product.count(),
-    prisma.supplier.count(),
-    prisma.user.count(),
-    prisma.technician.count(),
-  ]);
-  return { productCount, supplierCount, userCount, technicianCount };
-}
+import { getBadgeCounts } from "@/lib/data/badges";
 
 function canViewSegment(
   segment: string,
@@ -30,17 +16,25 @@ function canViewSegment(
   perms: Awaited<ReturnType<typeof getEffectivePermissions>>
 ): boolean {
   if (isConfigurableModule(segment)) {
-    return perms[segment]?.canView || (segment === "stock" && perms.mrf?.canView) || false;
+    if (perms[segment]?.canView) return true;
+    // Technicians use the Stock screen for MRFs — only they get this bridge.
+    if (segment === "stock" && role === "TECHNICIAN" && perms.mrf?.canView) return true;
+    return false;
   }
   return MODULE_ACCESS[role]?.includes(segment) ?? false;
 }
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [session, badgeCounts, hdrs] = await Promise.all([auth(), getBadgeCounts(), headers()]);
+  const session = await auth();
   if (!session?.user) redirect("/login");
 
   const role = session.user.role as Role;
-  const perms = await getEffectivePermissions(session.user.id, role);
+
+  const [badgeCounts, hdrs, perms] = await Promise.all([
+    getBadgeCounts(),
+    headers(),
+    getEffectivePermissions(session.user.id, role),
+  ]);
 
   const pathname = hdrs.get("x-pathname") ?? "";
   const pageSegment = pathname.split("/").filter(Boolean)[0] ?? "";

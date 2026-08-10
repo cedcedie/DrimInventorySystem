@@ -8,23 +8,11 @@ import { generateExcelReport } from "@/lib/excelReport";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { reportExportSchema } from "@/lib/schemas";
-
-async function nextReportRefNo(): Promise<string> {
-  const latest = await prisma.activityLog.findFirst({
-    where: { refNo: { startsWith: "RPT-" } },
-    orderBy: { refNo: "desc" },
-  });
-  const latestNum = latest ? parseInt(latest.refNo.split("-")[1] ?? "0", 10) : 0;
-  const nextNum = (Number.isFinite(latestNum) ? latestNum : 0) + 1;
-  return `RPT-${String(nextNum).padStart(3, "0")}`;
-}
+import { nextActivityRefNo } from "@/lib/refNo";
 
 export async function POST(req: Request) {
   const auth = await requireModuleAccess("reports", "canExport");
   if ("error" in auth) return auth.error;
-  if (auth.role !== "ADMIN" && auth.role !== "OWNER") {
-    return NextResponse.json({ error: "Generate Report requires Admin role" }, { status: 403 });
-  }
 
   const parsed = await parseBody(req, reportExportSchema);
   if ("error" in parsed) return parsed.error;
@@ -39,8 +27,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid date range" }, { status: 400 });
   }
 
+  const includePricing = auth.role === "OWNER" || auth.role === "ADMIN";
+
   const [{ headers, rows, summary }, company] = await Promise.all([
-    buildReportData(type, from, to),
+    buildReportData(type, from, to, { includePricing }),
     getCompanySettings(),
   ]);
   const generatedAt = new Date();
@@ -67,7 +57,7 @@ export async function POST(req: Request) {
         company,
       });
 
-  const refNo = await nextReportRefNo();
+  const refNo = await prisma.$transaction((tx) => nextActivityRefNo(tx, "RPT", 3));
   const fileExtension = format === "excel" ? "xlsx" : "pdf";
   const contentType = format === "excel"
     ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

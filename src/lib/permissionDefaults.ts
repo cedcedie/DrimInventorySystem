@@ -29,6 +29,12 @@ export interface PermissionSet {
   canExport: boolean;
 }
 
+export type PermissionAction = keyof PermissionSet;
+
+export function isConfigurableModule(segment: string): boolean {
+  return (PERMISSION_MODULES as readonly string[]).includes(segment);
+}
+
 export function defaultPermissionsFor(roleName: string, module: string): PermissionSet {
   if (roleName === "OWNER") {
     return { canView: true, canCreate: true, canEdit: true, canDelete: true, canExport: true };

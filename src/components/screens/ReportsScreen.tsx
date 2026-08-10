@@ -13,10 +13,12 @@ import type { Role } from "@/generated/prisma";
 import type { DashboardData } from "@/lib/data/dashboard";
 
 const REPORT_TYPES = [
-  { title: "Stock Report", desc: "Current stock levels, amounts, and totals across all categories." },
-  { title: "Transaction Report", desc: "All Stock-In and Stock-Out transactions in the date range." },
+  { title: "Stock Report", desc: "Current stock levels across all categories (prices for Owner/Admin only)." },
+  { title: "Transaction Report", desc: "Stock-In, Stock-Out, and adjustments in the date range — with MRF links." },
   { title: "Low Stock Report", desc: "Items at or below their minimum stock level, plus out-of-stock items." },
   { title: "Supplier Report", desc: "Stock-In volume grouped by supplier for the date range." },
+  { title: "MRF Status Report", desc: "Material requests filed in range — status, requested vs released qty." },
+  { title: "Stock Reconciliation", desc: "On-hand vs SI/SO/ADJ movements in range for audit spot-checks." },
 ] as const;
 
 function todayIso() {

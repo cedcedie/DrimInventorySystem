@@ -51,6 +51,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 }
 
+/** Soft-archive the product. History (SI/SO/MRF/ADJ) is preserved; product is
+ * hidden from active catalog and stock options. Hard delete only when unused. */
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireModuleAccess("products", "canDelete");
   if ("error" in auth) return auth.error;
@@ -61,18 +63,43 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!product) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
+  if (product.archivedAt) {
+    return NextResponse.json({ error: "Product is already archived" }, { status: 409 });
+  }
+
+  const [siCount, soCount, mrfCount, adjCount] = await Promise.all([
+    prisma.stockIn.count({ where: { productId: id } }),
+    prisma.stockOut.count({ where: { productId: id } }),
+    prisma.mrfItem.count({ where: { productId: id } }),
+    prisma.stockAdjustment.count({ where: { productId: id } }),
+  ]);
+  const hasHistory = siCount + soCount + mrfCount + adjCount > 0;
 
   await prisma.$transaction(async (tx) => {
-    await tx.product.delete({ where: { id } });
-    await tx.activityLog.create({
-      data: {
-        userId: auth.session.user.id,
-        action: `Removed product ${product.name} from catalog`,
-        refNo: product.code,
-      },
-    });
+    if (hasHistory) {
+      await tx.product.update({
+        where: { id },
+        data: { archivedAt: new Date() },
+      });
+      await tx.activityLog.create({
+        data: {
+          userId: auth.session.user.id,
+          action: `Archived product ${product.name} (history retained)`,
+          refNo: product.code,
+        },
+      });
+    } else {
+      await tx.product.delete({ where: { id } });
+      await tx.activityLog.create({
+        data: {
+          userId: auth.session.user.id,
+          action: `Removed product ${product.name} from catalog`,
+          refNo: product.code,
+        },
+      });
+    }
   });
 
   revalidateAfterMutation(["products", "inventory"]);
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, archived: hasHistory });
 }

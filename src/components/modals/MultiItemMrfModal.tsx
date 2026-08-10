@@ -9,6 +9,7 @@ import { lightTokens, darkTokens } from "@/theme/tokens";
 import { colors, borderRadius, shadows } from "@/theme/designTokens";
 import { postJson } from "@/lib/mutate";
 import { fetchJson } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 import { useToast } from "@/components/Toast";
 
 interface ProductOption {
@@ -67,9 +68,12 @@ export function MultiItemMrfModal({
         description: description.trim() || undefined,
       }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["mrf"] });
+      sessionStorage.setItem("drim-mrf-filed", data.refNo);
+      queryClient.invalidateQueries({ queryKey: queryKeys.mrf });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+      queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
-      showToast(`${data.refNo} filed — sent to warehouse.`);
+      showToast(`Request ${data.refNo} filed — sent to warehouse for fulfillment.`);
       resetForm();
       onClose();
     },

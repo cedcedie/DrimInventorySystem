@@ -93,6 +93,7 @@ async function loadStockFormOptions() {
 
   const [products, suppliers, technicians, pendingMrfs] = await Promise.all([
     prisma.product.findMany({
+      where: { archivedAt: null },
       orderBy: { name: "asc" },
       select: { id: true, name: true, code: true, stocks: true, unit: true },
     }),

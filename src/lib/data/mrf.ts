@@ -6,6 +6,17 @@ export async function getTechnicianForUser(userId: string) {
   return prisma.technician.findUnique({ where: { userId } });
 }
 
+function deriveMrfStatus(
+  dbStatus: "PENDING" | "PARTIAL" | "FULFILLED" | "CANCELLED",
+  totalRequested: number,
+  totalFulfilled: number
+): "PENDING" | "PARTIAL" | "FULFILLED" | "CANCELLED" {
+  if (dbStatus === "CANCELLED") return "CANCELLED";
+  if (totalFulfilled === 0) return "PENDING";
+  if (totalFulfilled >= totalRequested) return "FULFILLED";
+  return "PARTIAL";
+}
+
 async function loadMrfsForTechnician(technicianId: string) {
   "use cache";
   tagAndLife(["mrf", `mrf-tech-${technicianId}`], CACHE_SECONDS.short);
@@ -34,17 +45,6 @@ async function loadMrfsForTechnician(technicianId: string) {
       const totalFulfilled = m.items.reduce((sum, item) => sum + item.qtyFulfilled, 0);
       const itemCount = m.items.length;
 
-      let mrfStatus: "PENDING" | "PARTIAL" | "FULFILLED" | "CANCELLED" = m.status;
-      if (m.status !== "CANCELLED") {
-        if (totalFulfilled === 0) {
-          mrfStatus = "PENDING";
-        } else if (totalFulfilled >= totalRequested) {
-          mrfStatus = "FULFILLED";
-        } else {
-          mrfStatus = "PARTIAL";
-        }
-      }
-
       return {
         id: m.id,
         mrf: m.refNo,
@@ -53,10 +53,81 @@ async function loadMrfsForTechnician(technicianId: string) {
         qty: totalRequested,
         qtyFulfilled: totalFulfilled,
         project: m.project,
-        status: mrfStatus,
+        externalRefNo: m.externalRefNo,
+        status: deriveMrfStatus(m.status, totalRequested, totalFulfilled),
         itemCount,
       };
     }),
+  };
+}
+
+/** Open requests queue for warehouse — pending/partial MRFs with remaining line items. */
+async function loadOpenMrfsQueue() {
+  "use cache";
+  tagAndLife("mrf", CACHE_SECONDS.short);
+
+  const mrfs = await prisma.mrf.findMany({
+    where: {
+      status: { in: ["PENDING", "PARTIAL"] },
+    },
+    orderBy: { createdAt: "asc" },
+    take: 100,
+    include: {
+      technician: { select: { name: true, empNo: true } },
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              stocks: true,
+              unit: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const openMrfs = mrfs
+    .map((m) => {
+      const openItems = m.items
+        .filter((item) => item.qtyFulfilled < item.qtyRequested)
+        .map((item) => ({
+          id: item.id,
+          productName: item.product.name,
+          productCode: item.product.code,
+          unit: item.product.unit,
+          qtyRequested: item.qtyRequested,
+          qtyFulfilled: item.qtyFulfilled,
+          qtyRemaining: item.qtyRequested - item.qtyFulfilled,
+          availableStock: item.product.stocks,
+        }));
+
+      if (openItems.length === 0) return null;
+
+      const totalRequested = m.items.reduce((sum, item) => sum + item.qtyRequested, 0);
+      const totalFulfilled = m.items.reduce((sum, item) => sum + item.qtyFulfilled, 0);
+
+      return {
+        id: m.id,
+        refNo: m.refNo,
+        project: m.project,
+        externalRefNo: m.externalRefNo,
+        description: m.description,
+        status: deriveMrfStatus(m.status, totalRequested, totalFulfilled),
+        technicianName: m.technician.name,
+        empNo: m.technician.empNo,
+        createdAt: m.createdAt.toISOString(),
+        items: openItems,
+      };
+    })
+    .filter((m): m is NonNullable<typeof m> => m !== null);
+
+  return {
+    mrfs: openMrfs,
+    openItemCount: openMrfs.reduce((sum, m) => sum + m.items.length, 0),
   };
 }
 
@@ -64,4 +135,9 @@ export async function getMrfsForTechnician(technicianId: string) {
   return loadMrfsForTechnician(technicianId);
 }
 
+export async function getOpenMrfsQueue() {
+  return loadOpenMrfsQueue();
+}
+
 export type MrfListData = Awaited<ReturnType<typeof getMrfsForTechnician>>;
+export type OpenMrfsQueueData = Awaited<ReturnType<typeof getOpenMrfsQueue>>;

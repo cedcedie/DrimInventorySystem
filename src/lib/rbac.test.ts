@@ -31,9 +31,10 @@ describe("canAccess", () => {
     expect(canAccess("OWNER", "settings")).toBe(true);
   });
 
-  it("limits Warehouse Staff to dashboard, inventory, and stock", () => {
+  it("limits Warehouse Staff to dashboard, inventory, adjustments, and stock", () => {
     expect(canAccess("WAREHOUSE_STAFF", "dashboard")).toBe(true);
     expect(canAccess("WAREHOUSE_STAFF", "inventory")).toBe(true);
+    expect(canAccess("WAREHOUSE_STAFF", "adjustments")).toBe(true);
     expect(canAccess("WAREHOUSE_STAFF", "stock")).toBe(true);
 
     expect(canAccess("WAREHOUSE_STAFF", "products")).toBe(false);

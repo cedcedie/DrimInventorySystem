@@ -8,8 +8,9 @@ async function loadProductsPage(page: number) {
   tagAndLife("products", CACHE_SECONDS.list);
 
   const [total, products, categories, suppliers] = await Promise.all([
-    prisma.product.count(),
+    prisma.product.count({ where: { archivedAt: null } }),
     prisma.product.findMany({
+      where: { archivedAt: null },
       include: { category: true, supplier: true },
       orderBy: { code: "asc" },
       skip: (page - 1) * PAGE_SIZE,

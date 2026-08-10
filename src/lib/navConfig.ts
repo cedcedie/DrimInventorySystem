@@ -11,6 +11,7 @@ export const NAV_GROUPS = [
       { segment: "inventory", label: "Inventory" },
       { segment: "products", label: "Products" },
       { segment: "suppliers", label: "Suppliers" },
+      { segment: "adjustments", label: "Adjustments" },
     ],
   },
   {
@@ -40,6 +41,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   inventory: "Inventory",
   products: "Products/Materials",
   suppliers: "Suppliers",
+  adjustments: "Stock Adjustments",
   stock: "Stock In/Out",
   technicians: "Technicians",
   reports: "Reports",
@@ -55,6 +57,7 @@ export const SCREEN_SUBTITLES: Record<string, string> = {
   inventory: "Stock on hand by product and category",
   products: "Master product catalog",
   suppliers: "Accredited supplier registry",
+  adjustments: "Manual stock count corrections with audit trail",
   stock: "Record incoming and outgoing stock",
   technicians: "Field personnel and their transactions",
   reports: "Generate and export operational reports",

@@ -1,9 +1,17 @@
 import { prisma } from "@/lib/prisma";
+import type { MrfStatus } from "@/generated/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
-export async function getDashboardData() {
+/** When `technicianId` is set (technician dashboard), pending MRF KPI/list are scoped to that tech. */
+export async function getDashboardData(technicianId?: string) {
   "use cache";
   tagAndLife("dashboard", CACHE_SECONDS.dashboard);
+
+  const mrfOpenStatuses: MrfStatus[] = ["PENDING", "PARTIAL"];
+  const mrfOpenFilter = {
+    status: { in: mrfOpenStatuses },
+    ...(technicianId ? { technicianId } : {}),
+  };
 
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 6);
@@ -24,22 +32,22 @@ export async function getDashboardData() {
     weeklyIn,
     weeklyOut,
   ] = await Promise.all([
-    prisma.product.count(),
+    prisma.product.count({ where: { archivedAt: null } }),
     prisma.category.count(),
     prisma.$queryRaw<{ count: bigint }[]>`
-      SELECT COUNT(*)::bigint AS count FROM "Product" WHERE stocks > 0 AND stocks <= "minLevel"
+      SELECT COUNT(*)::bigint AS count FROM "Product" WHERE "archivedAt" IS NULL AND stocks > 0 AND stocks <= "minLevel"
     `,
-    prisma.product.count({ where: { stocks: 0 } }),
+    prisma.product.count({ where: { stocks: 0, archivedAt: null } }),
     prisma.$queryRaw<{ name: string; stocks: number; unit: string; category: string }[]>`
       SELECT p.name, p.stocks, p.unit, c.name AS category
       FROM "Product" p
       JOIN "Category" c ON c.id = p."categoryId"
-      WHERE p.stocks > 0 AND p.stocks <= p."minLevel"
+      WHERE p."archivedAt" IS NULL AND p.stocks > 0 AND p.stocks <= p."minLevel"
       ORDER BY p.name ASC
       LIMIT 8
     `,
     prisma.product.findMany({
-      where: { stocks: 0 },
+      where: { stocks: 0, archivedAt: null },
       select: { name: true, stocks: true, unit: true, category: { select: { name: true } } },
       orderBy: { name: "asc" },
       take: 8,
@@ -68,9 +76,9 @@ export async function getDashboardData() {
         mrf: { select: { refNo: true, project: true } },
       },
     }),
-    prisma.mrf.count({ where: { status: { in: ["PENDING", "PARTIAL"] } } }),
+    prisma.mrf.count({ where: mrfOpenFilter }),
     prisma.mrf.findMany({
-      where: { status: { in: ["PENDING", "PARTIAL"] } },
+      where: mrfOpenFilter,
       orderBy: { createdAt: "desc" },
       take: 6,
       select: {

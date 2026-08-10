@@ -6,14 +6,23 @@ import { ScreenBody } from "@/components/ScreenBody";
 import { DashboardScreen } from "@/components/screens/DashboardScreen";
 import { screenTitleForRole, screenSubtitleForRole, PERM_SUMMARY } from "@/lib/navConfig";
 import { getDashboardData } from "@/lib/data/dashboard";
+import { getTechnicianForUser } from "@/lib/data/mrf";
 
 export const metadata: Metadata = {
   title: "Dashboard — DRIM Inventory System",
 };
 
 export default async function DashboardPage() {
-  const [session, data] = await Promise.all([auth(), getDashboardData()]);
+  const session = await auth();
   const role = session!.user.role as Role;
+
+  let technicianId: string | undefined;
+  if (role === "TECHNICIAN") {
+    const technician = await getTechnicianForUser(session!.user.id);
+    technicianId = technician?.id;
+  }
+
+  const data = await getDashboardData(technicianId);
 
   return (
     <>

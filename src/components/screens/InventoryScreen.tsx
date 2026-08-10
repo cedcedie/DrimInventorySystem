@@ -80,10 +80,14 @@ export function InventoryScreen({
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteJson(`/api/products/${id}`),
-    onSuccess: () => {
+    mutationFn: (id: string) => deleteJson<{ ok: boolean; archived?: boolean }>(`/api/products/${id}`),
+    onSuccess: (res) => {
       invalidateAll();
-      showToast("Item deleted from inventory.");
+      showToast(
+        res.archived
+          ? "Product archived — transaction history kept."
+          : "Item deleted from inventory."
+      );
     },
   });
 

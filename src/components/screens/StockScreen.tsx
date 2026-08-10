@@ -8,38 +8,81 @@ import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
+import { StatusChip } from "@/components/StatusChip";
 import { useTheme } from "@mui/material/styles";
 import { StockInModal } from "@/components/modals/StockInModal";
 import { StockOutModal } from "@/components/modals/StockOutModal";
+import { MrfDetailModal } from "@/components/modals/MrfDetailModal";
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@/generated/prisma";
 import type { StockInData, StockOutData } from "@/lib/data/stock";
+import type { OpenMrfsQueueData } from "@/lib/data/mrf";
 
 const SI_COLS = "110px 106px minmax(0,1.2fr) minmax(0,1.2fr) 80px";
 const SO_COLS = "92px 96px minmax(0,1fr) minmax(0,1.1fr) 48px 84px minmax(0,1fr)";
+const MRF_COLS = "100px 96px minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) 72px 72px 72px 88px";
 
-export function StockScreen({ role }: { role: Role }) {
-  const [tab, setTab] = useState<"in" | "out">("in");
+type StockTab = "requests" | "in" | "out";
+
+function parseStockTab(value?: string): StockTab {
+  if (value === "in" || value === "out" || value === "requests") return value;
+  return "requests";
+}
+
+export function StockScreen({ role, initialTab }: { role: Role; initialTab?: string }) {
+  const [tab, setTab] = useState<StockTab>(() => parseStockTab(initialTab));
+  const [stockOutOpen, setStockOutOpen] = useState(false);
+  const [fulfillItemId, setFulfillItemId] = useState<string | undefined>();
+  const [detailMrfId, setDetailMrfId] = useState<string | null>(null);
   const canStock = useCan("stock", "canCreate");
   const viewOnly = !canStock;
   void role;
   const t = useTheme().palette;
 
+  const openFulfill = (mrfItemId?: string) => {
+    setFulfillItemId(mrfItemId);
+    setStockOutOpen(true);
+  };
+
+  const closeStockOut = () => {
+    setStockOutOpen(false);
+    setFulfillItemId(undefined);
+  };
+
   return (
     <Box>
-      <PageChrome title="Stock In / Out" />
+      <PageChrome title="Stock & Material Requests" />
       <Box sx={{ display: "flex", gap: 0.25, mb: 1.75, borderBottom: "1px solid", borderColor: t.line }}>
-        <TabButton label="Stock In" active={tab === "in"} onClick={() => setTab("in")} />
-        <TabButton label="Stock Out" active={tab === "out"} onClick={() => setTab("out")} />
+        <TabButton label="Open MRFs" active={tab === "requests"} onClick={() => setTab("requests")} />
+        <TabButton label="Stock In (SI)" active={tab === "in"} onClick={() => setTab("in")} />
+        <TabButton label="Stock Out (SO)" active={tab === "out"} onClick={() => setTab("out")} />
       </Box>
 
-      {tab === "in" ? (
+      {tab === "requests" ? (
+        <OpenMrfsTab
+          canStock={canStock}
+          viewOnly={viewOnly}
+          onFulfill={openFulfill}
+          onOpenDetail={setDetailMrfId}
+        />
+      ) : tab === "in" ? (
         <StockInTab canStock={canStock} viewOnly={viewOnly} />
       ) : (
-        <StockOutTab canStock={canStock} viewOnly={viewOnly} />
+        <StockOutTab canStock={canStock} viewOnly={viewOnly} onFulfill={() => openFulfill()} />
       )}
+
+      {canStock && (
+        <StockOutModal open={stockOutOpen} onClose={closeStockOut} initialMrfItemId={fulfillItemId} />
+      )}
+
+      <MrfDetailModal
+        mrfId={detailMrfId}
+        open={Boolean(detailMrfId)}
+        onClose={() => setDetailMrfId(null)}
+        onFulfill={canStock ? openFulfill : undefined}
+      />
     </Box>
   );
 }
@@ -87,6 +130,133 @@ function ViewOnlyNotice({ text }: { text: string }) {
   );
 }
 
+function OpenMrfsTab({
+  canStock,
+  viewOnly,
+  onFulfill,
+  onOpenDetail,
+}: {
+  canStock: boolean;
+  viewOnly: boolean;
+  onFulfill: (mrfItemId: string) => void;
+  onOpenDetail: (mrfId: string) => void;
+}) {
+  const t = useTheme().palette;
+  const { data, isFetching } = useQuery({
+    queryKey: queryKeys.openMrfs,
+    queryFn: () => fetchJson<OpenMrfsQueueData>("/api/mrf/open"),
+  });
+
+  const flatRows =
+    data?.mrfs.flatMap((mrf) =>
+      mrf.items.map((item) => ({
+        mrfId: mrf.id,
+        ...item,
+        refNo: mrf.refNo,
+        project: mrf.project,
+        externalRefNo: mrf.externalRefNo,
+        technicianName: mrf.technicianName,
+        status: mrf.status,
+        createdAt: mrf.createdAt,
+      }))
+    ) ?? [];
+
+  return (
+    <Box>
+      <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
+        <Typography sx={{ fontSize: 12, color: t.muted }}>
+          Material requests awaiting warehouse release — fulfill against the request # (MRF)
+        </Typography>
+        {viewOnly && <ViewOnlyNotice text="View only — fulfillment requires Stock Out permission" />}
+      </Box>
+
+      {!data ? (
+        <TableSkeleton label="Loading open material requests…" columns={8} rows={6} />
+      ) : (
+        <TableShell minWidth={900} dimmed={isFetching}>
+          <TableHeaderRow
+            columns={MRF_COLS}
+            headers={[
+              "Request #",
+              "Filed",
+              "Technician",
+              "Project",
+              "Item",
+              "Need",
+              "In stock",
+              "Action",
+            ]}
+          />
+          {flatRows.map((row) => (
+            <TableRow key={row.id} columns={MRF_COLS} onClick={() => onOpenDetail(row.mrfId)}>
+              <TableCell mono color={t.primary.main}>
+                {row.refNo}
+              </TableCell>
+              <TableCell color={t.text2}>{formatDate(new Date(row.createdAt))}</TableCell>
+              <TableCell>{row.technicianName}</TableCell>
+              <TableCell color={t.text2}>
+                {row.project}
+                {row.externalRefNo && (
+                  <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2 }}>
+                    Ext. {row.externalRefNo}
+                  </Box>
+                )}
+              </TableCell>
+              <TableCell>
+                {row.productName}
+                <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2, fontFamily: "monospace" }}>
+                  {row.productCode}
+                </Box>
+              </TableCell>
+              <TableCell bold>
+                {row.qtyRemaining} {row.unit}
+                {row.qtyFulfilled > 0 && (
+                  <Box component="span" sx={{ fontSize: 10, color: t.muted, fontWeight: 400 }}>
+                    {" "}
+                    ({row.qtyFulfilled} done)
+                  </Box>
+                )}
+              </TableCell>
+              <TableCell
+                bold
+                color={row.availableStock >= row.qtyRemaining ? t.success.main : t.warning.main}
+              >
+                {row.availableStock}
+              </TableCell>
+              <TableCell>
+                {canStock ? (
+                  <ButtonBase
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFulfill(row.id);
+                    }}
+                    sx={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: t.primary.main,
+                      px: 1,
+                      py: 0.5,
+                      border: "1px solid",
+                      borderColor: t.primary.main,
+                    }}
+                  >
+                    Fulfill
+                  </ButtonBase>
+                ) : (
+                  <StatusChip label={row.status === "PARTIAL" ? "Partial" : "Pending"} />
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+          {flatRows.length === 0 && (
+            <EmptyState message="No open material requests — all caught up." />
+          )}
+        </TableShell>
+      )}
+    </Box>
+  );
+}
+
 function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boolean }) {
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -102,7 +272,7 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
     <Box>
       <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
         <Typography sx={{ fontSize: 12, color: t.muted }}>
-          Incoming stock received from suppliers
+          Receipt slips (SI) — incoming stock from suppliers
         </Typography>
         {canStock && (
           <ButtonBase
@@ -129,7 +299,10 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
         <TableSkeleton label="Loading stock-in deliveries…" columns={5} rows={5} />
       ) : (
         <TableShell minWidth={620} dimmed={isFetching}>
-          <TableHeaderRow columns={SI_COLS} headers={["Reference No.", "Date", "Supplier", "Item", "Quantity"]} />
+          <TableHeaderRow
+            columns={SI_COLS}
+            headers={["Receipt slip (SI)", "Date", "Supplier", "Item", "Quantity"]}
+          />
           {data.rows.map((r) => (
             <TableRow key={r.id} columns={SI_COLS}>
               <TableCell mono color={t.primary.main}>
@@ -167,10 +340,17 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
   );
 }
 
-function StockOutTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boolean }) {
+function StockOutTab({
+  canStock,
+  viewOnly,
+  onFulfill,
+}: {
+  canStock: boolean;
+  viewOnly: boolean;
+  onFulfill: () => void;
+}) {
   const [page, setPage] = useState(1);
   const [pickedIdx, setPickedIdx] = useState(0);
-  const [modalOpen, setModalOpen] = useState(false);
   const t = useTheme().palette;
 
   const { data, isFetching } = useQuery({
@@ -186,11 +366,11 @@ function StockOutTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: bool
       <Box sx={{ flex: "2.4 1 460px", minWidth: 460 }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
           <Typography sx={{ fontSize: 12, color: t.muted }}>
-            Stock released against Material Request Forms
+            Release slips (SO) — stock issued against material requests
           </Typography>
           {canStock && (
             <ButtonBase
-              onClick={() => setModalOpen(true)}
+              onClick={onFulfill}
               sx={{
                 ml: "auto",
                 border: "none",
@@ -203,7 +383,7 @@ function StockOutTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: bool
                 fontWeight: 600,
               }}
             >
-              + New Stock Out
+              + Fulfill MRF
             </ButtonBase>
           )}
           {viewOnly && <ViewOnlyNotice text="View only — Stock Out requires create permission" />}
@@ -215,7 +395,15 @@ function StockOutTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: bool
           <TableShell minWidth={720} dimmed={isFetching}>
             <TableHeaderRow
               columns={SO_COLS}
-              headers={["Reference No.", "Date", "Technician Name", "Item", "Qty", "MRF Number", "Project"]}
+              headers={[
+                "Release slip (SO)",
+                "Date",
+                "Technician",
+                "Item",
+                "Qty",
+                "Request # (MRF)",
+                "Project",
+              ]}
             />
             {data.rows.map((r, i) => (
               <TableRow key={r.id} columns={SO_COLS} onClick={() => setPickedIdx(i)} selected={picked?.id === r.id}>
@@ -233,8 +421,8 @@ function StockOutTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: bool
             {data.rows.length === 0 && (
               <EmptyState
                 message="No stock-out releases recorded yet."
-                actionLabel={canStock ? "Record Stock Out" : undefined}
-                onAction={canStock ? () => setModalOpen(true) : undefined}
+                actionLabel={canStock ? "Fulfill an MRF" : undefined}
+                onAction={canStock ? onFulfill : undefined}
               />
             )}
             {data.totalPages > 1 && (
@@ -254,24 +442,22 @@ function StockOutTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: bool
 
       <Box sx={{ flex: "1 1 250px", minWidth: 250, bgcolor: t.surface, border: "1px solid", borderColor: t.line }}>
         <Box sx={{ px: 1.75, py: 1.25, borderBottom: "1px solid", borderColor: t.line }}>
-          <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>Technician Profile</Typography>
+          <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>Release detail</Typography>
         </Box>
         {picked ? (
           <Box sx={{ p: 1.75, display: "flex", flexDirection: "column", gap: 1.375 }}>
-            <ProfileField label="Name" value={picked.tech} bold />
+            <ProfileField label="Release slip (SO)" value={picked.ref} mono bold />
+            <ProfileField label="Request # (MRF)" value={picked.mrf} mono />
+            <ProfileField label="Technician" value={picked.tech} bold />
             <ProfileField label="Employee Number" value={picked.empNo} mono />
-            <ProfileField label="Position" value={picked.position} />
-            <ProfileField
-              label="Recent Transaction"
-              value={`${picked.mrf} · ${picked.item} × ${picked.qty} — ${formatDate(new Date(picked.date))}`}
-            />
+            <ProfileField label="Item" value={`${picked.item} × ${picked.qty}`} />
+            <ProfileField label="Project" value={picked.project} />
+            <ProfileField label="Released" value={formatDate(new Date(picked.date))} />
           </Box>
         ) : (
-          <Box sx={{ p: 1.75, fontSize: 12.5, color: t.muted }}>No stock-out selected.</Box>
+          <Box sx={{ p: 1.75, fontSize: 12.5, color: t.muted }}>No release selected.</Box>
         )}
       </Box>
-
-      {canStock && <StockOutModal open={modalOpen} onClose={() => setModalOpen(false)} />}
     </Box>
   );
 }

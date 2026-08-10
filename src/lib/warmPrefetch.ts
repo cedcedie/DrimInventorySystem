@@ -11,11 +11,13 @@ import type { ProductsData } from "@/lib/data/products";
 /** Routes most users hit first — RSC-prefetch only these, not the whole app. */
 export const PRIORITY_SEGMENTS = ["dashboard", "inventory", "products", "stock"] as const;
 
-function whenIdle(fn: () => void) {
+function whenIdle(fn: () => void, delayMs = 3000) {
   if (typeof window === "undefined") return;
-  const ric = window.requestIdleCallback?.bind(window);
-  if (ric) ric(fn, { timeout: 2500 });
-  else window.setTimeout(fn, 500);
+  window.setTimeout(() => {
+    const ric = window.requestIdleCallback?.bind(window);
+    if (ric) ric(fn, { timeout: 5000 });
+    else fn();
+  }, delayMs);
 }
 
 /** Right after credentials succeed: warm dashboard RSC + React Query before navigating. */
@@ -32,8 +34,8 @@ export async function warmPostLogin(router: AppRouterInstance, queryClient: Quer
 }
 
 /**
- * Once the authenticated shell is up, idle-prefetch the next likely screens
- * the user is allowed to see (RSC + light API warm for inventory/products).
+ * Once the authenticated shell is up, idle-prefetch likely screens the user
+ * can access. Deferred so the first navigation isn't competing with warm-up.
  */
 export function warmShellRoutes(
   router: AppRouterInstance,
@@ -41,24 +43,32 @@ export function warmShellRoutes(
   accessSegments: string[]
 ) {
   whenIdle(() => {
-    for (const seg of PRIORITY_SEGMENTS) {
-      if (accessSegments.includes(seg)) router.prefetch(`/${seg}`);
-    }
+    const routes = PRIORITY_SEGMENTS.filter((seg) => accessSegments.includes(seg));
+    routes.forEach((seg, index) => {
+      window.setTimeout(() => router.prefetch(`/${seg}`), index * 400);
+    });
 
     if (accessSegments.includes("inventory")) {
-      void queryClient.prefetchQuery({
-        queryKey: queryKeys.inventory({ q: "", category: "All", page: 1 }),
-        queryFn: () =>
-          fetchJson<InventoryData>(
-            `/api/inventory?q=${encodeURIComponent("")}&category=${encodeURIComponent("All")}&page=1`
-          ),
-      });
+      window.setTimeout(() => {
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.inventory({ q: "", category: "All", page: 1 }),
+          queryFn: () =>
+            fetchJson<InventoryData>(
+              `/api/inventory?q=${encodeURIComponent("")}&category=${encodeURIComponent("All")}&page=1`
+            ),
+          staleTime: 60_000,
+        });
+      }, 1200);
     }
+
     if (accessSegments.includes("products")) {
-      void queryClient.prefetchQuery({
-        queryKey: queryKeys.products({ page: 1 }),
-        queryFn: () => fetchJson<ProductsData>("/api/products?page=1"),
-      });
+      window.setTimeout(() => {
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.products({ page: 1 }),
+          queryFn: () => fetchJson<ProductsData>("/api/products?page=1"),
+          staleTime: 60_000,
+        });
+      }, 1800);
     }
   });
 }

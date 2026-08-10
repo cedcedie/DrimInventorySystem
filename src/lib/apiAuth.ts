@@ -2,11 +2,8 @@ import { NextResponse } from "next/server";
 import type { Role } from "@/generated/prisma";
 import { auth } from "@/lib/auth";
 import { canAccess } from "@/lib/rbac";
-import {
-  getEffectivePermissions,
-  isConfigurableModule,
-  type PermissionAction,
-} from "@/lib/effectivePermissions";
+import { getEffectivePermissions } from "@/lib/effectivePermissions";
+import { isConfigurableModule, type PermissionAction } from "@/lib/permissionDefaults";
 
 /** Guards an API route. Configurable modules (products, stock, users, …) are
  * checked against the Owner-managed permission matrix (user override → role
@@ -22,11 +19,10 @@ export async function requireModuleAccess(moduleSegment: string, action?: Permis
 
   if (isConfigurableModule(moduleSegment)) {
     const perms = await getEffectivePermissions(session.user.id, role);
-    // The "stock" segment doubles as the MRF screen for technicians, so MRF
-    // view rights also grant access to the shared stock endpoints.
+    // Technicians use shared stock routes for MRF fulfillment.
     const canView =
       perms[moduleSegment]?.canView ||
-      (moduleSegment === "stock" && perms.mrf?.canView) ||
+      (moduleSegment === "stock" && role === "TECHNICIAN" && perms.mrf?.canView) ||
       false;
     if (!canView) {
       return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) } as const;

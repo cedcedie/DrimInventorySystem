@@ -85,6 +85,7 @@ model Product {
   supplierId  String?
   supplier    Supplier?         @relation(fields: [supplierId], references: [id])
   imageKey    String? // R2 object key
+  archivedAt  DateTime? // Soft-archive — keeps SI/SO/MRF history; hidden from active catalog
   stockIns    StockIn[]
   stockOuts   StockOut[]
   mrfItems    MrfItem[] // NEW: Changed from mrfs to mrfItems
@@ -92,6 +93,7 @@ model Product {
 
   @@index([categoryId])
   @@index([supplierId])
+  @@index([archivedAt])
 }
 
 model Technician {

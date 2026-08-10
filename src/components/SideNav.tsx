@@ -9,6 +9,7 @@ import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import SellOutlinedIcon from "@mui/icons-material/SellOutlined";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import SwapVertOutlinedIcon from "@mui/icons-material/SwapVertOutlined";
+import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import EngineeringOutlinedIcon from "@mui/icons-material/EngineeringOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
@@ -20,6 +21,8 @@ import { signOut } from "next-auth/react";
 import type { Role } from "@/generated/prisma";
 import { MODULE_ACCESS } from "@/lib/rbac";
 import { NAV_GROUPS, screenTitleForRole } from "@/lib/navConfig";
+import { isConfigurableModule } from "@/lib/permissionDefaults";
+import { usePermissions } from "@/components/PermissionsProvider";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens, ACCENT, ACCENT_SOFT } from "@/theme/tokens";
 
@@ -30,6 +33,7 @@ const SEGMENT_ICONS: Record<string, React.ElementType> = {
   inventory: Inventory2OutlinedIcon,
   products: SellOutlinedIcon,
   suppliers: LocalShippingOutlinedIcon,
+  adjustments: TuneOutlinedIcon,
   stock: SwapVertOutlinedIcon,
   technicians: EngineeringOutlinedIcon,
   users: PeopleAltOutlinedIcon,
@@ -86,6 +90,7 @@ export function SideNav({
   onMobileClose?: () => void;
 }) {
   const access = accessSegments ?? MODULE_ACCESS[role] ?? [];
+  const { permissions } = usePermissions();
   const pathname = usePathname();
   const activeSegment = pathname?.split("/").filter(Boolean)[0] ?? "";
   const { mode } = useColorMode();
@@ -98,12 +103,21 @@ export function SideNav({
     setPendingSegment(null);
   }, [pathname]);
 
+  const canShowSegment = (segment: string) => {
+    if (isConfigurableModule(segment)) {
+      if (permissions[segment]?.canView) return true;
+      if (segment === "stock" && role === "TECHNICIAN" && permissions.mrf?.canView) return true;
+      return false;
+    }
+    return access.includes(segment);
+  };
+
   const navContent = (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <Logo />
       <Box sx={{ flex: 1, overflowY: "auto", px: 1.5, pb: 1 }}>
         {NAV_GROUPS.map((group) => {
-          const items = group.items.filter((item) => access.includes(item.segment));
+          const items = group.items.filter((item) => canShowSegment(item.segment));
           if (!items.length) return null;
           return (
             <Box key={group.label} sx={{ mb: 0.5 }}>

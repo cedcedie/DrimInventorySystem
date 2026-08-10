@@ -7,6 +7,7 @@ export const MODULE_ACCESS: Record<Role, string[]> = {
     "inventory",
     "products",
     "suppliers",
+    "adjustments",
     "stock",
     "technicians",
     "reports",
@@ -20,12 +21,13 @@ export const MODULE_ACCESS: Record<Role, string[]> = {
     "inventory",
     "products",
     "suppliers",
+    "adjustments",
     "stock",
     "technicians",
     "reports",
     "activity",
   ],
-  WAREHOUSE_STAFF: ["dashboard", "inventory", "stock"],
+  WAREHOUSE_STAFF: ["dashboard", "inventory", "adjustments", "stock"],
   TECHNICIAN: ["dashboard", "stock"],
 };
 

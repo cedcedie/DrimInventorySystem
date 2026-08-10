@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Box, Typography, Checkbox, Tabs, Tab, ButtonBase, MenuItem, Select } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
@@ -13,6 +14,7 @@ import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import { fetchJson } from "@/lib/api";
 import { postJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
+import { usePermissions } from "@/components/PermissionsProvider";
 import { useTheme } from "@mui/material/styles";
 import { ACCENT, ACCENT_SOFT } from "@/theme/tokens";
 import { ROLE_LABELS } from "@/lib/navConfig";
@@ -77,13 +79,13 @@ export function PermissionsScreen() {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { data: session } = useSession();
+  const { patchModule } = usePermissions();
   const [mode, setMode] = useState<"role" | "user">("role");
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
 
   const refreshAccess = () => {
-    // Layout + PermissionsProvider read from the server cache — force a
-    // soft refresh so nav/buttons pick up the new matrix without a full reload.
     router.refresh();
   };
 
@@ -98,28 +100,68 @@ export function PermissionsScreen() {
     enabled: mode === "user",
   });
 
+  const applyLiveIfCurrentRole = (roleId: string, module: string, permissions: PermissionSet) => {
+    const roleMeta = roleData?.roles.find((r) => r.id === roleId);
+    if (roleMeta && session?.user?.role === roleMeta.name) {
+      patchModule(module, permissions);
+    }
+  };
+
+  const applyLiveIfCurrentUser = (
+    userId: string,
+    module: string,
+    permissions: PermissionSet | null,
+    roleName?: Role
+  ) => {
+    if (session?.user?.id !== userId) return;
+    if (permissions) {
+      patchModule(module, permissions);
+      return;
+    }
+    // Reset override → fall back to role default currently shown in the matrix.
+    if (roleName) {
+      const fallback = roleDefaultFor(roleName, module);
+      patchModule(module, fallback);
+    }
+  };
+
   const roleMutation = useMutation({
     mutationFn: (payload: { roleId: string; module: string; permissions: PermissionSet }) =>
       postJson("/api/permissions/update", payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["role-permissions"] });
-      queryClient.invalidateQueries({ queryKey: ["user-permissions"] });
-      refreshAccess();
-      showToast("Role permissions updated");
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: ["role-permissions"] });
+      const previous = queryClient.getQueryData<RolePermissionsData>(["role-permissions"]);
+      queryClient.setQueryData<RolePermissionsData>(["role-permissions"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          permissions: old.permissions.map((p) =>
+            p.roleId === payload.roleId && p.module === payload.module
+              ? { ...p, ...payload.permissions }
+              : p
+          ),
+        };
+      });
+      applyLiveIfCurrentRole(payload.roleId, payload.module, payload.permissions);
+      return { previous };
     },
-  });
-
-  const userMutation = useMutation({
-    mutationFn: (payload: { userId: string; module: string; permissions: PermissionSet | null }) =>
-      postJson("/api/permissions/user-update", payload),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["user-permissions"] });
-      refreshAccess();
-      showToast(
-        variables.permissions === null
-          ? "Override removed — back to role default"
-          : "User override saved"
+    onError: (_err, payload, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(["role-permissions"], ctx.previous);
+      const prevRow = ctx?.previous?.permissions.find(
+        (p) => p.roleId === payload.roleId && p.module === payload.module
       );
+      if (prevRow) {
+        applyLiveIfCurrentRole(payload.roleId, payload.module, prevRow);
+      }
+      showToast("Could not update role permissions");
+    },
+    onSuccess: () => {
+      showToast("Role permissions updated");
+      refreshAccess();
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["role-permissions"] });
+      void queryClient.invalidateQueries({ queryKey: ["user-permissions"] });
     },
   });
 
@@ -129,6 +171,51 @@ export function PermissionsScreen() {
       row ?? { canView: false, canCreate: false, canEdit: false, canDelete: false, canExport: false }
     );
   };
+
+  const userMutation = useMutation({
+    mutationFn: (payload: { userId: string; module: string; permissions: PermissionSet | null }) =>
+      postJson("/api/permissions/user-update", payload),
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: ["user-permissions"] });
+      const previous = queryClient.getQueryData<{ users: UserRow[] }>(["user-permissions"]);
+      const target = previous?.users.find((u) => u.id === payload.userId);
+      queryClient.setQueryData<{ users: UserRow[] }>(["user-permissions"], (old) => {
+        if (!old) return old;
+        return {
+          users: old.users.map((u) => {
+            if (u.id !== payload.userId) return u;
+            const others = u.permissions.filter((p) => p.module !== payload.module);
+            if (payload.permissions === null) {
+              return { ...u, permissions: others };
+            }
+            return {
+              ...u,
+              permissions: [...others, { module: payload.module, ...payload.permissions }],
+            };
+          }),
+        };
+      });
+      applyLiveIfCurrentUser(payload.userId, payload.module, payload.permissions, target?.role);
+      return { previous };
+    },
+    onError: (_err, payload, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(["user-permissions"], ctx.previous);
+      showToast("Could not update user permissions");
+      refreshAccess();
+      void payload;
+    },
+    onSuccess: (_data, variables) => {
+      showToast(
+        variables.permissions === null
+          ? "Override removed — back to role default"
+          : "User override saved"
+      );
+      refreshAccess();
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["user-permissions"] });
+    },
+  });
 
   const modeButton = (value: "role" | "user", label: string, desc: string) => {
     const active = mode === value;
@@ -173,7 +260,7 @@ export function PermissionsScreen() {
             data={roleData}
             selectedRole={selectedRole}
             onSelectRole={setSelectedRole}
-            pending={roleMutation.isPending}
+            pending={false}
             onToggle={(roleId, module, perm, value) => {
               const current = roleData.permissions.find(
                 (p) => p.roleId === roleId && p.module === module
@@ -201,7 +288,7 @@ export function PermissionsScreen() {
           selectedUserId={selectedUserId || userData.users[0]?.id || ""}
           onSelectUser={setSelectedUserId}
           roleDefaultFor={roleDefaultFor}
-          pending={userMutation.isPending}
+          pending={false}
           onToggle={(user, module, perm, value) => {
             const override = user.permissions.find((p) => p.module === module);
             const effective = override ?? roleDefaultFor(user.role, module);

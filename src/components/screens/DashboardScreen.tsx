@@ -145,10 +145,10 @@ export function DashboardScreen({
             <Typography sx={{ fontSize: 14, fontWeight: 800 }}>Pending MRFs</Typography>
             <Box
               component={NextLink}
-              href="/stock"
+              href="/stock?tab=requests"
               sx={{ fontSize: 12.5, fontWeight: 700, color: ACCENT, textDecoration: "none" }}
             >
-              Open stock
+              Open queue
             </Box>
           </Box>
           {pendingMrfs.length === 0 ? (

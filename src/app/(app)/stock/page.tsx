@@ -7,21 +7,26 @@ import { ScreenBody } from "@/components/ScreenBody";
 import { StockScreen } from "@/components/screens/StockScreen";
 import { MrfScreen } from "@/components/screens/MrfScreen";
 import { getTechnicianForUser } from "@/lib/data/mrf";
+import { screenTitleForRole, screenSubtitleForRole } from "@/lib/navConfig";
 
 export const metadata: Metadata = {
   title: "Stock — DRIM Inventory System",
 };
 
-export default async function StockPage() {
-  const session = await auth();
+export default async function StockPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const [session, params] = await Promise.all([auth(), searchParams]);
   const role = session!.user.role as Role;
 
   if (role === "TECHNICIAN") {
     return (
       <>
         <ScreenHeader
-          title="Material Requests"
-          subtitle="File and track your MRFs"
+          title={screenTitleForRole("stock", role)}
+          subtitle={screenSubtitleForRole("stock", role)}
         />
         <ScreenBody>{await renderTechnicianView(session!.user.id)}</ScreenBody>
       </>
@@ -29,9 +34,12 @@ export default async function StockPage() {
   }
 
   return (
-    <ScreenBody>
-      <StockScreen role={role} />
-    </ScreenBody>
+    <>
+      <ScreenHeader title="Stock & Material Requests" subtitle="Open requests, receipts (SI), and releases (SO)" />
+      <ScreenBody>
+        <StockScreen role={role} initialTab={params.tab} />
+      </ScreenBody>
+    </>
   );
 }
 

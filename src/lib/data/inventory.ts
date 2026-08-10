@@ -6,6 +6,7 @@ const PAGE_SIZE = 15;
 async function fetchInventoryData(q: string, category: string, page: number) {
   const where = {
     AND: [
+      { archivedAt: null },
       category !== "All" ? { category: { name: category } } : {},
       q
         ? {

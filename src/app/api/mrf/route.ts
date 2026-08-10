@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { getTechnicianForUser, getMrfsForTechnician } from "@/lib/data/mrf";
 import { prisma } from "@/lib/prisma";
-import { nextRefNo } from "@/lib/refNo";
+import { nextRefNo, withRefNoRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { mrfCreateSchema } from "@/lib/schemas";
@@ -49,27 +49,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
-  const mrf = await prisma.$transaction(async (tx) => {
-    const refNo = await nextRefNo(tx, "mrf", "MRF");
-    const created = await tx.mrf.create({
-      data: {
-        refNo,
-        technicianId: technician.id,
-        project: projectName,
-        items: {
-          create: [{ productId, qtyRequested: quantity, qtyFulfilled: 0 }],
+  const mrf = await withRefNoRetry(() =>
+    prisma.$transaction(async (tx) => {
+      const refNo = await nextRefNo(tx, "mrf", "MRF");
+      const created = await tx.mrf.create({
+        data: {
+          refNo,
+          technicianId: technician.id,
+          project: projectName,
+          items: {
+            create: [{ productId, qtyRequested: quantity, qtyFulfilled: 0 }],
+          },
         },
-      },
-    });
-    await tx.activityLog.create({
-      data: {
-        userId: auth.session.user.id,
-        action: `Filed MRF for ${product.name} × ${quantity}`,
-        refNo,
-      },
-    });
-    return created;
-  });
+      });
+      await tx.activityLog.create({
+        data: {
+          userId: auth.session.user.id,
+          action: `Filed MRF for ${product.name} × ${quantity}`,
+          refNo,
+        },
+      });
+      return created;
+    })
+  );
 
   revalidateAfterMutation(["mrf"], [`mrf-tech-${technician.id}`]);
   return NextResponse.json({ refNo: mrf.refNo }, { status: 201 });

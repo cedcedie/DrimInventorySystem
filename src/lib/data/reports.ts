@@ -1,41 +1,64 @@
 import { prisma } from "@/lib/prisma";
 
-export const REPORT_TYPES = ["Stock Report", "Transaction Report", "Low Stock Report", "Supplier Report"] as const;
+export const REPORT_TYPES = [
+  "Stock Report",
+  "Transaction Report",
+  "Low Stock Report",
+  "Supplier Report",
+  "MRF Status Report",
+  "Stock Reconciliation",
+] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];
 
 const REPORT_ROW_CAP = 5000;
 const capNote = (count: number) => (count === REPORT_ROW_CAP ? " (showing first 5000 rows)" : "");
 
-export interface ReportRow {
-  label: string;
-  value: string;
+export interface ReportOptions {
+  /** Include unit price / valuation columns (Owner & Admin only). */
+  includePricing?: boolean;
 }
 
 /** Pulls the raw data + a flat table of rows for a given report type and date
  * range, used both for the on-screen preview and the exported PDF. */
-export async function buildReportData(type: ReportType, from: Date, to: Date) {
+export async function buildReportData(
+  type: ReportType,
+  from: Date,
+  to: Date,
+  options: ReportOptions = {}
+) {
+  const includePricing = options.includePricing ?? false;
+
   if (type === "Stock Report") {
     const products = await prisma.product.findMany({
+      where: { archivedAt: null },
       include: { category: true },
       orderBy: { code: "asc" },
       take: REPORT_ROW_CAP,
     });
+    if (includePricing) {
+      return {
+        headers: ["Code", "Name", "Category", "Stocks", "Unit", "Unit Price", "Value"],
+        rows: products.map((p) => [
+          p.code,
+          p.name,
+          p.category.name,
+          String(p.stocks),
+          p.unit,
+          Number(p.amount ?? 0).toFixed(2),
+          (Number(p.amount ?? 0) * p.stocks).toFixed(2),
+        ]),
+        summary: `${products.length} active products · as of ${to.toLocaleDateString("en-PH")}${capNote(products.length)}`,
+      };
+    }
     return {
-      headers: ["Code", "Name", "Category", "Stocks", "Unit", "Amount"],
-      rows: products.map((p) => [
-        p.code,
-        p.name,
-        p.category.name,
-        String(p.stocks),
-        p.unit,
-        Number(p.amount).toFixed(2),
-      ]),
-      summary: `${products.length} products · as of ${to.toLocaleDateString("en-PH")}${capNote(products.length)}`,
+      headers: ["Code", "Name", "Category", "Stocks", "Unit"],
+      rows: products.map((p) => [p.code, p.name, p.category.name, String(p.stocks), p.unit]),
+      summary: `${products.length} active products · as of ${to.toLocaleDateString("en-PH")}${capNote(products.length)}`,
     };
   }
 
   if (type === "Transaction Report") {
-    const [stockIns, stockOuts] = await Promise.all([
+    const [stockIns, stockOuts, adjustments] = await Promise.all([
       prisma.stockIn.findMany({
         where: { createdAt: { gte: from, lte: to } },
         include: { product: true, supplier: true },
@@ -44,7 +67,17 @@ export async function buildReportData(type: ReportType, from: Date, to: Date) {
       }),
       prisma.stockOut.findMany({
         where: { createdAt: { gte: from, lte: to } },
-        include: { product: true, technician: true },
+        include: {
+          product: true,
+          technician: true,
+          mrf: { select: { refNo: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: REPORT_ROW_CAP,
+      }),
+      prisma.stockAdjustment.findMany({
+        where: { createdAt: { gte: from, lte: to } },
+        include: { product: true },
         orderBy: { createdAt: "desc" },
         take: REPORT_ROW_CAP,
       }),
@@ -54,28 +87,42 @@ export async function buildReportData(type: ReportType, from: Date, to: Date) {
         si.createdAt.toLocaleDateString("en-PH"),
         "Stock-In",
         si.refNo,
+        "—",
         `${si.qty} × ${si.product.name} from ${si.supplier.name}`,
       ]),
       ...stockOuts.map((so) => [
         so.createdAt.toLocaleDateString("en-PH"),
         "Stock-Out",
         so.refNo,
+        so.mrf?.refNo ?? "—",
         `${so.qty} × ${so.product.name} to ${so.technician.name}`,
+      ]),
+      ...adjustments.map((a) => [
+        a.createdAt.toLocaleDateString("en-PH"),
+        "Adjustment",
+        a.refNo,
+        "—",
+        `${a.product.name}: ${a.qtyBefore} → ${a.qtyAfter} (${a.delta >= 0 ? "+" : ""}${a.delta})`,
       ]),
     ].sort((a, b) => (a[0] < b[0] ? 1 : -1));
 
-    const transactionCapNote =
-      stockIns.length === REPORT_ROW_CAP || stockOuts.length === REPORT_ROW_CAP ? " (showing first 5000 rows)" : "";
+    const capped =
+      stockIns.length === REPORT_ROW_CAP ||
+      stockOuts.length === REPORT_ROW_CAP ||
+      adjustments.length === REPORT_ROW_CAP;
 
     return {
-      headers: ["Date", "Type", "Ref", "Description"],
+      headers: ["Date", "Type", "Slip / Adj #", "Request # (MRF)", "Description"],
       rows,
-      summary: `${rows.length} transactions · ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")}${transactionCapNote}`,
+      summary: `${rows.length} movements · ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")}${
+        capped ? " (showing first 5000 rows per type)" : ""
+      }`,
     };
   }
 
   if (type === "Low Stock Report") {
     const products = await prisma.product.findMany({
+      where: { archivedAt: null },
       include: { category: true },
       take: REPORT_ROW_CAP,
     });
@@ -84,6 +131,91 @@ export async function buildReportData(type: ReportType, from: Date, to: Date) {
       headers: ["Code", "Name", "Category", "Stocks", "Min. Level"],
       rows: flagged.map((p) => [p.code, p.name, p.category.name, String(p.stocks), String(p.minLevel)]),
       summary: `${flagged.length} items flagged${capNote(products.length)}`,
+    };
+  }
+
+  if (type === "MRF Status Report") {
+    const mrfs = await prisma.mrf.findMany({
+      where: { createdAt: { gte: from, lte: to } },
+      include: {
+        technician: { select: { name: true, empNo: true } },
+        items: { select: { qtyRequested: true, qtyFulfilled: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: REPORT_ROW_CAP,
+    });
+    return {
+      headers: ["Request #", "Date", "Technician", "Project", "Status", "Requested", "Released", "Ext. Ref"],
+      rows: mrfs.map((m) => {
+        const requested = m.items.reduce((s, i) => s + i.qtyRequested, 0);
+        const fulfilled = m.items.reduce((s, i) => s + i.qtyFulfilled, 0);
+        return [
+          m.refNo,
+          m.createdAt.toLocaleDateString("en-PH"),
+          `${m.technician.name} (${m.technician.empNo})`,
+          m.project,
+          m.status,
+          String(requested),
+          String(fulfilled),
+          m.externalRefNo ?? "—",
+        ];
+      }),
+      summary: `${mrfs.length} MRFs · ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")}${capNote(mrfs.length)}`,
+    };
+  }
+
+  if (type === "Stock Reconciliation") {
+    // On-hand vs sum of movements: opening isn't tracked historically, so we
+    // show SI − SO + ADJ deltas in range vs current on-hand for audit spotting.
+    const products = await prisma.product.findMany({
+      where: { archivedAt: null },
+      include: { category: true },
+      orderBy: { code: "asc" },
+      take: REPORT_ROW_CAP,
+    });
+    const productIds = products.map((p) => p.id);
+
+    const [ins, outs, adjs] = await Promise.all([
+      prisma.stockIn.groupBy({
+        by: ["productId"],
+        where: { productId: { in: productIds }, createdAt: { gte: from, lte: to } },
+        _sum: { qty: true },
+      }),
+      prisma.stockOut.groupBy({
+        by: ["productId"],
+        where: { productId: { in: productIds }, createdAt: { gte: from, lte: to } },
+        _sum: { qty: true },
+      }),
+      prisma.stockAdjustment.groupBy({
+        by: ["productId"],
+        where: { productId: { in: productIds }, createdAt: { gte: from, lte: to } },
+        _sum: { delta: true },
+      }),
+    ]);
+
+    const inMap = Object.fromEntries(ins.map((r) => [r.productId, r._sum.qty ?? 0]));
+    const outMap = Object.fromEntries(outs.map((r) => [r.productId, r._sum.qty ?? 0]));
+    const adjMap = Object.fromEntries(adjs.map((r) => [r.productId, r._sum.delta ?? 0]));
+
+    return {
+      headers: ["Code", "Name", "Category", "On hand", "SI (range)", "SO (range)", "ADJ Δ", "Net movement"],
+      rows: products.map((p) => {
+        const si = inMap[p.id] ?? 0;
+        const so = outMap[p.id] ?? 0;
+        const adj = adjMap[p.id] ?? 0;
+        const net = si - so + adj;
+        return [
+          p.code,
+          p.name,
+          p.category.name,
+          String(p.stocks),
+          String(si),
+          String(so),
+          String(adj),
+          String(net),
+        ];
+      }),
+      summary: `${products.length} products · movements ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")} · net = SI − SO + ADJ (compare to on-hand for anomalies)${capNote(products.length)}`,
     };
   }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
-import { nextRefNo } from "@/lib/refNo";
+import { isUniqueRefNoError, nextRefNo, withRefNoRetry } from "@/lib/refNo";
 import { getTechnicianForUser } from "@/lib/data/mrf";
 import { parseBody } from "@/lib/validate";
 import { z } from "zod";
@@ -22,6 +22,9 @@ const multiMrfSchema = z.object({
 export async function POST(req: Request) {
   const auth = await requireModuleAccess("mrf", "canCreate");
   if ("error" in auth) return auth.error;
+  if (auth.role !== "TECHNICIAN") {
+    return NextResponse.json({ error: "Only technicians file MRFs" }, { status: 403 });
+  }
 
   // MRFs are always requests from a technician; the account must be linked
   // to a roster entry so fulfilled stock can be attributed correctly.
@@ -50,48 +53,57 @@ export async function POST(req: Request) {
   }
 
   try {
-    const refNo = await prisma.$transaction(async (tx) => {
-      const ref = await nextRefNo(tx, "mrf", "MRF");
-      const mrf = await tx.mrf.create({
-        data: {
-          refNo: ref,
-          technicianId: technician.id,
-          project,
-          externalRefNo: externalRefNo || null,
-          description: description || null,
-          status: "PENDING",
-          items: {
-            create: items.map((item) => ({
-              productId: item.productId,
-              qtyRequested: item.qty,
-              qtyFulfilled: 0,
-            })),
+    const refNo = await withRefNoRetry(() =>
+      prisma.$transaction(async (tx) => {
+        const ref = await nextRefNo(tx, "mrf", "MRF");
+        const mrf = await tx.mrf.create({
+          data: {
+            refNo: ref,
+            technicianId: technician.id,
+            project,
+            externalRefNo: externalRefNo || null,
+            description: description || null,
+            status: "PENDING",
+            items: {
+              create: items.map((item) => ({
+                productId: item.productId,
+                qtyRequested: item.qty,
+                qtyFulfilled: 0,
+              })),
+            },
           },
-        },
-        include: { items: true },
-      });
+          include: { items: true },
+        });
 
-      const totalQty = mrf.items.reduce((sum, item) => sum + item.qtyRequested, 0);
-      const itemsSummary =
-        mrf.items.length === 1
-          ? `${products[0]?.name ?? "1 item"} (${totalQty})`
-          : `${mrf.items.length} items (${totalQty} total qty)`;
+        const totalQty = mrf.items.reduce((sum, item) => sum + item.qtyRequested, 0);
+        const itemsSummary =
+          mrf.items.length === 1
+            ? `${products[0]?.name ?? "1 item"} (${totalQty})`
+            : `${mrf.items.length} items (${totalQty} total qty)`;
 
-      await tx.activityLog.create({
-        data: {
-          userId: auth.session.user.id,
-          action: `Filed MRF for ${itemsSummary}`,
-          refNo: ref,
-        },
-      });
+        await tx.activityLog.create({
+          data: {
+            userId: auth.session.user.id,
+            action: `Filed MRF for ${itemsSummary}`,
+            refNo: ref,
+          },
+        });
 
-      return ref;
-    });
+        return ref;
+      })
+    );
 
     revalidateAfterMutation(["mrf"], [`mrf-tech-${technician.id}`]);
 
     return NextResponse.json({ refNo }, { status: 201 });
   } catch (e) {
+    if (isUniqueRefNoError(e)) {
+      return NextResponse.json(
+        { error: "Could not assign an MRF reference number. Please try again." },
+        { status: 409 }
+      );
+    }
+
     const message = e instanceof Error ? e.message : "Failed to file MRF";
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Box, MenuItem, Select, Alert } from "@mui/material";
 import { EntityModal, ModalFormActions, FormField, fieldInputSx } from "@/components/EntityModal";
@@ -9,16 +9,25 @@ import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
 import { postJson } from "@/lib/mutate";
 import { fetchJson } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { queryKeys } from "@/lib/queryKeys";
 import type { StockFormOptions } from "@/lib/data/stock";
 
-export function StockOutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function StockOutModal({
+  open,
+  onClose,
+  initialMrfItemId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  initialMrfItemId?: string;
+}) {
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
   const { data: options } = useQuery({
-    queryKey: ["stock-options"],
+    queryKey: queryKeys.stockOptions,
     queryFn: () => fetchJson<StockFormOptions>("/api/stock/options"),
     enabled: open,
   });
@@ -27,19 +36,45 @@ export function StockOutModal({ open, onClose }: { open: boolean; onClose: () =>
   const [qty, setQty] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (!open) {
+      setMrfItemId("");
+      setQty("");
+      setError("");
+      return;
+    }
+    if (initialMrfItemId) {
+      setMrfItemId(initialMrfItemId);
+    }
+  }, [open, initialMrfItemId]);
+
+  useEffect(() => {
+    if (!open || !mrfItemId || !options) return;
+    const item = options.pendingMrfItems.find((m) => m.id === mrfItemId);
+    if (item && !qty) {
+      setQty(String(item.qtyRemaining));
+    }
+  }, [open, mrfItemId, options, qty]);
+
   const selectedMrfItem = options?.pendingMrfItems.find((m) => m.id === mrfItemId);
 
   const mutation = useMutation({
     mutationFn: () => postJson<{ refNo: string }>("/api/stock-out", { mrfItemId, qty }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["stock-out"] });
-      queryClient.invalidateQueries({ queryKey: ["stock-options"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stockOptions });
+      queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
-      queryClient.invalidateQueries({ queryKey: ["mrf"] });
-      showToast(`Stock Out ${data.refNo} released.`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.mrf });
+      const mrfRef = selectedMrfItem?.mrfRefNo;
+      showToast(
+        mrfRef
+          ? `Release slip ${data.refNo} recorded against request ${mrfRef}.`
+          : `Release slip ${data.refNo} recorded.`
+      );
       setMrfItemId("");
       setQty("");
       onClose();
@@ -51,7 +86,7 @@ export function StockOutModal({ open, onClose }: { open: boolean; onClose: () =>
     e.preventDefault();
     setError("");
     if (!mrfItemId || !qty || Number(qty) <= 0) {
-      setError("Select an MRF item and enter a positive quantity.");
+      setError("Select an MRF line item and enter a positive quantity.");
       return;
     }
     if (selectedMrfItem) {
@@ -68,10 +103,10 @@ export function StockOutModal({ open, onClose }: { open: boolean; onClose: () =>
   };
 
   return (
-    <EntityModal open={open} onClose={onClose} title="New Stock Out" width={560}>
+    <EntityModal open={open} onClose={onClose} title="Fulfill MRF — Stock Out" width={560}>
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
-          <FormField label="MRF Item to Fulfill" span2>
+          <FormField label="MRF line item" span2>
             <Select
               value={mrfItemId}
               onChange={(e) => {
@@ -88,14 +123,14 @@ export function StockOutModal({ open, onClose }: { open: boolean; onClose: () =>
               </MenuItem>
               {options?.pendingMrfItems.map((item) => (
                 <MenuItem key={item.id} value={item.id} sx={{ fontSize: 12.5 }}>
-                  {item.mrfRefNo} · {item.productName} · Need: {item.qtyRemaining} {item.unit}
+                  {item.mrfRefNo} · {item.productName} · need {item.qtyRemaining} {item.unit}
                 </MenuItem>
               ))}
             </Select>
           </FormField>
           {selectedMrfItem && (
             <>
-              <FormField label="MRF Number">
+              <FormField label="Request # (MRF)">
                 <Box sx={{ fontSize: 12.5, py: 1, color: ACCENT, fontFamily: "monospace", fontWeight: 600 }}>
                   {selectedMrfItem.mrfRefNo}
                 </Box>
@@ -116,34 +151,41 @@ export function StockOutModal({ open, onClose }: { open: boolean; onClose: () =>
                   {selectedMrfItem.qtyRequested} {selectedMrfItem.unit}
                 </Box>
               </FormField>
-              <FormField label="Already Fulfilled">
-                <Box sx={{ 
-                  fontSize: 12.5, 
-                  py: 1, 
-                  color: selectedMrfItem.qtyFulfilled > 0 ? ACCENT : t.text2,
-                  fontWeight: selectedMrfItem.qtyFulfilled > 0 ? 600 : 400,
-                }}>
+              <FormField label="Already released">
+                <Box
+                  sx={{
+                    fontSize: 12.5,
+                    py: 1,
+                    color: selectedMrfItem.qtyFulfilled > 0 ? ACCENT : t.text2,
+                    fontWeight: selectedMrfItem.qtyFulfilled > 0 ? 600 : 400,
+                  }}
+                >
                   {selectedMrfItem.qtyFulfilled} {selectedMrfItem.unit}
                 </Box>
               </FormField>
-              <FormField label="Remaining to Fulfill">
+              <FormField label="Remaining">
                 <Box sx={{ fontSize: 12.5, py: 1, color: t.text, fontWeight: 700 }}>
                   {selectedMrfItem.qtyRemaining} {selectedMrfItem.unit}
                 </Box>
               </FormField>
-              <FormField label="Available in Stock">
-                <Box sx={{ 
-                  fontSize: 12.5, 
-                  py: 1, 
-                  color: selectedMrfItem.availableStock >= selectedMrfItem.qtyRemaining ? t.success : t.warn,
-                  fontWeight: 600,
-                }}>
+              <FormField label="Available in stock">
+                <Box
+                  sx={{
+                    fontSize: 12.5,
+                    py: 1,
+                    color:
+                      selectedMrfItem.availableStock >= selectedMrfItem.qtyRemaining
+                        ? t.success
+                        : t.warn,
+                    fontWeight: 600,
+                  }}
+                >
                   {selectedMrfItem.availableStock} {selectedMrfItem.unit}
                 </Box>
               </FormField>
             </>
           )}
-          <FormField label="Quantity to Release">
+          <FormField label="Quantity to release">
             <Box
               component="input"
               type="number"
@@ -162,7 +204,7 @@ export function StockOutModal({ open, onClose }: { open: boolean; onClose: () =>
           </Alert>
         )}
 
-        <ModalFormActions onCancel={onClose} submitLabel="Save Stock Out" disabled={mutation.isPending} />
+        <ModalFormActions onCancel={onClose} submitLabel="Record release (SO)" disabled={mutation.isPending} />
       </Box>
     </EntityModal>
   );

@@ -58,13 +58,17 @@ export function ProductsScreen({
   const t = useTheme().palette;
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteJson(`/api/products/${id}`),
-    onSuccess: () => {
+    mutationFn: (id: string) => deleteJson<{ ok: boolean; archived?: boolean }>(`/api/products/${id}`),
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
-      showToast("Product removed from catalog.");
+      showToast(
+        res.archived
+          ? "Product archived — transaction history kept."
+          : "Product removed from catalog."
+      );
     },
   });
 

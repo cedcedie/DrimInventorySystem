@@ -5,8 +5,58 @@ import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/lib/auth.config";
 import { checkRateLimit } from "@/lib/rateLimit";
 
+const ROLE_REFRESH_MS = 60_000;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  callbacks: {
+    ...authConfig.callbacks,
+    jwt: async ({ token, user }) => {
+      if (user) {
+        token.role = user.role;
+        token.username = user.username;
+        token.status = "ACTIVE";
+        token.roleCheckedAt = Date.now();
+        return token;
+      }
+
+      const checkedAt = typeof token.roleCheckedAt === "number" ? token.roleCheckedAt : 0;
+      if (token.sub && Date.now() - checkedAt > ROLE_REFRESH_MS) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true, username: true, status: true, name: true },
+        });
+
+        token.roleCheckedAt = Date.now();
+
+        if (!dbUser || dbUser.status !== "ACTIVE") {
+          token.error = "Inactive";
+          token.status = "INACTIVE";
+          return token;
+        }
+
+        token.error = undefined;
+        token.status = dbUser.status;
+        token.role = dbUser.role;
+        token.username = dbUser.username;
+        if (dbUser.name) token.name = dbUser.name;
+      }
+
+      return token;
+    },
+    session: ({ session, token }) => {
+      if (token.error === "Inactive") {
+        // Strip user so middleware / layout treat the session as logged out.
+        return { ...session, user: undefined as unknown as typeof session.user };
+      }
+      if (session.user) {
+        session.user.id = token.sub as string;
+        session.user.role = token.role as string;
+        session.user.username = token.username as string;
+      }
+      return session;
+    },
+  },
   providers: [
     Credentials({
       credentials: {

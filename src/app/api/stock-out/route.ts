@@ -6,12 +6,6 @@ import { nextRefNo } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { stockOutSchema } from "@/lib/schemas";
-import type { Role } from "@/generated/prisma";
-
-function canRecordStock(role: Role): boolean {
-  return role === "ADMIN" || role === "WAREHOUSE_STAFF" || role === "OWNER";
-}
-
 export async function GET(req: Request) {
   const auth = await requireModuleAccess("stock");
   if ("error" in auth) return auth.error;
@@ -25,9 +19,6 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const auth = await requireModuleAccess("stock", "canCreate");
   if ("error" in auth) return auth.error;
-  if (!canRecordStock(auth.role)) {
-    return NextResponse.json({ error: "Stock Out requires Admin or Warehouse Staff role" }, { status: 403 });
-  }
 
   const parsed = await parseBody(req, stockOutSchema);
   if ("error" in parsed) return parsed.error;

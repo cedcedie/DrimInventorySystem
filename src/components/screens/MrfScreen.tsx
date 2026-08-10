@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
@@ -11,9 +11,11 @@ import { StatusChip } from "@/components/StatusChip";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
 import { MultiItemMrfModal } from "@/components/modals/MultiItemMrfModal";
+import { MrfDetailModal } from "@/components/modals/MrfDetailModal";
 import type { MrfListData } from "@/lib/data/mrf";
 
 const COLS = "100px 100px minmax(0,1.2fr) 90px minmax(0,1.2fr) 100px";
+const FILE_HIGHLIGHT_KEY = "drim-mrf-filed";
 
 export function MrfScreen({
   technicianName,
@@ -25,7 +27,17 @@ export function MrfScreen({
   position: string;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [detailMrfId, setDetailMrfId] = useState<string | null>(null);
+  const [highlightRef, setHighlightRef] = useState<string | null>(null);
   const t = useTheme().palette;
+
+  useEffect(() => {
+    const filed = sessionStorage.getItem(FILE_HIGHLIGHT_KEY);
+    if (filed) {
+      setHighlightRef(filed);
+      sessionStorage.removeItem(FILE_HIGHLIGHT_KEY);
+    }
+  }, []);
 
   const { data } = useQuery({
     queryKey: queryKeys.mrf,
@@ -63,9 +75,14 @@ export function MrfScreen({
           <TableSkeleton label="Loading your material requests…" columns={6} rows={4} />
         ) : (
           <TableShell minWidth={660}>
-            <TableHeaderRow columns={COLS} headers={["MRF Number", "Date", "Item(s)", "Qty (Fulfilled)", "Project", "Status"]} />
+            <TableHeaderRow columns={COLS} headers={["Request # (MRF)", "Date", "Item(s)", "Qty (released)", "Project", "Status"]} />
             {data.rows.map((r) => (
-              <TableRow key={r.id} columns={COLS}>
+              <TableRow
+                key={r.id}
+                columns={COLS}
+                selected={highlightRef === r.mrf}
+                onClick={() => setDetailMrfId(r.id)}
+              >
                 <TableCell mono color={t.primary.main}>
                   {r.mrf}
                 </TableCell>
@@ -134,6 +151,11 @@ export function MrfScreen({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         technicianLabel={`${technicianName} (${empNo})`}
+      />
+      <MrfDetailModal
+        mrfId={detailMrfId}
+        open={Boolean(detailMrfId)}
+        onClose={() => setDetailMrfId(null)}
       />
     </Box>
   );

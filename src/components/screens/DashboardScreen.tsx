@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { Box, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-import { liveQueryOptions } from "@/lib/liveQuery";
+import { liveWarm } from "@/lib/liveQuery";
 import { formatDateTime } from "@/lib/format";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { BentoGrid } from "@/components/dashboard/BentoGrid";
@@ -43,7 +43,7 @@ export function DashboardScreen({
     queryKey: queryKeys.dashboard,
     queryFn: () => fetchJson<DashboardData>("/api/dashboard"),
     initialData,
-    ...liveQueryOptions,
+    ...liveWarm,
   });
   const t = useTheme().palette;
 

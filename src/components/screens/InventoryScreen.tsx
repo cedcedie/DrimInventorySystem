@@ -5,7 +5,7 @@ import { useQuery, keepPreviousData, useMutation, useQueryClient } from "@tansta
 import { Box, ButtonBase, InputBase } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-import { liveQueryOptions } from "@/lib/liveQuery";
+import { liveCool } from "@/lib/liveQuery";
 import {
   TableShell,
   TableHeaderRow,
@@ -64,7 +64,7 @@ export function InventoryScreen({
     // Keep showing the previous rows while a new filter/page loads instead of
     // flashing back to a skeleton — filter clicks should feel instant.
     placeholderData: keepPreviousData,
-    ...liveQueryOptions,
+    ...liveCool,
   });
   const t = useTheme().palette;
 

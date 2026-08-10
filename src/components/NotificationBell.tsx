@@ -26,7 +26,7 @@ type NotificationsPayload = {
   }>;
 };
 
-import { liveQueryOptions } from "@/lib/liveQuery";
+import { liveHot } from "@/lib/liveQuery";
 
 export function NotificationBell({
   buttonSx,
@@ -41,7 +41,7 @@ export function NotificationBell({
   const { data } = useQuery({
     queryKey: queryKeys.notifications,
     queryFn: () => fetchJson<NotificationsPayload>("/api/notifications"),
-    ...liveQueryOptions,
+    ...liveHot,
   });
 
   const markRead = useMutation({

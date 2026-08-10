@@ -5,7 +5,7 @@ import { useQuery, keepPreviousData, useMutation, useQueryClient } from "@tansta
 import { Box, ButtonBase, InputBase, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-import { liveQueryOptions } from "@/lib/liveQuery";
+import { liveCool } from "@/lib/liveQuery";
 import {
   TableShell,
   TableHeaderRow,
@@ -55,7 +55,7 @@ export function ProductsScreen({
     queryFn: () => fetchJson<ProductsData>(`/api/products?page=${page}`),
     initialData: page === 1 ? initialData : undefined,
     placeholderData: keepPreviousData,
-    ...liveQueryOptions,
+    ...liveCool,
   });
   const t = useTheme().palette;
 

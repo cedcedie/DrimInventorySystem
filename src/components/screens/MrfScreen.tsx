@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-import { liveQueryOptions } from "@/lib/liveQuery";
+import { liveHot } from "@/lib/liveQuery";
 import { formatDate } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
@@ -44,7 +44,7 @@ export function MrfScreen({
   const { data } = useQuery({
     queryKey: queryKeys.mrf,
     queryFn: () => fetchJson<MrfListData>("/api/mrf"),
-    ...liveQueryOptions,
+    ...liveHot,
   });
 
   const recent = data?.rows[0];

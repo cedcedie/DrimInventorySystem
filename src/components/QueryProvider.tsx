@@ -10,9 +10,9 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Multi-user warehouse: prefer freshness over aggressive client caching.
-            // Screens that need continuous sync also set refetchInterval via liveQueryOptions.
-            staleTime: 4_000,
+            // Default: snappy nav without hammering Neon. Screens opt into
+            // liveHot / liveWarm / liveCool polling for multi-user sync.
+            staleTime: 15_000,
             gcTime: 5 * 60_000,
             refetchOnWindowFocus: true,
             refetchOnReconnect: true,

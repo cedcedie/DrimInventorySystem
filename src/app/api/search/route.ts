@@ -3,6 +3,7 @@ import type { Role } from "@/generated/prisma";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { mrfStatusLabel } from "@/lib/mrfLifecycle";
+import { searchIncludesWarehouseSlips, searchOwnMrfsOnly } from "@/lib/stockTabs";
 
 /** Lightweight global search across products, MRFs, and stock slips.
  * Technicians only see their own MRFs (+ catalog products for filing help). */
@@ -20,9 +21,11 @@ export async function GET(req: Request) {
 
   const like = q.replace(/[%_]/g, "");
   const isTech = role === "TECHNICIAN";
+  const ownMrfsOnly = searchOwnMrfsOnly(isTech);
+  const includeSlips = searchIncludesWarehouseSlips(isTech);
 
   let techId: string | undefined;
-  if (isTech) {
+  if (ownMrfsOnly) {
     const tech = await prisma.technician.findFirst({
       where: { userId: session.user.id },
       select: { id: true },
@@ -42,7 +45,7 @@ export async function GET(req: Request) {
       select: { id: true, name: true, code: true },
       take: 5,
     }),
-    techId === undefined && isTech
+    ownMrfsOnly && techId === undefined
       ? Promise.resolve([])
       : prisma.mrf.findMany({
           where: {
@@ -62,20 +65,20 @@ export async function GET(req: Request) {
           },
           take: 5,
         }),
-    isTech
-      ? Promise.resolve([])
-      : prisma.stockIn.findMany({
+    includeSlips
+      ? prisma.stockIn.findMany({
           where: { refNo: { contains: like, mode: "insensitive" } },
           select: { id: true, refNo: true },
           take: 3,
-        }),
-    isTech
-      ? Promise.resolve([])
-      : prisma.stockOut.findMany({
+        })
+      : Promise.resolve([]),
+    includeSlips
+      ? prisma.stockOut.findMany({
           where: { refNo: { contains: like, mode: "insensitive" } },
           select: { id: true, refNo: true },
           take: 3,
-        }),
+        })
+      : Promise.resolve([]),
   ]);
 
   const results = [

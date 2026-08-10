@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState, Suspense } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
+import { parseStockTab, type StockTab } from "@/lib/stockTabs";
 import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
 import { StatusChip } from "@/components/StatusChip";
@@ -24,15 +26,19 @@ const SI_COLS = "110px 106px minmax(0,1.2fr) minmax(0,1.2fr) 80px";
 const SO_COLS = "92px 96px minmax(0,1fr) minmax(0,1.1fr) 48px 84px minmax(0,1fr)";
 const MRF_COLS = "100px 96px minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) 72px 72px 72px 88px";
 
-type StockTab = "requests" | "in" | "out";
-
-function parseStockTab(value?: string): StockTab {
-  if (value === "in" || value === "out" || value === "requests") return value;
-  return "requests";
+export function StockScreen({ role, initialTab }: { role: Role; initialTab?: string }) {
+  return (
+    <Suspense fallback={<TableSkeleton label="Loading stock…" columns={6} rows={6} />}>
+      <StockScreenInner role={role} initialTab={initialTab} />
+    </Suspense>
+  );
 }
 
-export function StockScreen({ role, initialTab }: { role: Role; initialTab?: string }) {
-  const [tab, setTab] = useState<StockTab>(() => parseStockTab(initialTab));
+function StockScreenInner({ role, initialTab }: { role: Role; initialTab?: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = parseStockTab(searchParams.get("tab") ?? initialTab);
   const [stockOutOpen, setStockOutOpen] = useState(false);
   const [fulfillItemId, setFulfillItemId] = useState<string | undefined>();
   const [detailMrfId, setDetailMrfId] = useState<string | null>(null);
@@ -40,6 +46,15 @@ export function StockScreen({ role, initialTab }: { role: Role; initialTab?: str
   const viewOnly = !canStock;
   void role;
   const t = useTheme().palette;
+
+  const setTab = useCallback(
+    (next: StockTab) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", next);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   const openFulfill = (mrfItemId?: string) => {
     setFulfillItemId(mrfItemId);
@@ -54,7 +69,11 @@ export function StockScreen({ role, initialTab }: { role: Role; initialTab?: str
   return (
     <Box>
       <PageChrome title="Stock & Material Requests" />
-      <Box sx={{ display: "flex", gap: 0.25, mb: 1.75, borderBottom: "1px solid", borderColor: t.line }}>
+      <Box
+        role="tablist"
+        aria-label="Stock sections"
+        sx={{ display: "flex", gap: 0.25, mb: 1.75, borderBottom: "1px solid", borderColor: t.line }}
+      >
         <TabButton label="Open MRFs" active={tab === "requests"} onClick={() => setTab("requests")} />
         <TabButton label="Stock In (SI)" active={tab === "in"} onClick={() => setTab("in")} />
         <TabButton label="Stock Out (SO)" active={tab === "out"} onClick={() => setTab("out")} />
@@ -92,6 +111,8 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
 
   return (
     <ButtonBase
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
       sx={{
         border: "none",
@@ -104,6 +125,10 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
         borderBottom: "2px solid",
         borderColor: active ? t.primary.main : "transparent",
         mb: "-1px",
+        "&:focus-visible": {
+          outline: `2px solid ${t.primary.main}`,
+          outlineOffset: 2,
+        },
       }}
     >
       {label}

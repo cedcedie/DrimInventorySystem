@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
-import { nextRefNo } from "@/lib/refNo";
+import { isProductRequestable } from "@/lib/mrfLifecycle";
+import { nextRefNo, withRefNoRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { stockAdjustmentSchema } from "@/lib/schemas";
@@ -37,49 +38,53 @@ export async function POST(req: Request) {
   const { productId, qtyAfter, reason, note } = parsed.data;
 
   try {
-    const result = await prisma.$transaction(
-      async (tx) => {
-        const product = await tx.product.findUnique({ where: { id: productId } });
-        if (!product) throw new Error("Product not found");
+    const result = await withRefNoRetry(() =>
+      prisma.$transaction(
+        async (tx) => {
+          const product = await tx.product.findUnique({ where: { id: productId } });
+          if (!product || !isProductRequestable(product.archivedAt)) {
+            throw new Error("Product not found or archived");
+          }
 
-        const qtyBefore = product.stocks;
-        const delta = qtyAfter - qtyBefore;
-        if (delta === 0) {
-          throw new Error("The corrected count matches the current stock — nothing to adjust");
-        }
+          const qtyBefore = product.stocks;
+          const delta = qtyAfter - qtyBefore;
+          if (delta === 0) {
+            throw new Error("The corrected count matches the current stock — nothing to adjust");
+          }
 
-        const refNo = await nextRefNo(tx, "stockAdjustment", "ADJ");
+          const refNo = await nextRefNo(tx, "stockAdjustment", "ADJ");
 
-        const adjustment = await tx.stockAdjustment.create({
-          data: {
-            refNo,
-            productId,
-            qtyBefore,
-            qtyAfter,
-            delta,
-            reason,
-            note: note || null,
-            byUserId: auth.session.user.id,
-          },
-        });
+          const adjustment = await tx.stockAdjustment.create({
+            data: {
+              refNo,
+              productId,
+              qtyBefore,
+              qtyAfter,
+              delta,
+              reason,
+              note: note || null,
+              byUserId: auth.session.user.id,
+            },
+          });
 
-        await tx.product.update({
-          where: { id: productId },
-          data: { stocks: qtyAfter },
-        });
+          await tx.product.update({
+            where: { id: productId },
+            data: { stocks: qtyAfter },
+          });
 
-        const sign = delta > 0 ? "+" : "";
-        await tx.activityLog.create({
-          data: {
-            userId: auth.session.user.id,
-            action: `Adjusted stock on ${product.name} — ${qtyBefore} → ${qtyAfter} (${sign}${delta}, ${REASON_LABELS[reason] ?? reason})`,
-            refNo,
-          },
-        });
+          const sign = delta > 0 ? "+" : "";
+          await tx.activityLog.create({
+            data: {
+              userId: auth.session.user.id,
+              action: `Adjusted stock on ${product.name} — ${qtyBefore} → ${qtyAfter} (${sign}${delta}, ${REASON_LABELS[reason] ?? reason})`,
+              refNo,
+            },
+          });
 
-        return adjustment;
-      },
-      { isolationLevel: "Serializable", maxWait: 10000, timeout: 15000 }
+          return adjustment;
+        },
+        { isolationLevel: "Serializable", maxWait: 10000, timeout: 15000 }
+      )
     );
 
     revalidateAfterMutation(["inventory", "products", "adjustments"]);

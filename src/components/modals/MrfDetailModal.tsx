@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { Box, ButtonBase, Typography, Alert } from "@mui/material";
 import { EntityModal } from "@/components/EntityModal";
 import { StatusChip } from "@/components/StatusChip";
@@ -69,6 +70,11 @@ export function MrfDetailModal({
   const queryClient = useQueryClient();
   const canWarehouseCancel = useCan("stock", "canEdit");
   const canTechFile = useCan("mrf", "canCreate");
+  const [confirmCancel, setConfirmCancel] = useState(false);
+
+  useEffect(() => {
+    if (!open) setConfirmCancel(false);
+  }, [open, mrfId]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["mrf-detail", mrfId],
@@ -243,45 +249,80 @@ export function MrfDetailModal({
               )}
             </Box>
 
-            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, pt: 0.5 }}>
-              {canCancel && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1, pt: 0.5 }}>
+              {confirmCancel && canCancel && (
+                <Alert severity="warning" sx={{ fontSize: 13 }}>
+                  <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.75 }}>
+                    {mrfCancelConfirmMessage(data.refNo, anyReleased)}
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                    <ButtonBase
+                      onClick={() => cancelMutation.mutate()}
+                      disabled={cancelMutation.isPending}
+                      sx={{
+                        px: 1.5,
+                        py: 0.75,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#fff",
+                        bgcolor: t.warn,
+                      }}
+                    >
+                      {cancelMutation.isPending
+                        ? anyReleased
+                          ? "Closing…"
+                          : "Cancelling…"
+                        : `Yes, ${mrfCancelButtonLabel(anyReleased).toLowerCase()}`}
+                    </ButtonBase>
+                    <ButtonBase
+                      onClick={() => setConfirmCancel(false)}
+                      disabled={cancelMutation.isPending}
+                      sx={{
+                        px: 1.5,
+                        py: 0.75,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        bgcolor: t.line2,
+                        color: t.text,
+                      }}
+                    >
+                      Back
+                    </ButtonBase>
+                  </Box>
+                </Alert>
+              )}
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+                {canCancel && !confirmCancel && (
+                  <ButtonBase
+                    onClick={() => setConfirmCancel(true)}
+                    disabled={cancelMutation.isPending}
+                    sx={{
+                      px: 1.75,
+                      py: 1,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: t.warn,
+                      border: "1px solid",
+                      borderColor: t.warn,
+                    }}
+                  >
+                    {mrfCancelButtonLabel(anyReleased)}
+                  </ButtonBase>
+                )}
                 <ButtonBase
-                  onClick={() => {
-                    if (confirm(mrfCancelConfirmMessage(data.refNo, anyReleased))) {
-                      cancelMutation.mutate();
-                    }
-                  }}
-                  disabled={cancelMutation.isPending}
+                  onClick={onClose}
                   sx={{
                     px: 1.75,
                     py: 1,
                     fontSize: 12,
                     fontWeight: 600,
-                    color: t.warn,
-                    border: "1px solid",
-                    borderColor: t.warn,
+                    bgcolor: t.line2,
+                    color: t.text,
                   }}
                 >
-                  {cancelMutation.isPending
-                    ? anyReleased
-                      ? "Closing…"
-                      : "Cancelling…"
-                    : mrfCancelButtonLabel(anyReleased)}
+                  {canCancel ? "Done" : "Close"}
                 </ButtonBase>
-              )}
-              <ButtonBase
-                onClick={onClose}
-                sx={{
-                  px: 1.75,
-                  py: 1,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  bgcolor: t.line2,
-                  color: t.text,
-                }}
-              >
-                {canCancel ? "Done" : "Close"}
-              </ButtonBase>
+              </Box>
             </Box>
           </Box>
         )}

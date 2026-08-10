@@ -327,6 +327,7 @@ export function MultiItemMrfModal({
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <IconButton
                       size="small"
+                      aria-label={`Decrease quantity for ${item.productName}`}
                       onClick={() => handleUpdateQty(index, item.qty - 1)}
                       sx={{
                         bgcolor: mode === "dark" ? colors.neutral[700] : colors.neutral[200],
@@ -337,7 +338,9 @@ export function MultiItemMrfModal({
                         },
                       }}
                     >
-                      <Typography sx={{ fontSize: 16, fontWeight: 700 }}>−</Typography>
+                      <Typography sx={{ fontSize: 16, fontWeight: 700 }} aria-hidden>
+                        −
+                      </Typography>
                     </IconButton>
                     <Typography
                       sx={{
@@ -352,6 +355,7 @@ export function MultiItemMrfModal({
                     </Typography>
                     <IconButton
                       size="small"
+                      aria-label={`Increase quantity for ${item.productName}`}
                       onClick={() => handleUpdateQty(index, item.qty + 1)}
                       sx={{
                         bgcolor: mode === "dark" ? colors.neutral[700] : colors.neutral[200],
@@ -362,12 +366,15 @@ export function MultiItemMrfModal({
                         },
                       }}
                     >
-                      <Typography sx={{ fontSize: 16, fontWeight: 700 }}>+</Typography>
+                      <Typography sx={{ fontSize: 16, fontWeight: 700 }} aria-hidden>
+                        +
+                      </Typography>
                     </IconButton>
                   </Box>
                   <Tooltip title="Remove item">
                     <IconButton
                       size="small"
+                      aria-label={`Remove ${item.productName} from request`}
                       onClick={() => handleRemoveItem(index)}
                       sx={{
                         color: colors.status.error,

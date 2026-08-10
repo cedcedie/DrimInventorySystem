@@ -95,7 +95,19 @@ export function TableRow({
 
   return (
     <Box
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       sx={{
         display: "grid",
         gridTemplateColumns: columns,
@@ -107,6 +119,12 @@ export function TableRow({
         transition: "background-color 0.12s ease",
         "&:last-of-type": { borderBottom: "none" },
         "&:hover": onClick || selected !== undefined ? { bgcolor: t.rowSel } : { bgcolor: t.hover },
+        "&:focus-visible": onClick
+          ? {
+              outline: `2px solid ${ACCENT}`,
+              outlineOffset: -2,
+            }
+          : undefined,
       }}
     >
       {children}

@@ -167,15 +167,19 @@ export function MrfDetailModal({
                     <Typography sx={{ fontSize: 12, color: t.muted }}>
                       Done {item.qtyFulfilled}
                     </Typography>
-                    <Typography
-                      sx={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: item.availableStock >= item.qtyRemaining ? t.success : t.warn,
-                      }}
-                    >
-                      Stock {item.availableStock}
-                    </Typography>
+                    {onFulfill ? (
+                      <Typography
+                        sx={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: item.availableStock >= item.qtyRemaining ? t.success : t.warn,
+                        }}
+                      >
+                        Stock {item.availableStock}
+                      </Typography>
+                    ) : (
+                      <span />
+                    )}
                     {onFulfill && item.qtyRemaining > 0 && data.status !== "CANCELLED" ? (
                       <ButtonBase
                         onClick={() => {
@@ -204,7 +208,7 @@ export function MrfDetailModal({
             </Box>
 
             <Box>
-              <Label>Release slips (SO)</Label>
+              <Label>{onFulfill ? "Release slips (SO)" : "Releases"}</Label>
               {data.releases.length === 0 ? (
                 <Typography sx={{ fontSize: 12.5, color: t.muted }}>No releases yet.</Typography>
               ) : (
@@ -276,7 +280,7 @@ export function MrfDetailModal({
                   color: t.text,
                 }}
               >
-                Close
+                {canCancel ? "Done" : "Close"}
               </ButtonBase>
             </Box>
           </Box>

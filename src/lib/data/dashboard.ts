@@ -2,16 +2,90 @@ import { prisma } from "@/lib/prisma";
 import type { MrfStatus } from "@/generated/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
-/** When `technicianId` is set (technician dashboard), pending MRF KPI/list are scoped to that tech. */
+/** When `technicianId` is set (technician dashboard), only that tech's open MRFs
+ * are returned — no warehouse SI/SO feeds, stock KPIs, or global activity. */
 export async function getDashboardData(technicianId?: string) {
   "use cache";
   tagAndLife("dashboard", CACHE_SECONDS.dashboard);
 
+  if (technicianId) {
+    return getTechnicianDashboard(technicianId);
+  }
+
+  return getWarehouseDashboard();
+}
+
+async function getTechnicianDashboard(technicianId: string) {
   const mrfOpenStatuses: MrfStatus[] = ["PENDING", "PARTIAL"];
   const mrfOpenFilter = {
     status: { in: mrfOpenStatuses },
-    ...(technicianId ? { technicianId } : {}),
+    technicianId,
   };
+
+  const [pendingMrfCount, pendingMrfs] = await Promise.all([
+    prisma.mrf.count({ where: mrfOpenFilter }),
+    prisma.mrf.findMany({
+      where: mrfOpenFilter,
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: {
+        id: true,
+        refNo: true,
+        project: true,
+        status: true,
+        createdAt: true,
+        technician: { select: { name: true } },
+        items: { select: { qtyRequested: true, qtyFulfilled: true } },
+      },
+    }),
+  ]);
+
+  return {
+    kpis: {
+      totalProducts: 0,
+      categoryCount: 0,
+      lowStockCount: 0,
+      outOfStockCount: 0,
+      pendingMrfCount,
+    },
+    weeklyMovement: [] as Array<{
+      day: string;
+      date: string;
+      stockIn: number;
+      stockOut: number;
+    }>,
+    pendingMrfs: pendingMrfs.map((m) => {
+      const requested = m.items.reduce((s, i) => s + i.qtyRequested, 0);
+      const fulfilled = m.items.reduce((s, i) => s + i.qtyFulfilled, 0);
+      return {
+        id: m.id,
+        refNo: m.refNo,
+        project: m.project,
+        status: m.status,
+        technician: m.technician.name,
+        itemCount: m.items.length,
+        requested,
+        fulfilled,
+        dt: m.createdAt.toISOString(),
+      };
+    }),
+    activity: [] as Array<{ dt: string; action: string; refNo: string; user: string }>,
+    transactions: [] as Array<{
+      dt: string;
+      ref: string;
+      type: "Stock-In" | "Stock-Out";
+      desc: string;
+      user: string;
+      link: string;
+    }>,
+    lowAlerts: [] as Array<{ product: string; category: string; qty: number; unit: string }>,
+    outAlerts: [] as Array<{ product: string; category: string; qty: number; unit: string }>,
+  };
+}
+
+async function getWarehouseDashboard() {
+  const mrfOpenStatuses: MrfStatus[] = ["PENDING", "PARTIAL"];
+  const mrfOpenFilter = { status: { in: mrfOpenStatuses } };
 
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 6);

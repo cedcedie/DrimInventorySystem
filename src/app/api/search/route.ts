@@ -1,20 +1,34 @@
 import { NextResponse } from "next/server";
+import type { Role } from "@/generated/prisma";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { mrfStatusLabel } from "@/lib/mrfLifecycle";
 
-/** Lightweight global search across products, MRFs, and stock slips. */
+/** Lightweight global search across products, MRFs, and stock slips.
+ * Technicians only see their own MRFs (+ catalog products for filing help). */
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const role = session.user.role as Role;
   const q = new URL(req.url).searchParams.get("q")?.trim() ?? "";
   if (q.length < 2) {
     return NextResponse.json({ results: [] });
   }
 
   const like = q.replace(/[%_]/g, "");
+  const isTech = role === "TECHNICIAN";
+
+  let techId: string | undefined;
+  if (isTech) {
+    const tech = await prisma.technician.findFirst({
+      where: { userId: session.user.id },
+      select: { id: true },
+    });
+    techId = tech?.id;
+  }
 
   const [products, mrfs, stockIns, stockOuts] = await Promise.all([
     prisma.product.findMany({
@@ -28,27 +42,40 @@ export async function GET(req: Request) {
       select: { id: true, name: true, code: true },
       take: 5,
     }),
-    prisma.mrf.findMany({
-      where: {
-        OR: [
-          { refNo: { contains: like, mode: "insensitive" } },
-          { externalRefNo: { contains: like, mode: "insensitive" } },
-          { project: { contains: like, mode: "insensitive" } },
-        ],
-      },
-      select: { id: true, refNo: true, project: true, status: true },
-      take: 5,
-    }),
-    prisma.stockIn.findMany({
-      where: { refNo: { contains: like, mode: "insensitive" } },
-      select: { id: true, refNo: true },
-      take: 3,
-    }),
-    prisma.stockOut.findMany({
-      where: { refNo: { contains: like, mode: "insensitive" } },
-      select: { id: true, refNo: true },
-      take: 3,
-    }),
+    techId === undefined && isTech
+      ? Promise.resolve([])
+      : prisma.mrf.findMany({
+          where: {
+            ...(techId ? { technicianId: techId } : {}),
+            OR: [
+              { refNo: { contains: like, mode: "insensitive" } },
+              { externalRefNo: { contains: like, mode: "insensitive" } },
+              { project: { contains: like, mode: "insensitive" } },
+            ],
+          },
+          select: {
+            id: true,
+            refNo: true,
+            project: true,
+            status: true,
+            items: { select: { qtyFulfilled: true } },
+          },
+          take: 5,
+        }),
+    isTech
+      ? Promise.resolve([])
+      : prisma.stockIn.findMany({
+          where: { refNo: { contains: like, mode: "insensitive" } },
+          select: { id: true, refNo: true },
+          take: 3,
+        }),
+    isTech
+      ? Promise.resolve([])
+      : prisma.stockOut.findMany({
+          where: { refNo: { contains: like, mode: "insensitive" } },
+          select: { id: true, refNo: true },
+          take: 3,
+        }),
   ]);
 
   const results = [
@@ -57,15 +84,18 @@ export async function GET(req: Request) {
       id: p.id,
       label: p.name,
       meta: p.code,
-      href: "/products",
+      href: isTech ? "/stock" : "/products",
     })),
-    ...mrfs.map((m) => ({
-      type: "mrf" as const,
-      id: m.id,
-      label: m.refNo,
-      meta: `${m.project} · ${m.status}`,
-      href: "/stock?tab=requests",
-    })),
+    ...mrfs.map((m) => {
+      const fulfilled = m.items.reduce((s, i) => s + i.qtyFulfilled, 0);
+      return {
+        type: "mrf" as const,
+        id: m.id,
+        label: m.refNo,
+        meta: `${m.project} · ${mrfStatusLabel(m.status, fulfilled)}`,
+        href: isTech ? "/stock" : "/stock?tab=requests",
+      };
+    }),
     ...stockIns.map((s) => ({
       type: "slip" as const,
       id: s.id,

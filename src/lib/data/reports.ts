@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { mrfStatusLabel } from "@/lib/mrfLifecycle";
 
 export const REPORT_TYPES = [
   "Stock Report",
@@ -154,7 +155,7 @@ export async function buildReportData(
           m.createdAt.toLocaleDateString("en-PH"),
           `${m.technician.name} (${m.technician.empNo})`,
           m.project,
-          m.status,
+          mrfStatusLabel(m.status, fulfilled),
           String(requested),
           String(fulfilled),
           m.externalRefNo ?? "—",

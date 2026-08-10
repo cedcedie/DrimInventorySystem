@@ -7,11 +7,11 @@ export async function GET() {
   const auth = await requireModuleAccess("dashboard");
   if ("error" in auth) return auth.error;
 
-  let technicianId: string | undefined;
   if (auth.role === "TECHNICIAN") {
     const technician = await getTechnicianForUser(auth.session.user.id);
-    technicianId = technician?.id;
+    // Always tech-scoped — never fall through to warehouse dashboard if unlinked.
+    return NextResponse.json(await getDashboardData(technician?.id ?? "__none__"));
   }
 
-  return NextResponse.json(await getDashboardData(technicianId));
+  return NextResponse.json(await getDashboardData());
 }

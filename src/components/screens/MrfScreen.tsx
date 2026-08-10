@@ -76,7 +76,7 @@ export function MrfScreen({
           <TableSkeleton label="Loading your material requests…" columns={6} rows={4} />
         ) : (
           <TableShell minWidth={660}>
-            <TableHeaderRow columns={COLS} headers={["Request # (MRF)", "Date", "Item(s)", "Qty (released)", "Project", "Status"]} />
+            <TableHeaderRow columns={COLS} headers={["Request # (MRF)", "Date", "Item(s)", "Requested (released)", "Project", "Status"]} />
             {data.rows.map((r) => (
               <TableRow
                 key={r.id}
@@ -132,9 +132,10 @@ export function MrfScreen({
             label="Recent Transaction"
             value={
               recent
-                ? `${recent.mrf} · ${recent.item} × ${recent.qty} — ${
-                    recent.status === "PENDING" ? "pending" : "fulfilled"
-                  } ${formatDate(new Date(recent.date))}`
+                ? `${recent.mrf} · ${recent.item} × ${recent.qty} — ${mrfStatusLabel(
+                    recent.status,
+                    recent.qtyFulfilled
+                  ).toLowerCase()} ${formatDate(new Date(recent.date))}`
                 : "No recent activity"
             }
           />

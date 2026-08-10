@@ -16,7 +16,7 @@ export const NAV_GROUPS = [
   },
   {
     label: "Stock",
-    items: [{ segment: "stock", label: "Stock In/Out" }],
+    items: [{ segment: "stock", label: "Stock & MRFs" }],
   },
   {
     label: "People",
@@ -42,7 +42,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   products: "Products/Materials",
   suppliers: "Suppliers",
   adjustments: "Stock Adjustments",
-  stock: "Stock In/Out",
+  stock: "Stock & MRFs",
   technicians: "Technicians",
   reports: "Reports",
   users: "Users",
@@ -58,7 +58,7 @@ export const SCREEN_SUBTITLES: Record<string, string> = {
   products: "Master product catalog",
   suppliers: "Accredited supplier registry",
   adjustments: "Manual stock count corrections with audit trail",
-  stock: "Record incoming and outgoing stock",
+  stock: "Open material requests, receive (SI), and release (SO)",
   technicians: "Field personnel and their transactions",
   reports: "Generate and export operational reports",
   users: "System accounts and roles",
@@ -68,7 +68,7 @@ export const SCREEN_SUBTITLES: Record<string, string> = {
   profile: "Your display name and password",
 };
 
-// Stock In/Out renders as Material Requests (MRF) for technicians per README RBAC note.
+// Stock & MRFs renders as Material Requests (MRF) for technicians per README RBAC note.
 export function screenTitleForRole(segment: string, role: Role): string {
   if (segment === "stock" && role === "TECHNICIAN") return "Material Requests (MRF)";
   return SCREEN_TITLES[segment] ?? segment;
@@ -77,6 +77,9 @@ export function screenTitleForRole(segment: string, role: Role): string {
 export function screenSubtitleForRole(segment: string, role: Role): string {
   if (segment === "stock" && role === "TECHNICIAN") {
     return "File and track your material requests";
+  }
+  if (segment === "dashboard" && role === "TECHNICIAN") {
+    return "Your open material requests";
   }
   return SCREEN_SUBTITLES[segment] ?? "";
 }

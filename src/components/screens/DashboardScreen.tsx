@@ -57,6 +57,7 @@ export function DashboardScreen({
   }
 
   const pendingMrfs = data.pendingMrfs ?? [];
+  const isTech = role === "TECHNICIAN";
 
   return (
     <Box>
@@ -65,62 +66,67 @@ export function DashboardScreen({
           <StatCard
             label="Pending MRFs"
             value={data.kpis.pendingMrfCount}
-            sub={role === "TECHNICIAN" ? "your open requests" : "awaiting fulfillment"}
+            sub={isTech ? "your open requests" : "awaiting fulfillment"}
             color={KPI_COLORS.orange}
             icon={<PendingActionsOutlinedIcon />}
           />
-          <StatCard
-            label="Out of Stock"
-            value={data.kpis.outOfStockCount}
-            sub="needs replenishment"
-            color={KPI_COLORS.navy}
-            icon={<ProductionQuantityLimitsOutlinedIcon />}
-          />
-          <StatCard
-            label="Low Stock"
-            value={data.kpis.lowStockCount}
-            sub="at or below min. level"
-            color={KPI_COLORS.teal}
-            icon={<TrendingDownOutlinedIcon />}
-          />
-          <StatCard
-            label="Products Tracked"
-            value={data.kpis.totalProducts}
-            sub={`${data.kpis.categoryCount} categories`}
-            color={KPI_COLORS.blue}
-            icon={<Inventory2OutlinedIcon />}
-          />
+          {!isTech && (
+            <>
+              <StatCard
+                label="Out of Stock"
+                value={data.kpis.outOfStockCount}
+                sub="needs replenishment"
+                color={KPI_COLORS.navy}
+                icon={<ProductionQuantityLimitsOutlinedIcon />}
+              />
+              <StatCard
+                label="Low Stock"
+                value={data.kpis.lowStockCount}
+                sub="at or below min. level"
+                color={KPI_COLORS.teal}
+                icon={<TrendingDownOutlinedIcon />}
+              />
+              <StatCard
+                label="Products Tracked"
+                value={data.kpis.totalProducts}
+                sub={`${data.kpis.categoryCount} categories`}
+                color={KPI_COLORS.blue}
+                icon={<Inventory2OutlinedIcon />}
+              />
+            </>
+          )}
         </BentoGrid>
       </Box>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 2, alignItems: "stretch" }}>
-        {/* Weekly movement chart */}
-        <Box
-          sx={{
-            flex: "1.6 1 360px",
-            minWidth: 300,
-            bgcolor: t.surface,
-            border: "1px solid",
-            borderColor: t.line,
-            borderRadius: "8px",
-            p: 2,
-          }}
-        >
-          <Typography sx={{ fontSize: 14, fontWeight: 800, mb: 0.25 }}>
-            Stock movement · last 7 days
-          </Typography>
-          <Typography sx={{ fontSize: 12, color: t.muted, mb: 1.5 }}>
-            Units received vs released
-          </Typography>
-          <Box sx={{ width: "100%", height: 220 }}>
-            <StockMovementChart data={data.weeklyMovement ?? []} />
+        {!isTech && (
+          <Box
+            sx={{
+              flex: "1.6 1 360px",
+              minWidth: 300,
+              bgcolor: t.surface,
+              border: "1px solid",
+              borderColor: t.line,
+              borderRadius: "8px",
+              p: 2,
+            }}
+          >
+            <Typography sx={{ fontSize: 14, fontWeight: 800, mb: 0.25 }}>
+              Stock movement · last 7 days
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: t.muted, mb: 1.5 }}>
+              Units received vs released
+            </Typography>
+            <Box sx={{ width: "100%", height: 220 }}>
+              <StockMovementChart data={data.weeklyMovement ?? []} />
+            </Box>
           </Box>
-        </Box>
+        )}
 
         {/* Pending MRFs */}
         <Box
           sx={{
-            flex: "1 1 280px",
+            flex: isTech ? "1 1 100%" : "1 1 280px",
             minWidth: 260,
             bgcolor: t.surface,
             border: "1px solid",
@@ -142,17 +148,25 @@ export function DashboardScreen({
               justifyContent: "space-between",
             }}
           >
-            <Typography sx={{ fontSize: 14, fontWeight: 800 }}>Pending MRFs</Typography>
+            <Typography sx={{ fontSize: 14, fontWeight: 800 }}>
+              {isTech ? "Your open requests" : "Pending MRFs"}
+            </Typography>
             <Box
               component={NextLink}
-              href="/stock?tab=requests"
+              href={isTech ? "/stock" : "/stock?tab=requests"}
               sx={{ fontSize: 12.5, fontWeight: 700, color: ACCENT, textDecoration: "none" }}
             >
-              Open queue
+              {isTech ? "View requests" : "Open queue"}
             </Box>
           </Box>
           {pendingMrfs.length === 0 ? (
-            <EmptyState message="No open material requests. You're clear." />
+            <EmptyState
+              message={
+                isTech
+                  ? "No open material requests. File one from Material Requests when you need stock."
+                  : "No open material requests. You're clear."
+              }
+            />
           ) : (
             pendingMrfs.map((m, i) => (
               <Box
@@ -174,7 +188,9 @@ export function DashboardScreen({
                   {m.project}
                 </Typography>
                 <Typography sx={{ fontSize: 12, color: t.muted, mt: 0.25 }}>
-                  {m.technician} · {m.itemCount} item{m.itemCount === 1 ? "" : "s"} · {m.fulfilled}/{m.requested} qty
+                  {isTech
+                    ? `${m.itemCount} item${m.itemCount === 1 ? "" : "s"} · ${m.fulfilled}/${m.requested} qty released`
+                    : `${m.technician} · ${m.itemCount} item${m.itemCount === 1 ? "" : "s"} · ${m.fulfilled}/${m.requested} qty`}
                 </Typography>
               </Box>
             ))
@@ -182,67 +198,69 @@ export function DashboardScreen({
         </Box>
       </Box>
 
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-        <Box sx={{ flex: "2.2 1 420px", minWidth: 300 }}>
-          <TableShell minWidth={560}>
-            <Box
-              sx={{
-                px: 1.75,
-                py: 1.375,
-                borderBottom: "1px solid",
-                borderColor: t.line,
-                display: "flex",
-                alignItems: "baseline",
-                gap: 1,
-                flexWrap: "wrap",
-              }}
-            >
-              <Typography sx={{ fontSize: 13, fontWeight: 700 }}>Recent Transactions</Typography>
-              <Typography sx={{ fontSize: 11, color: t.muted2 }}>
-                Stock-In / Stock-Out · linked to MRF# / Slip#
-              </Typography>
-            </Box>
-            <TableHeaderRow
-              columns={TX_COLS}
-              headers={["Date & Time", "Ref. No", "Type", "Description", "User", "MRF# / Slip#"]}
-            />
-            {data.transactions.map((tx) => (
-              <TableRow key={tx.ref} columns={TX_COLS}>
-                <TableCell color={t.text2}>{formatDateTime(new Date(tx.dt))}</TableCell>
-                <TableCell mono>{tx.ref}</TableCell>
-                <TableCell>
-                  <StatusChip label={tx.type} />
-                </TableCell>
-                <TableCell sx={{ whiteSpace: "normal", fontSize: 12.5 }}>{tx.desc}</TableCell>
-                <TableCell color={t.text2}>{tx.user}</TableCell>
-                <TableCell mono color={t.primary.main}>
-                  {tx.link}
-                </TableCell>
-              </TableRow>
-            ))}
-            {data.transactions.length === 0 && (
-              <EmptyState message="No stock movements yet. Record a Stock In or Stock Out to see them here." />
-            )}
-          </TableShell>
-        </Box>
+      {!isTech && (
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
+          <Box sx={{ flex: "2.2 1 420px", minWidth: 300 }}>
+            <TableShell minWidth={560}>
+              <Box
+                sx={{
+                  px: 1.75,
+                  py: 1.375,
+                  borderBottom: "1px solid",
+                  borderColor: t.line,
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 1,
+                  flexWrap: "wrap",
+                }}
+              >
+                <Typography sx={{ fontSize: 13, fontWeight: 700 }}>Recent Transactions</Typography>
+                <Typography sx={{ fontSize: 11, color: t.muted2 }}>
+                  Stock-In / Stock-Out · linked to MRF# / Slip#
+                </Typography>
+              </Box>
+              <TableHeaderRow
+                columns={TX_COLS}
+                headers={["Date & Time", "Ref. No", "Type", "Description", "User", "MRF# / Slip#"]}
+              />
+              {data.transactions.map((tx) => (
+                <TableRow key={tx.ref} columns={TX_COLS}>
+                  <TableCell color={t.text2}>{formatDateTime(new Date(tx.dt))}</TableCell>
+                  <TableCell mono>{tx.ref}</TableCell>
+                  <TableCell>
+                    <StatusChip label={tx.type} />
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: "normal", fontSize: 12.5 }}>{tx.desc}</TableCell>
+                  <TableCell color={t.text2}>{tx.user}</TableCell>
+                  <TableCell mono color={t.primary.main}>
+                    {tx.link}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {data.transactions.length === 0 && (
+                <EmptyState message="No stock movements yet. Record a Stock In or Stock Out to see them here." />
+              )}
+            </TableShell>
+          </Box>
 
-        <Box sx={{ flex: "1 1 260px", minWidth: 240, display: "flex", flexDirection: "column", gap: 2 }}>
-          <AlertPanel
-            title="Low Stock"
-            dotColor={t.stock.low}
-            rows={data.lowAlerts}
-            qtyColor={t.stock.low}
-            emptyMessage="Every product is above its minimum level."
-          />
-          <AlertPanel
-            title="Out of Stock"
-            dotColor={t.stock.out}
-            rows={data.outAlerts}
-            qtyColor={t.stock.out}
-            emptyMessage="Nothing is out of stock."
-          />
+          <Box sx={{ flex: "1 1 260px", minWidth: 240, display: "flex", flexDirection: "column", gap: 2 }}>
+            <AlertPanel
+              title="Low Stock"
+              dotColor={t.stock.low}
+              rows={data.lowAlerts}
+              qtyColor={t.stock.low}
+              emptyMessage="Every product is above its minimum level."
+            />
+            <AlertPanel
+              title="Out of Stock"
+              dotColor={t.stock.out}
+              rows={data.outAlerts}
+              qtyColor={t.stock.out}
+              emptyMessage="Nothing is out of stock."
+            />
+          </Box>
         </Box>
-      </Box>
+      )}
     </Box>
   );
 }

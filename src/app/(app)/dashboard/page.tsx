@@ -16,13 +16,25 @@ export default async function DashboardPage() {
   const session = await auth();
   const role = session!.user.role as Role;
 
-  let technicianId: string | undefined;
   if (role === "TECHNICIAN") {
     const technician = await getTechnicianForUser(session!.user.id);
-    technicianId = technician?.id;
+    // Always tech-scoped — never fall through to warehouse dashboard if unlinked.
+    const data = await getDashboardData(technician?.id ?? "__none__");
+    return (
+      <>
+        <ScreenHeader
+          title={screenTitleForRole("dashboard", role)}
+          subtitle={screenSubtitleForRole("dashboard", role)}
+          permSummary={PERM_SUMMARY[role]}
+        />
+        <ScreenBody>
+          <DashboardScreen role={role} initialData={data} />
+        </ScreenBody>
+      </>
+    );
   }
 
-  const data = await getDashboardData(technicianId);
+  const data = await getDashboardData();
 
   return (
     <>

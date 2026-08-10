@@ -53,9 +53,10 @@ export function isProductRequestable(archivedAt: Date | string | null | undefine
 }
 
 /**
- * Stock module view is matrix-only — technicians do not inherit stock reads
- * from mrf.canView (prevents warehouse-wide open-queue / SI/SO leaks).
+ * Stock module view is matrix-only — technicians never inherit stock reads
+ * (apiAuth hard-blocks TECHNICIAN on stock even if matrix grants canView).
  */
-export function canViewStockModule(stockCanView: boolean, _mrfCanView: boolean): boolean {
+export function canViewStockModule(stockCanView: boolean, roleIsTechnician: boolean): boolean {
+  if (roleIsTechnician) return false;
   return stockCanView;
 }

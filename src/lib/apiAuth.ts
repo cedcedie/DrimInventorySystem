@@ -21,6 +21,11 @@ export async function requireModuleAccess(moduleSegment: string, action?: Permis
   const role = session.user.role as Role;
 
   if (isConfigurableModule(moduleSegment)) {
+    // Technicians never use warehouse stock APIs — matrix stock.canView must not
+    // reopen SI/SO/open-queue. They reach products via /api/stock/options dual-gate.
+    if (moduleSegment === "stock" && role === "TECHNICIAN") {
+      return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) } as const;
+    }
     const perms = await getEffectivePermissions(session.user.id, role);
     if (!perms[moduleSegment]?.canView) {
       return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) } as const;

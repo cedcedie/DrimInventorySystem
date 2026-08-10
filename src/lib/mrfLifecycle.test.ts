@@ -11,7 +11,8 @@ import {
 } from "./mrfLifecycle";
 
 describe("canViewStockModule", () => {
-  it("does not bridge technician mrf view into stock", () => {
+  it("hard-blocks technicians even when matrix grants stock view", () => {
+    expect(canViewStockModule(true, true)).toBe(false);
     expect(canViewStockModule(false, true)).toBe(false);
     expect(canViewStockModule(true, false)).toBe(true);
   });

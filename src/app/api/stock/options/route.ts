@@ -15,7 +15,7 @@ export async function GET() {
   const role = session.user.role as Role;
   const perms = await getEffectivePermissions(session.user.id, role);
 
-  if (perms.stock?.canView) {
+  if (perms.stock?.canView && role !== "TECHNICIAN") {
     return NextResponse.json(await getStockFormOptions());
   }
 

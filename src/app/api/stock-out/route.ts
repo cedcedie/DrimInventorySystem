@@ -112,8 +112,11 @@ export async function POST(req: Request) {
               ? "PARTIAL"
               : "PENDING";
 
-          await tx.mrf.update({
-            where: { id: mrfItem.mrfId },
+          await tx.mrf.updateMany({
+            where: {
+              id: mrfItem.mrfId,
+              status: { in: ["PENDING", "PARTIAL"] },
+            },
             data: { status: newMrfStatus },
           });
 

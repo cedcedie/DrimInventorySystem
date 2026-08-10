@@ -114,6 +114,18 @@ export const stockOutSchema = z.object({
   qty: positiveQty,
 });
 
+export const stockOutBulkSchema = z.object({
+  mrfId: id,
+  items: z
+    .array(
+      z.object({
+        mrfItemId: id,
+        qty: positiveQty,
+      })
+    )
+    .min(1, "Select at least one line to fulfill"),
+});
+
 export const stockAdjustmentSchema = z.object({
   productId: id,
   // The corrected on-hand count, not a delta — the operator types what they

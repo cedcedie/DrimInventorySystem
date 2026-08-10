@@ -8,7 +8,7 @@ import { StatusChip } from "@/components/StatusChip";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
 import { fetchJson } from "@/lib/api";
-import { patchJson } from "@/lib/mutate";
+import { patchJson, postJson } from "@/lib/mutate";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { queryKeys } from "@/lib/queryKeys";
 import { useToast } from "@/components/Toast";
@@ -71,9 +71,13 @@ export function MrfDetailModal({
   const canWarehouseCancel = useCan("stock", "canEdit");
   const canTechFile = useCan("mrf", "canCreate");
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmBulk, setConfirmBulk] = useState(false);
 
   useEffect(() => {
-    if (!open) setConfirmCancel(false);
+    if (!open) {
+      setConfirmCancel(false);
+      setConfirmBulk(false);
+    }
   }, [open, mrfId]);
 
   const { data, isLoading, error } = useQuery({
@@ -82,16 +86,50 @@ export function MrfDetailModal({
     enabled: open && Boolean(mrfId),
   });
 
+  const invalidateMrf = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
+    queryClient.invalidateQueries({ queryKey: queryKeys.mrf });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+    queryClient.invalidateQueries({ queryKey: ["mrf-detail", mrfId] });
+    queryClient.invalidateQueries({ queryKey: ["activity"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.stockOptions });
+    queryClient.invalidateQueries({ queryKey: ["stock-out"] });
+    queryClient.invalidateQueries({ queryKey: ["inventory"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+  };
+
   const cancelMutation = useMutation({
     mutationFn: () =>
       patchJson<{ refNo: string; anyReleased?: boolean }>(`/api/mrf/${mrfId}`, { action: "cancel" }),
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
-      queryClient.invalidateQueries({ queryKey: queryKeys.mrf });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
-      queryClient.invalidateQueries({ queryKey: ["mrf-detail", mrfId] });
-      queryClient.invalidateQueries({ queryKey: ["activity"] });
+      invalidateMrf();
       showToast(mrfCancelToast(res.refNo, Boolean(res.anyReleased)));
+      onClose();
+    },
+    onError: (e: Error) => showToast(e.message),
+  });
+
+  const bulkLines =
+    data?.items
+      .map((item) => ({
+        mrfItemId: item.id,
+        qty: Math.min(item.qtyRemaining, item.availableStock),
+        productName: item.productName,
+      }))
+      .filter((l) => l.qty > 0) ?? [];
+
+  const bulkMutation = useMutation({
+    mutationFn: () =>
+      postJson<{ mrfRefNo: string; refNos: string[]; count: number }>("/api/stock-out/bulk", {
+        mrfId,
+        items: bulkLines.map(({ mrfItemId, qty }) => ({ mrfItemId, qty })),
+      }),
+    onSuccess: (res) => {
+      invalidateMrf();
+      showToast(
+        `Released ${res.count} line(s) against ${res.mrfRefNo} (${res.refNos.join(", ")}).`
+      );
+      setConfirmBulk(false);
       onClose();
     },
     onError: (e: Error) => showToast(e.message),
@@ -104,6 +142,13 @@ export function MrfDetailModal({
     data.status !== "CANCELLED" &&
     data.status !== "FULFILLED" &&
     (canWarehouseCancel || (canTechFile && data.status === "PENDING" && !anyReleased));
+
+  const canBulkFulfill =
+    Boolean(onFulfill) &&
+    data &&
+    data.status !== "CANCELLED" &&
+    data.status !== "FULFILLED" &&
+    bulkLines.length > 0;
 
   const statusLabel = data ? mrfStatusLabel(data.status, data.totalFulfilled) : "Pending";
 
@@ -250,6 +295,54 @@ export function MrfDetailModal({
             </Box>
 
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1, pt: 0.5 }}>
+              {confirmBulk && canBulkFulfill && (
+                <Alert severity="info" sx={{ fontSize: 13 }}>
+                  <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>
+                    Fulfill remaining on {data.refNo}?
+                  </Typography>
+                  <Typography sx={{ fontSize: 12.5, color: t.text2, mb: 1 }}>
+                    Releases {bulkLines.length} line(s) using on-hand stock (skips lines with 0
+                    available). Creates one SO slip per line.
+                  </Typography>
+                  <Box component="ul" sx={{ m: 0, pl: 2, fontSize: 12.5, color: t.text2 }}>
+                    {bulkLines.map((l) => (
+                      <li key={l.mrfItemId}>
+                        {l.productName} × {l.qty}
+                      </li>
+                    ))}
+                  </Box>
+                  <Box sx={{ display: "flex", gap: 1, mt: 1.25 }}>
+                    <ButtonBase
+                      onClick={() => bulkMutation.mutate()}
+                      disabled={bulkMutation.isPending}
+                      sx={{
+                        px: 1.5,
+                        py: 0.75,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#fff",
+                        bgcolor: ACCENT,
+                      }}
+                    >
+                      {bulkMutation.isPending ? "Releasing…" : "Yes, fulfill remaining"}
+                    </ButtonBase>
+                    <ButtonBase
+                      onClick={() => setConfirmBulk(false)}
+                      disabled={bulkMutation.isPending}
+                      sx={{
+                        px: 1.5,
+                        py: 0.75,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        bgcolor: t.line2,
+                        color: t.text,
+                      }}
+                    >
+                      Back
+                    </ButtonBase>
+                  </Box>
+                </Alert>
+              )}
               {confirmCancel && canCancel && (
                 <Alert severity="warning" sx={{ fontSize: 13 }}>
                   <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.75 }}>
@@ -291,8 +384,25 @@ export function MrfDetailModal({
                   </Box>
                 </Alert>
               )}
-              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-                {canCancel && !confirmCancel && (
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, flexWrap: "wrap" }}>
+                {canBulkFulfill && !confirmBulk && !confirmCancel && (
+                  <ButtonBase
+                    onClick={() => setConfirmBulk(true)}
+                    disabled={bulkMutation.isPending}
+                    sx={{
+                      px: 1.75,
+                      py: 1,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: ACCENT,
+                      border: "1px solid",
+                      borderColor: ACCENT,
+                    }}
+                  >
+                    Fulfill remaining
+                  </ButtonBase>
+                )}
+                {canCancel && !confirmCancel && !confirmBulk && (
                   <ButtonBase
                     onClick={() => setConfirmCancel(true)}
                     disabled={cancelMutation.isPending}
@@ -320,7 +430,7 @@ export function MrfDetailModal({
                     color: t.text,
                   }}
                 >
-                  {canCancel ? "Done" : "Close"}
+                  {canCancel || canBulkFulfill ? "Done" : "Close"}
                 </ButtonBase>
               </Box>
             </Box>

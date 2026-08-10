@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
-import { isProductRequestable } from "@/lib/mrfLifecycle";
 import { prisma } from "@/lib/prisma";
+import { isProductRequestable } from "@/lib/mrfLifecycle";
+import { notifyWarehouseMrfFiled } from "@/lib/notifications";
 import { isUniqueRefNoError, nextRefNo, withRefNoRetry } from "@/lib/refNo";
 import { getTechnicianForUser } from "@/lib/data/mrf";
 import { parseBody } from "@/lib/validate";
@@ -101,6 +102,13 @@ export async function POST(req: Request) {
     );
 
     revalidateAfterMutation(["mrf"], [`mrf-tech-${technician.id}`]);
+
+    await notifyWarehouseMrfFiled({
+      mrfRefNo: refNo,
+      project,
+      technicianName: technician.name,
+      excludeUserId: auth.session.user.id,
+    });
 
     return NextResponse.json({ refNo }, { status: 201 });
   } catch (e) {

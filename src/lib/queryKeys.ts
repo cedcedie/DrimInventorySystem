@@ -17,4 +17,5 @@ export const queryKeys = {
   mrf: ["mrf"] as const,
   openMrfs: ["mrf-open"] as const,
   adjustments: (params: { page?: number }) => ["adjustments", params] as const,
+  notifications: ["notifications"] as const,
 };

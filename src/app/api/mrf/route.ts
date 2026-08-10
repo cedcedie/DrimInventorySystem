@@ -3,6 +3,7 @@ import { requireModuleAccess } from "@/lib/apiAuth";
 import { getTechnicianForUser, getMrfsForTechnician } from "@/lib/data/mrf";
 import { prisma } from "@/lib/prisma";
 import { isProductRequestable } from "@/lib/mrfLifecycle";
+import { notifyWarehouseMrfFiled } from "@/lib/notifications";
 import { nextRefNo, withRefNoRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
@@ -75,5 +76,11 @@ export async function POST(req: Request) {
   );
 
   revalidateAfterMutation(["mrf"], [`mrf-tech-${technician.id}`]);
+  await notifyWarehouseMrfFiled({
+    mrfRefNo: mrf.refNo,
+    project: projectName,
+    technicianName: technician.name,
+    excludeUserId: auth.session.user.id,
+  });
   return NextResponse.json({ refNo: mrf.refNo }, { status: 201 });
 }

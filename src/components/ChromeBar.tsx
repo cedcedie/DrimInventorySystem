@@ -2,7 +2,6 @@
 
 import { Box, ButtonBase } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
-import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import AddIcon from "@mui/icons-material/Add";
@@ -14,6 +13,7 @@ import { ROLE_LABELS } from "@/lib/navConfig";
 import { SIDENAV_WIDTH } from "@/components/SideNav";
 import { useCan } from "@/components/PermissionsProvider";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { NotificationBell } from "@/components/NotificationBell";
 
 function initialsOf(name: string): string {
   return name
@@ -122,9 +122,7 @@ export function ChromeBar({
           )}
         </ButtonBase>
 
-        <ButtonBase component={Link} href="/activity" title="Activity log" sx={iconButtonSx}>
-          <NotificationsNoneOutlinedIcon sx={{ fontSize: 20 }} />
-        </ButtonBase>
+        <NotificationBell buttonSx={iconButtonSx} />
 
         {/* Profile */}
         <Box

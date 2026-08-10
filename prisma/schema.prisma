@@ -53,6 +53,7 @@ model User {
   settingsEdits       CompanySettings[]
   technician          Technician?
   permissions         Permission[] // NEW: Direct permissions
+  notifications       Notification[]
   createdAt           DateTime          @default(now())
 }
 
@@ -282,5 +283,22 @@ model ActivityLog {
   refNo     String // SI-0442 / SO-0290 / MRF-118 / RPT-088 / product code
   createdAt DateTime @default(now())
 
+  @@index([userId, createdAt])
+}
+
+/** In-app inbox — polled by clients; works for multi-user Vercel + Neon. */
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // mrf_filed | mrf_fulfilled | mrf_closed
+  title     String
+  body      String
+  href      String
+  refNo     String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt, createdAt])
   @@index([userId, createdAt])
 }

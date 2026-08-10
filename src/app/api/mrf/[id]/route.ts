@@ -8,6 +8,7 @@ import {
   techMayCancelMrf,
   warehouseMayCancelMrf,
 } from "@/lib/mrfLifecycle";
+import { notifyTechMrfUpdate } from "@/lib/notifications";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { z } from "zod";
@@ -208,6 +209,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     );
 
     revalidateAfterMutation(["mrf"], [`mrf-tech-${updated.technicianId}`]);
+
+    const tech = await prisma.technician.findUnique({
+      where: { id: updated.technicianId },
+      select: { userId: true },
+    });
+    // Only notify the tech when warehouse (or someone else) closes their request
+    if (tech?.userId && tech.userId !== session.user.id) {
+      await notifyTechMrfUpdate({
+        technicianUserId: tech.userId,
+        type: "mrf_closed",
+        mrfRefNo: updated.refNo,
+        body: updated.anyReleased
+          ? "Warehouse closed the remaining qty. Released stock is unchanged."
+          : "Your material request was cancelled.",
+      });
+    }
+
     return NextResponse.json({
       id: updated.id,
       status: updated.status,

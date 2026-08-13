@@ -20,6 +20,7 @@ import { AdjustStockModal, type AdjustableProduct } from "@/components/modals/Ad
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { ViewOnlyBanner } from "@/components/ViewOnlyBanner";
+import { LastUpdated } from "@/components/LastUpdated";
 import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@/generated/prisma";
 import type { StockInData, StockOutData } from "@/lib/data/stock";
@@ -152,7 +153,7 @@ function OpenMrfsTab({
   onOpenDetail: (mrfId: string) => void;
 }) {
   const t = useTheme().palette;
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, dataUpdatedAt } = useQuery({
     queryKey: queryKeys.openMrfs,
     queryFn: () => fetchJson<OpenMrfsQueueData>("/api/mrf/open"),
     ...liveHot,
@@ -177,10 +178,13 @@ function OpenMrfsTab({
       {viewOnly && (
         <ViewOnlyBanner text="View only — fulfilling material requests requires Stock Out permission" />
       )}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
+      <Box sx={{ display: "flex", alignItems: "center", mb: 1.5, gap: 1.5 }}>
         <Typography sx={{ fontSize: 12, color: t.muted }}>
           Material requests awaiting warehouse release — fulfill against the request # (MRF)
         </Typography>
+        <Box sx={{ ml: "auto" }}>
+          <LastUpdated dataUpdatedAt={dataUpdatedAt} />
+        </Box>
       </Box>
 
       {!data ? (

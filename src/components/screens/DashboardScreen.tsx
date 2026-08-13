@@ -20,6 +20,7 @@ import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/Da
 import { StatusChip } from "@/components/StatusChip";
 import { EmptyState } from "@/components/EmptyState";
 import { KpiSkeleton, TableSkeleton } from "@/components/Skeleton";
+import { LastUpdated } from "@/components/LastUpdated";
 import { useTheme } from "@mui/material/styles";
 import type { Role } from "@/generated/prisma";
 import type { DashboardData } from "@/lib/data/dashboard";
@@ -39,7 +40,7 @@ export function DashboardScreen({
   role: Role;
   initialData?: DashboardData;
 }) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, dataUpdatedAt } = useQuery({
     queryKey: queryKeys.dashboard,
     queryFn: () => fetchJson<DashboardData>("/api/dashboard"),
     initialData,
@@ -63,6 +64,9 @@ export function DashboardScreen({
 
   return (
     <Box>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+        <LastUpdated dataUpdatedAt={dataUpdatedAt} />
+      </Box>
       <Box sx={{ mb: 2 }}>
         <BentoGrid>
           <StatCard

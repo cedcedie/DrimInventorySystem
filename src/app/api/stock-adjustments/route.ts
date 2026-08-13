@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { isProductRequestable } from "@/lib/mrfLifecycle";
+import { notifyLowStock } from "@/lib/notifications";
 import { nextRefNo, withRefNoRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
@@ -81,14 +82,29 @@ export async function POST(req: Request) {
             },
           });
 
-          return adjustment;
+          return {
+            adjustment,
+            crossedThreshold: qtyBefore > product.minLevel && qtyAfter <= product.minLevel,
+            productName: product.name,
+            minLevel: product.minLevel,
+          };
         },
         { isolationLevel: "Serializable", maxWait: 10000, timeout: 15000 }
       )
     );
 
+    if (result.crossedThreshold) {
+      await notifyLowStock({
+        productId: result.adjustment.productId,
+        productName: result.productName,
+        stocks: result.adjustment.qtyAfter,
+        minLevel: result.minLevel,
+        excludeUserId: auth.session.user.id,
+      });
+    }
+
     revalidateAfterMutation(["inventory", "products", "adjustments"]);
-    return NextResponse.json({ refNo: result.refNo, delta: result.delta }, { status: 201 });
+    return NextResponse.json({ refNo: result.adjustment.refNo, delta: result.adjustment.delta }, { status: 201 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Stock adjustment failed";
     return NextResponse.json({ error: message }, { status: 400 });

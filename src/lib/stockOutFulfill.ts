@@ -11,6 +11,11 @@ export type FulfillLineResult = {
   technicianId: string;
   productName: string;
   qty: number;
+  /** Set when this fulfillment dropped the product from above minLevel to at
+   * or below it (or to 0) — caller fires the low-stock notification outside
+   * the transaction so a notification failure never rolls back a real
+   * stock-out. Undefined when no threshold was crossed. */
+  lowStockCrossed?: { productId: string; productName: string; stocks: number; minLevel: number };
 };
 
 /** Fulfills one MRF line inside an open transaction. Caller owns retry/isolation. */
@@ -63,10 +68,12 @@ export async function fulfillMrfItemInTx(
     },
   });
 
+  const stocksAfter = freshProduct.stocks - quantity;
   await tx.product.update({
     where: { id: product.id },
     data: { stocks: { decrement: quantity } },
   });
+  const crossedThreshold = freshProduct.stocks > freshProduct.minLevel && stocksAfter <= freshProduct.minLevel;
 
   await tx.mrfItem.update({
     where: { id: mrfItem.id },
@@ -106,6 +113,9 @@ export async function fulfillMrfItemInTx(
     technicianId: mrfItem.mrf.technicianId,
     productName: product.name,
     qty: quantity,
+    lowStockCrossed: crossedThreshold
+      ? { productId: product.id, productName: product.name, stocks: stocksAfter, minLevel: freshProduct.minLevel }
+      : undefined,
   };
 }
 

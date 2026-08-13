@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { getStockOutData } from "@/lib/data/stock";
 import { prisma } from "@/lib/prisma";
-import { notifyTechMrfUpdate } from "@/lib/notifications";
+import { notifyTechMrfUpdate, notifyLowStock } from "@/lib/notifications";
 import { withRefNoRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { fulfillMrfItemInTx } from "@/lib/stockOutFulfill";
@@ -50,6 +50,9 @@ export async function POST(req: Request) {
       mrfRefNo: result.mrfRefNo,
       body: `Warehouse released ${result.qty} × ${result.productName} for ${result.project}`,
     });
+    if (result.lowStockCrossed) {
+      await notifyLowStock({ ...result.lowStockCrossed, excludeUserId: auth.session.user.id });
+    }
 
     revalidateAfterMutation(["inventory", "products", "stock-out", "mrf"]);
     return NextResponse.json({ refNo: result.refNo }, { status: 201 });

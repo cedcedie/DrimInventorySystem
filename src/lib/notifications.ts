@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 
 type NotifyInput = {
   userId: string;
-  type: "mrf_filed" | "mrf_fulfilled" | "mrf_closed";
+  type: "mrf_filed" | "mrf_fulfilled" | "mrf_closed" | "low_stock";
   title: string;
   body: string;
   href: string;
@@ -52,6 +52,34 @@ export async function notifyWarehouseMrfFiled(opts: {
       body: `${opts.technicianName} requested materials for ${opts.project}`,
       href: "/stock?tab=requests",
       refNo: opts.mrfRefNo,
+    }))
+  );
+}
+
+/** Fires once at the moment a product's stock crosses at-or-below its
+ * minLevel (including hitting 0) — not on every dashboard load, which would
+ * otherwise be the only signal (see getWarehouseDashboard). Re-fires only if
+ * stock recovers above minLevel and drops again, since callers only invoke
+ * this when their own before/after check detects a fresh crossing. */
+export async function notifyLowStock(opts: {
+  productId: string;
+  productName: string;
+  stocks: number;
+  minLevel: number;
+  excludeUserId?: string;
+}) {
+  const ids = await warehouseRecipientIds(opts.excludeUserId);
+  const isOut = opts.stocks === 0;
+  await createNotifications(
+    ids.map((userId) => ({
+      userId,
+      type: "low_stock" as const,
+      title: isOut ? `${opts.productName} is out of stock` : `${opts.productName} is low on stock`,
+      body: isOut
+        ? `Stock hit 0 (min level ${opts.minLevel}). Reorder soon to avoid unfulfillable requests.`
+        : `${opts.stocks} left, at or below the min level of ${opts.minLevel}.`,
+      href: "/dashboard",
+      refNo: undefined,
     }))
   );
 }

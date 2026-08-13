@@ -11,6 +11,7 @@ import { fetchJson } from "@/lib/api";
 import { patchJson } from "@/lib/mutate";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDateTime } from "@/lib/format";
+import { liveNotifications } from "@/lib/liveQuery";
 
 type NotificationsPayload = {
   unreadCount: number;
@@ -26,8 +27,6 @@ type NotificationsPayload = {
   }>;
 };
 
-import { liveHot } from "@/lib/liveQuery";
-
 export function NotificationBell({
   buttonSx,
 }: {
@@ -41,7 +40,7 @@ export function NotificationBell({
   const { data } = useQuery({
     queryKey: queryKeys.notifications,
     queryFn: () => fetchJson<NotificationsPayload>("/api/notifications"),
-    ...liveHot,
+    ...liveNotifications,
   });
 
   const markRead = useMutation({

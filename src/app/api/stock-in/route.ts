@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   const parsed = await parseBody(req, stockInSchema);
   if ("error" in parsed) return parsed.error;
-  const { supplierId, items } = parsed.data;
+  const { supplierId, items, purchaseOrderId } = parsed.data;
 
   try {
     const result = await withRefNoRetry(() =>
@@ -44,6 +44,49 @@ export async function POST(req: Request) {
           }
           const productsById = new Map(products.map((p) => [p.id, p]));
 
+          let poRefNo: string | undefined;
+          if (purchaseOrderId) {
+            const po = await tx.purchaseOrder.findUnique({
+              where: { id: purchaseOrderId },
+              include: { items: true },
+            });
+            if (!po) throw new Error("Linked Purchase Order not found");
+            if (po.supplierId !== supplierId) {
+              throw new Error("Linked Purchase Order is for a different supplier");
+            }
+            if (po.status === "CANCELLED" || po.status === "RECEIVED") {
+              throw new Error(`This Purchase Order is already ${po.status.toLowerCase()}`);
+            }
+            poRefNo = po.refNo;
+
+            // Apply received qty toward each matching PO line, capped at what
+            // was actually ordered — extra/unexpected qty on a delivery still
+            // updates stock (below) but isn't attributed to the PO beyond it.
+            for (const item of items) {
+              const poItem = po.items.find((i) => i.productId === item.productId);
+              if (!poItem) continue;
+              const remaining = poItem.qtyOrdered - poItem.qtyReceived;
+              const applied = Math.min(remaining, item.qty);
+              if (applied > 0) {
+                await tx.purchaseOrderItem.update({
+                  where: { id: poItem.id },
+                  data: { qtyReceived: { increment: applied } },
+                });
+              }
+            }
+
+            const refreshedItems = await tx.purchaseOrderItem.findMany({
+              where: { purchaseOrderId },
+              select: { qtyOrdered: true, qtyReceived: true },
+            });
+            const allReceived = refreshedItems.every((i) => i.qtyReceived >= i.qtyOrdered);
+            const anyReceived = refreshedItems.some((i) => i.qtyReceived > 0);
+            await tx.purchaseOrder.update({
+              where: { id: purchaseOrderId },
+              data: { status: allReceived ? "RECEIVED" : anyReceived ? "PARTIALLY_RECEIVED" : po.status },
+            });
+          }
+
           const refNo = await nextRefNo(tx, "stockInBatch", "SI");
 
           const batch = await tx.stockInBatch.create({
@@ -51,6 +94,7 @@ export async function POST(req: Request) {
               refNo,
               supplierId,
               byUserId: auth.session.user.id,
+              purchaseOrderId: purchaseOrderId ?? null,
               items: {
                 create: items.map((item) => ({ productId: item.productId, qty: item.qty })),
               },
@@ -74,7 +118,7 @@ export async function POST(req: Request) {
           await tx.activityLog.create({
             data: {
               userId: auth.session.user.id,
-              action: `Recorded Stock In — ${itemsSummary}`,
+              action: `Recorded Stock In — ${itemsSummary}${poRefNo ? ` (against ${poRefNo})` : ""}`,
               refNo,
             },
           });
@@ -85,7 +129,7 @@ export async function POST(req: Request) {
       )
     );
 
-    revalidateAfterMutation(["inventory", "products", "stock-in"]);
+    revalidateAfterMutation(purchaseOrderId ? ["inventory", "products", "stock-in", "purchase-orders"] : ["inventory", "products", "stock-in"]);
     return NextResponse.json({ refNo: result.refNo }, { status: 201 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Stock In failed";

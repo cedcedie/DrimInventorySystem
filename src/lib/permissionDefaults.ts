@@ -9,6 +9,7 @@ export const PERMISSION_MODULES = [
   "stock",
   "mrf",
   "suppliers",
+  "purchaseOrders",
   "technicians",
   "users",
   "reports",
@@ -52,9 +53,9 @@ export function defaultPermissionsFor(roleName: string, module: string): Permiss
   if (roleName === "WAREHOUSE_STAFF") {
     const canManage = ["inventory", "stock"].includes(module);
     return {
-      canView: ["dashboard", "inventory", "products", "stock"].includes(module),
-      canCreate: canManage || module === "stock",
-      canEdit: canManage,
+      canView: ["dashboard", "inventory", "products", "stock", "purchaseOrders"].includes(module),
+      canCreate: canManage || module === "stock" || module === "purchaseOrders",
+      canEdit: canManage || module === "purchaseOrders",
       canDelete: false,
       canExport: false,
     };

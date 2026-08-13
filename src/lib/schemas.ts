@@ -108,6 +108,21 @@ export const stockInSchema = z.object({
   items: z
     .array(z.object({ productId: id, qty: positiveQty }))
     .min(1, "At least one item is required"),
+  // Optional — this delivery can be received against an open PO, applying
+  // qty toward each line item's qtyReceived, or stand alone as before.
+  purchaseOrderId: id.optional(),
+});
+
+export const purchaseOrderCreateSchema = z.object({
+  supplierId: id,
+  items: z
+    .array(z.object({ productId: id, qty: positiveQty }))
+    .min(1, "At least one item is required"),
+  notes: z.string().trim().max(500, "Note is too long").optional(),
+});
+
+export const purchaseOrderStatusSchema = z.object({
+  status: z.enum(["SENT", "CANCELLED"], { message: "Invalid status transition" }),
 });
 
 export const stockOutSchema = z.object({

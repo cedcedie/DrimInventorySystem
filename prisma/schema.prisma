@@ -29,6 +29,14 @@ enum MrfStatus {
   CANCELLED
 }
 
+enum PurchaseOrderStatus {
+  DRAFT // being built, not yet sent to the supplier
+  SENT // sent to supplier, awaiting delivery
+  PARTIALLY_RECEIVED // some items received via a linked Stock In batch
+  RECEIVED // fully received
+  CANCELLED
+}
+
 enum AdjustmentReason {
   MISCOUNT // physical count didn't match the system
   DAMAGED // goods damaged or otherwise unusable
@@ -54,6 +62,7 @@ model User {
   technician          Technician?
   permissions         Permission[] // NEW: Direct permissions
   notifications       Notification[]
+  purchaseOrders      PurchaseOrder[]
   createdAt           DateTime          @default(now())
 }
 
@@ -64,33 +73,35 @@ model Category {
 }
 
 model Supplier {
-  id             String         @id @default(cuid())
-  name           String         @unique
+  id             String          @id @default(cuid())
+  name           String          @unique
   contact        String // phone or email
   supplies       String // free-text description
   products       Product[]
   stockInBatches StockInBatch[]
+  purchaseOrders PurchaseOrder[]
 }
 
 model Product {
-  id          String            @id @default(cuid())
-  code        String            @unique // e.g. PIP-012 (prefix per category)
-  name        String
-  description String?           @db.Text // NEW: Detailed product description/specs
-  categoryId  String
-  category    Category          @relation(fields: [categoryId], references: [id])
-  unit        String // Pcs | Meter | ...
-  amount      Decimal?          @db.Decimal(12, 2) // CHANGED: Optional unit price (hidden from most users)
-  stocks      Int               @default(0)
-  minLevel    Int               @default(0) // low-stock threshold
-  supplierId  String?
-  supplier    Supplier?         @relation(fields: [supplierId], references: [id])
-  imageKey    String? // R2 object key
-  archivedAt  DateTime? // Soft-archive — keeps SI/SO/MRF history; hidden from active catalog
-  stockIns    StockIn[]
-  stockOuts   StockOut[]
-  mrfItems    MrfItem[] // NEW: Changed from mrfs to mrfItems
-  adjustments StockAdjustment[]
+  id                 String              @id @default(cuid())
+  code               String              @unique // e.g. PIP-012 (prefix per category)
+  name               String
+  description        String?             @db.Text // NEW: Detailed product description/specs
+  categoryId         String
+  category           Category            @relation(fields: [categoryId], references: [id])
+  unit               String // Pcs | Meter | ...
+  amount             Decimal?            @db.Decimal(12, 2) // CHANGED: Optional unit price (hidden from most users)
+  stocks             Int                 @default(0)
+  minLevel           Int                 @default(0) // low-stock threshold
+  supplierId         String?
+  supplier           Supplier?           @relation(fields: [supplierId], references: [id])
+  imageKey           String? // R2 object key
+  archivedAt         DateTime? // Soft-archive — keeps SI/SO/MRF history; hidden from active catalog
+  stockIns           StockIn[]
+  stockOuts          StockOut[]
+  mrfItems           MrfItem[] // NEW: Changed from mrfs to mrfItems
+  adjustments        StockAdjustment[]
+  purchaseOrderItems PurchaseOrderItem[]
 
   @@index([categoryId])
   @@index([supplierId])
@@ -146,18 +157,57 @@ model MrfItem {
 // A single delivery receipt. One SI-#### ref can cover several products
 // received from the same supplier in one batch (NEW: was one-item-per-refNo).
 model StockInBatch {
-  id         String    @id @default(cuid())
-  refNo      String    @unique // SI-0442, shared by every item in the batch
-  supplierId String
-  supplier   Supplier  @relation(fields: [supplierId], references: [id])
-  byUserId   String
-  byUser     User      @relation(fields: [byUserId], references: [id])
-  createdAt  DateTime  @default(now())
-  items      StockIn[]
+  id              String         @id @default(cuid())
+  refNo           String         @unique // SI-0442, shared by every item in the batch
+  supplierId      String
+  supplier        Supplier       @relation(fields: [supplierId], references: [id])
+  byUserId        String
+  byUser          User           @relation(fields: [byUserId], references: [id])
+  createdAt       DateTime       @default(now())
+  items           StockIn[]
+  // Optional — a delivery can arrive against a PO (expected shipment) or
+  // stand alone (an unplanned/ad-hoc receipt), same as today.
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
 
   @@index([supplierId])
   @@index([byUserId])
   @@index([createdAt])
+  @@index([purchaseOrderId])
+}
+
+// What's on order from a supplier but not yet (fully) received — closes the
+// gap where Stock In was purely reactive to whatever already arrived, with
+// no visibility into what's already inbound before deciding to reorder.
+model PurchaseOrder {
+  id             String              @id @default(cuid())
+  refNo          String              @unique // PO-0001
+  supplierId     String
+  supplier       Supplier            @relation(fields: [supplierId], references: [id])
+  status         PurchaseOrderStatus @default(DRAFT)
+  notes          String?             @db.Text
+  byUserId       String
+  byUser         User                @relation(fields: [byUserId], references: [id])
+  createdAt      DateTime            @default(now())
+  items          PurchaseOrderItem[]
+  stockInBatches StockInBatch[]
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  qtyOrdered      Int
+  qtyReceived     Int           @default(0)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
 }
 
 model StockIn {
@@ -298,7 +348,9 @@ model ActivityLog {
   @@index([userId, createdAt])
 }
 
-/** In-app inbox — polled by clients; works for multi-user Vercel + Neon. */
+/**
+ * In-app inbox — polled by clients; works for multi-user Vercel + Neon.
+ */
 model Notification {
   id        String    @id @default(cuid())
   userId    String

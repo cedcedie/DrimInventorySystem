@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Box, MenuItem, Select, Alert, ButtonBase, Typography } from "@mui/material";
-import { EntityModal, FormField } from "@/components/EntityModal";
+import { Box, MenuItem, Select, Alert, ButtonBase } from "@mui/material";
+import { EntityModal, FormField, fieldInputSx } from "@/components/EntityModal";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens } from "@/theme/tokens";
 import { colors, borderRadius, shadows } from "@/theme/designTokens";
@@ -13,19 +13,7 @@ import { useToast } from "@/components/Toast";
 import { ItemCartEditor, type CartItem } from "@/components/ItemCartEditor";
 import type { StockFormOptions } from "@/lib/data/stock";
 
-interface OpenPurchaseOrder {
-  id: string;
-  refNo: string;
-  items: {
-    productId: string;
-    productName: string;
-    productCode: string;
-    unit: string;
-    qtyRemaining: number;
-  }[];
-}
-
-export function StockInModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function PurchaseOrderModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
   const queryClient = useQueryClient();
@@ -38,55 +26,21 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
   });
 
   const [supplierId, setSupplierId] = useState("");
-  const [purchaseOrderId, setPurchaseOrderId] = useState("");
   const [items, setItems] = useState<CartItem[]>([]);
+  const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
-
-  const { data: openPOs } = useQuery({
-    queryKey: ["purchase-orders-open", supplierId],
-    queryFn: () =>
-      fetchJson<{ purchaseOrders: OpenPurchaseOrder[] }>(
-        `/api/purchase-orders/open?supplierId=${supplierId}`
-      ),
-    enabled: open && Boolean(supplierId),
-    select: (data) => data.purchaseOrders,
-  });
-
-  // Supplier changed — any previously chosen PO belonged to the old supplier.
-  useEffect(() => {
-    setPurchaseOrderId("");
-  }, [supplierId]);
-
-  const selectedPO = openPOs?.find((po) => po.id === purchaseOrderId);
-
-  const fillFromPO = () => {
-    if (!selectedPO) return;
-    setItems(
-      selectedPO.items.map((item) => ({
-        productId: item.productId,
-        productName: item.productName,
-        productCode: item.productCode,
-        unit: item.unit,
-        qty: item.qtyRemaining,
-      }))
-    );
-  };
 
   const mutation = useMutation({
     mutationFn: () =>
-      postJson<{ refNo: string }>("/api/stock-in", {
+      postJson<{ refNo: string }>("/api/purchase-orders", {
         supplierId,
         items: items.map((item) => ({ productId: item.productId, qty: item.qty })),
-        purchaseOrderId: purchaseOrderId || undefined,
+        notes: notes.trim() || undefined,
       }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["stock-in"] });
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
-      if (purchaseOrderId) queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-      showToast(`Stock In ${data.refNo} recorded.`);
+      showToast(`Purchase Order ${data.refNo} created.`);
       resetForm();
       onClose();
     },
@@ -95,14 +49,14 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
 
   const resetForm = () => {
     setSupplierId("");
-    setPurchaseOrderId("");
     setItems([]);
+    setNotes("");
     setError("");
   };
 
   const handleClose = () => {
-    if (items.length > 0 || supplierId) {
-      const confirmed = window.confirm("Discard this delivery? This can't be undone.");
+    if (items.length > 0 || supplierId || notes) {
+      const confirmed = window.confirm("Discard this Purchase Order? This can't be undone.");
       if (confirmed) resetForm();
       return confirmed;
     }
@@ -118,7 +72,7 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
       return;
     }
     if (items.length === 0) {
-      setError("Add at least one item to this delivery.");
+      setError("Add at least one item to order.");
       return;
     }
 
@@ -126,7 +80,13 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
   };
 
   return (
-    <EntityModal open={open} onClose={onClose} confirmClose={handleClose} title="New Stock In" width={660}>
+    <EntityModal
+      open={open}
+      onClose={onClose}
+      confirmClose={handleClose}
+      title="New Purchase Order"
+      width={660}
+    >
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
         <FormField label="Supplier" span2>
           <Select
@@ -147,62 +107,27 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
           </Select>
         </FormField>
 
-        {supplierId && openPOs && openPOs.length > 0 && (
-          <Box sx={{ mt: 1.5, display: "grid", gridTemplateColumns: "1fr auto", gap: 1.5, alignItems: "end" }}>
-            <FormField label="Link to Purchase Order (Optional)">
-              <Select
-                value={purchaseOrderId}
-                onChange={(e) => setPurchaseOrderId(e.target.value)}
-                size="small"
-                displayEmpty
-                sx={{ fontSize: 12.5, bgcolor: t.surface }}
-              >
-                <MenuItem value="" sx={{ fontSize: 12.5 }}>
-                  Not against a PO
-                </MenuItem>
-                {openPOs.map((po) => (
-                  <MenuItem key={po.id} value={po.id} sx={{ fontSize: 12.5 }}>
-                    {po.refNo} — {po.items.length} item(s) expected
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormField>
-            {selectedPO && (
-              <ButtonBase
-                type="button"
-                onClick={fillFromPO}
-                sx={{
-                  px: 1.75,
-                  py: 1.125,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: colors.brand.primary,
-                  border: `1px solid ${colors.brand.primary}`,
-                  borderRadius: borderRadius.md,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Fill from PO
-              </ButtonBase>
-            )}
-          </Box>
-        )}
-        {purchaseOrderId && (
-          <Typography sx={{ fontSize: 11, color: t.muted, mt: 0.5 }}>
-            Received qty on this delivery will be applied toward {selectedPO?.refNo}&apos;s open lines.
-          </Typography>
-        )}
-
         <Box sx={{ mt: 2.5 }}>
           <ItemCartEditor
             products={options?.products}
             items={items}
             onItemsChange={setItems}
-            addSectionLabel="Add Items to Delivery"
-            cartLabel="Items in this Delivery"
+            addSectionLabel="Add Items to Order"
+            cartLabel="Items on this Order"
             emptyProductError="Select an item and enter a positive quantity."
           />
         </Box>
+
+        <FormField label="Notes (Optional)">
+          <Box
+            component="input"
+            value={notes}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNotes(e.target.value)}
+            placeholder="Delivery instructions, expected date, etc."
+            maxLength={500}
+            sx={fieldInputSx(t)}
+          />
+        </FormField>
 
         {error && (
           <Alert severity="error" sx={{ mt: 1.5, borderRadius: borderRadius.md }}>
@@ -210,7 +135,6 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
           </Alert>
         )}
 
-        {/* Actions */}
         <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end", mt: 3 }}>
           <ButtonBase
             type="button"
@@ -255,7 +179,7 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
               },
             }}
           >
-            {mutation.isPending ? "Saving…" : `Save Stock In (${items.length} items)`}
+            {mutation.isPending ? "Creating…" : `Create Purchase Order (${items.length} items)`}
           </ButtonBase>
         </Box>
       </Box>

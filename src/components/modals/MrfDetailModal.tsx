@@ -422,6 +422,23 @@ export function MrfDetailModal({
                   </ButtonBase>
                 )}
                 <ButtonBase
+                  component="a"
+                  href={`/api/mrf/${data.id}/pdf`}
+                  target="_blank"
+                  rel="noopener"
+                  sx={{
+                    px: 1.75,
+                    py: 1,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: t.text,
+                    border: "1px solid",
+                    borderColor: t.line,
+                  }}
+                >
+                  Download PDF
+                </ButtonBase>
+                <ButtonBase
                   onClick={onClose}
                   sx={{
                     px: 1.75,

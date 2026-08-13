@@ -9,6 +9,7 @@ import {
   warehouseMayCancelMrf,
 } from "@/lib/mrfLifecycle";
 import { notifyTechMrfUpdate } from "@/lib/notifications";
+import { getMrfDetailForApi } from "@/lib/data/mrf";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { z } from "zod";
@@ -42,30 +43,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params;
 
-  const mrf = await prisma.mrf.findUnique({
-    where: { id },
-    include: {
-      technician: { select: { id: true, name: true, empNo: true, position: true, userId: true } },
-      items: {
-        include: {
-          product: {
-            select: { id: true, name: true, code: true, unit: true, stocks: true },
-          },
-        },
-      },
-      stockOuts: {
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          refNo: true,
-          qty: true,
-          createdAt: true,
-          product: { select: { name: true, code: true } },
-          byUser: { select: { name: true } },
-        },
-      },
-    },
-  });
+  const mrf = await getMrfDetailForApi(id);
 
   if (!mrf) {
     return NextResponse.json({ error: "MRF not found" }, { status: 404 });
@@ -76,13 +54,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       where: { userId: session.user.id },
       select: { id: true },
     });
-    if (!tech || tech.id !== mrf.technicianId) {
+    if (!tech || tech.id !== mrf.technician.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
-
-  const totalRequested = mrf.items.reduce((s, i) => s + i.qtyRequested, 0);
-  const totalFulfilled = mrf.items.reduce((s, i) => s + i.qtyFulfilled, 0);
 
   return NextResponse.json({
     id: mrf.id,
@@ -93,29 +68,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     status: mrf.status,
     createdAt: mrf.createdAt.toISOString(),
     technician: mrf.technician,
-    totalRequested,
-    totalFulfilled,
-    items: mrf.items.map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      productName: item.product.name,
-      productCode: item.product.code,
-      unit: item.product.unit,
-      availableStock: item.product.stocks,
-      qtyRequested: item.qtyRequested,
-      qtyFulfilled: item.qtyFulfilled,
-      qtyRemaining: item.qtyRequested - item.qtyFulfilled,
-      notes: item.notes,
-    })),
-    releases: mrf.stockOuts.map((so) => ({
-      id: so.id,
-      refNo: so.refNo,
-      qty: so.qty,
-      productName: so.product.name,
-      productCode: so.product.code,
-      byUser: so.byUser.name,
-      createdAt: so.createdAt.toISOString(),
-    })),
+    totalRequested: mrf.totalRequested,
+    totalFulfilled: mrf.totalFulfilled,
+    items: mrf.items,
+    releases: mrf.releases.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
   });
 }
 

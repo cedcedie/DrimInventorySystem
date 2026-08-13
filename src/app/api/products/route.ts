@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireModuleAccess } from "@/lib/apiAuth";
+import { requireModuleAccess, isOwnerOrAdmin } from "@/lib/apiAuth";
 import { getProductsData } from "@/lib/data/products";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
@@ -12,6 +12,19 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const data = await getProductsData({ page: Number(searchParams.get("page") ?? "1") });
+
+  // Unit cost is Owner/Admin-only — never let it leave the server for other roles,
+  // regardless of what the UI chooses to render.
+  if (!isOwnerOrAdmin(auth.role)) {
+    return NextResponse.json({
+      ...data,
+      rows: data.rows.map((row) => {
+        const { amount, ...rest } = row;
+        void amount;
+        return rest;
+      }),
+    });
+  }
 
   return NextResponse.json(data);
 }

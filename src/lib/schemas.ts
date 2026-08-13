@@ -104,9 +104,10 @@ export const mrfCreateSchema = z.object({
 });
 
 export const stockInSchema = z.object({
-  productId: id,
   supplierId: id,
-  qty: positiveQty,
+  items: z
+    .array(z.object({ productId: id, qty: positiveQty }))
+    .min(1, "At least one item is required"),
 });
 
 export const stockOutSchema = z.object({

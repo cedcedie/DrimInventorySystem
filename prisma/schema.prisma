@@ -47,7 +47,7 @@ model User {
   status              UserStatus        @default(ACTIVE)
   permissionOverrides Json? // NEW: User-specific permission overrides
   activities          ActivityLog[]
-  stockIns            StockIn[]
+  stockInBatches      StockInBatch[]
   stockOuts           StockOut[]
   adjustments         StockAdjustment[]
   settingsEdits       CompanySettings[]
@@ -64,12 +64,12 @@ model Category {
 }
 
 model Supplier {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  contact  String // phone or email
-  supplies String // free-text description
-  products Product[]
-  stockIns StockIn[]
+  id             String         @id @default(cuid())
+  name           String         @unique
+  contact        String // phone or email
+  supplies       String // free-text description
+  products       Product[]
+  stockInBatches StockInBatch[]
 }
 
 model Product {
@@ -143,22 +143,34 @@ model MrfItem {
   @@index([productId])
 }
 
-model StockIn {
-  id         String   @id @default(cuid())
-  refNo      String   @unique // SI-0442
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id])
+// A single delivery receipt. One SI-#### ref can cover several products
+// received from the same supplier in one batch (NEW: was one-item-per-refNo).
+model StockInBatch {
+  id         String    @id @default(cuid())
+  refNo      String    @unique // SI-0442, shared by every item in the batch
   supplierId String
-  supplier   Supplier @relation(fields: [supplierId], references: [id])
-  qty        Int
+  supplier   Supplier  @relation(fields: [supplierId], references: [id])
   byUserId   String
-  byUser     User     @relation(fields: [byUserId], references: [id])
-  createdAt  DateTime @default(now())
+  byUser     User      @relation(fields: [byUserId], references: [id])
+  createdAt  DateTime  @default(now())
+  items      StockIn[]
 
-  @@index([productId])
   @@index([supplierId])
   @@index([byUserId])
   @@index([createdAt])
+}
+
+model StockIn {
+  id             String       @id @default(cuid())
+  stockInBatchId String
+  stockInBatch   StockInBatch @relation(fields: [stockInBatchId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id])
+  qty            Int
+  createdAt      DateTime     @default(now())
+
+  @@index([stockInBatchId])
+  @@index([productId])
 }
 
 model StockOut {

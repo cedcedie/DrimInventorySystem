@@ -131,11 +131,15 @@ async function getWarehouseDashboard() {
       take: 8,
       select: {
         createdAt: true,
-        refNo: true,
         qty: true,
         product: { select: { name: true } },
-        supplier: { select: { name: true } },
-        byUser: { select: { name: true } },
+        stockInBatch: {
+          select: {
+            refNo: true,
+            supplier: { select: { name: true } },
+            byUser: { select: { name: true } },
+          },
+        },
       },
     }),
     prisma.stockOut.findMany({
@@ -218,11 +222,11 @@ async function getWarehouseDashboard() {
   const transactions = [
     ...stockIns.map((si) => ({
       dt: si.createdAt.toISOString(),
-      ref: si.refNo,
+      ref: si.stockInBatch.refNo,
       type: "Stock-In" as const,
-      desc: `Received ${si.qty} × ${si.product.name} from ${si.supplier.name}`,
-      user: si.byUser.name,
-      link: `Slip# ${si.refNo}`,
+      desc: `Received ${si.qty} × ${si.product.name} from ${si.stockInBatch.supplier.name}`,
+      user: si.stockInBatch.byUser.name,
+      link: `Slip# ${si.stockInBatch.refNo}`,
     })),
     ...stockOuts.map((so) => ({
       dt: so.createdAt.toISOString(),

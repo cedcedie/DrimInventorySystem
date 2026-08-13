@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Box, MenuItem, Select, Typography, Alert, IconButton, Tooltip, ButtonBase } from "@mui/material";
+import { Box, MenuItem, ListSubheader, Select, Typography, Alert, IconButton, Tooltip, ButtonBase } from "@mui/material";
 import { EntityModal, FormField, fieldInputSx } from "@/components/EntityModal";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens } from "@/theme/tokens";
@@ -11,12 +11,15 @@ import { postJson } from "@/lib/mutate";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { useToast } from "@/components/Toast";
+import { groupByCategory } from "@/lib/groupByCategory";
+import { useFormDraft } from "@/lib/useFormDraft";
 
 interface ProductOption {
   id: string;
   name: string;
   code: string;
   unit: string;
+  category: { name: string } | null;
 }
 
 interface MrfItem {
@@ -48,6 +51,8 @@ export function MultiItemMrfModal({
     select: (data) => data.products,
   });
 
+  const groupedProducts = products ? groupByCategory(products) : [];
+
   // Form state
   const [items, setItems] = useState<MrfItem[]>([]);
   const [project, setProject] = useState("");
@@ -59,6 +64,35 @@ export function MultiItemMrfModal({
   const [selectedProductId, setSelectedProductId] = useState("");
   const [itemQty, setItemQty] = useState("");
 
+  // Draft persistence — a technician filing this from a job site can lose signal or
+  // background the tab mid-fill; without this, the whole request (items typed one at a
+  // time) would be silently destroyed. Restored on open, cleared on successful submit.
+  type Draft = { items: MrfItem[]; project: string; externalRefNo: string; description: string };
+  const draft = useFormDraft<Draft>(
+    "drim-mrf-draft",
+    { items, project, externalRefNo, description },
+    (v) => v.items.length === 0 && !v.project && !v.externalRefNo && !v.description
+  );
+  const restoredRef = useRef(false);
+
+  useEffect(() => {
+    if (!open || restoredRef.current) return;
+    restoredRef.current = true;
+    const saved = draft.load();
+    if (saved && (saved.items.length > 0 || saved.project || saved.externalRefNo || saved.description)) {
+      setItems(saved.items);
+      setProject(saved.project);
+      setExternalRefNo(saved.externalRefNo);
+      setDescription(saved.description);
+      showToast("Restored your unfinished material request.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) restoredRef.current = false;
+  }, [open]);
+
   const mutation = useMutation({
     mutationFn: () =>
       postJson<{ refNo: string }>("/api/mrf/multi", {
@@ -69,6 +103,7 @@ export function MultiItemMrfModal({
       }),
     onSuccess: (data) => {
       sessionStorage.setItem("drim-mrf-filed", data.refNo);
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: queryKeys.mrf });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
@@ -88,6 +123,18 @@ export function MultiItemMrfModal({
     setSelectedProductId("");
     setItemQty("");
     setError("");
+  };
+
+  const handleClose = () => {
+    if (items.length > 0 || project || externalRefNo || description) {
+      const confirmed = window.confirm("Discard this material request? This can't be undone.");
+      if (confirmed) {
+        draft.clear();
+        resetForm();
+      }
+      return confirmed;
+    }
+    return true;
   };
 
   const handleAddItem = () => {
@@ -162,7 +209,13 @@ export function MultiItemMrfModal({
   const totalItems = items.reduce((sum, item) => sum + item.qty, 0);
 
   return (
-    <EntityModal open={open} onClose={onClose} title="File Material Request Form (MRF)" width={660}>
+    <EntityModal
+      open={open}
+      onClose={onClose}
+      confirmClose={handleClose}
+      title="File Material Request Form (MRF)"
+      width={660}
+    >
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
         {/* Header info */}
         <Box
@@ -209,11 +262,16 @@ export function MultiItemMrfModal({
                 <MenuItem value="" sx={{ fontSize: 13 }}>
                   Choose product…
                 </MenuItem>
-                {products?.map((p) => (
-                  <MenuItem key={p.id} value={p.id} sx={{ fontSize: 13 }}>
-                    {p.code} — {p.name}
-                  </MenuItem>
-                ))}
+                {groupedProducts.flatMap((group) => [
+                  <ListSubheader key={group.categoryName} sx={{ fontSize: 11.5, fontWeight: 700, lineHeight: "28px" }}>
+                    {group.categoryName}
+                  </ListSubheader>,
+                  ...group.items.map((p) => (
+                    <MenuItem key={p.id} value={p.id} sx={{ fontSize: 13 }}>
+                      {p.code} — {p.name}
+                    </MenuItem>
+                  )),
+                ])}
               </Select>
             </FormField>
             <FormField label="Quantity">
@@ -446,7 +504,9 @@ export function MultiItemMrfModal({
         <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end", mt: 3 }}>
           <ButtonBase
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              if (handleClose()) onClose();
+            }}
             sx={{
               px: 2.5,
               py: 1.25,

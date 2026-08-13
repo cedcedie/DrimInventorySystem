@@ -13,20 +13,30 @@ export function EntityModal({
   title,
   width,
   children,
+  confirmClose,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   width: ModalWidth;
   children: React.ReactNode;
+  /** When provided, gates every close attempt (X button, Escape, backdrop
+   * click) — return true to allow the close, false to block it (e.g. show
+   * your own "discard unsaved changes?" prompt instead). */
+  confirmClose?: () => boolean;
 }) {
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
 
+  const handleClose = () => {
+    if (confirmClose && !confirmClose()) return;
+    onClose();
+  };
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       maxWidth={false}
       aria-labelledby="entity-modal-title"
       slotProps={{
@@ -58,7 +68,7 @@ export function EntityModal({
         }}
       >
         {title}
-        <IconButton aria-label="Close dialog" onClick={onClose} size="small" sx={{ ml: "auto", color: t.muted2 }}>
+        <IconButton aria-label="Close dialog" onClick={handleClose} size="small" sx={{ ml: "auto", color: t.muted2 }}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>

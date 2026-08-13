@@ -6,6 +6,76 @@ export async function getTechnicianForUser(userId: string) {
   return prisma.technician.findUnique({ where: { userId } });
 }
 
+/** Full single-MRF detail (header, items, fulfillment history) — shared by the detail
+ * API route and the PDF export route so both render from the same query. */
+export async function getMrfDetailForApi(id: string) {
+  const mrf = await prisma.mrf.findUnique({
+    where: { id },
+    include: {
+      technician: { select: { id: true, name: true, empNo: true, position: true, userId: true } },
+      items: {
+        include: {
+          product: {
+            select: { id: true, name: true, code: true, unit: true, stocks: true },
+          },
+        },
+      },
+      stockOuts: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          refNo: true,
+          qty: true,
+          createdAt: true,
+          product: { select: { name: true, code: true } },
+          byUser: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  if (!mrf) return null;
+
+  const totalRequested = mrf.items.reduce((s, i) => s + i.qtyRequested, 0);
+  const totalFulfilled = mrf.items.reduce((s, i) => s + i.qtyFulfilled, 0);
+
+  return {
+    id: mrf.id,
+    refNo: mrf.refNo,
+    externalRefNo: mrf.externalRefNo,
+    project: mrf.project,
+    description: mrf.description,
+    status: mrf.status,
+    createdAt: mrf.createdAt,
+    technician: mrf.technician,
+    totalRequested,
+    totalFulfilled,
+    items: mrf.items.map((item) => ({
+      id: item.id,
+      productId: item.productId,
+      productName: item.product.name,
+      productCode: item.product.code,
+      unit: item.product.unit,
+      availableStock: item.product.stocks,
+      qtyRequested: item.qtyRequested,
+      qtyFulfilled: item.qtyFulfilled,
+      qtyRemaining: item.qtyRequested - item.qtyFulfilled,
+      notes: item.notes,
+    })),
+    releases: mrf.stockOuts.map((so) => ({
+      id: so.id,
+      refNo: so.refNo,
+      qty: so.qty,
+      productName: so.product.name,
+      productCode: so.product.code,
+      byUser: so.byUser.name,
+      createdAt: so.createdAt,
+    })),
+  };
+}
+
+export type MrfDetailForApi = NonNullable<Awaited<ReturnType<typeof getMrfDetailForApi>>>;
+
 function deriveMrfStatus(
   dbStatus: "PENDING" | "PARTIAL" | "FULFILLED" | "CANCELLED",
   totalRequested: number,

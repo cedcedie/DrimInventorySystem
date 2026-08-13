@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Box, Typography } from "@mui/material";
+import { Box, ButtonBase, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
+import { formatDate } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, RowActionButton } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
 import { deleteJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { TechnicianModal, type TechnicianFormRow } from "@/components/modals/TechnicianModal";
+import { MrfDetailModal } from "@/components/modals/MrfDetailModal";
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { useCan } from "@/components/PermissionsProvider";
@@ -34,6 +36,7 @@ export function TechniciansScreen({
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTechnician, setEditingTechnician] = useState<TechnicianFormRow | null>(null);
+  const [detailMrfId, setDetailMrfId] = useState<string | null>(null);
   const canCreate = useCan("technicians", "canCreate");
   const canEdit = useCan("technicians", "canEdit");
   const canDelete = useCan("technicians", "canDelete");
@@ -98,7 +101,11 @@ export function TechniciansScreen({
                 <TableCell mono>{r.empNo}</TableCell>
                 <TableCell color={t.text2}>{r.position}</TableCell>
                 <TableCell color={t.muted} sx={{ whiteSpace: "normal" }}>
-                  {r.recent}
+                  {r.recentMrfs.length > 0
+                    ? r.recentMrfs.length === 1
+                      ? `${r.recentMrfs[0].refNo} · ${r.recentMrfs[0].itemSummary} × ${r.recentMrfs[0].qty}`
+                      : `${r.recentMrfs[0].refNo} · ${r.recentMrfs[0].itemSummary} × ${r.recentMrfs[0].qty} (+${r.recentMrfs.length - 1} more)`
+                    : "No recent activity"}
                 </TableCell>
                 {canManage && (
                   <TableCell>
@@ -155,7 +162,55 @@ export function TechniciansScreen({
               <ProfileField label="Name" value={picked.name} bold />
               <ProfileField label="Employee Number" value={picked.empNo} mono />
               <ProfileField label="Position" value={picked.position} />
-              <ProfileField label="Recent Transaction" value={picked.recent} />
+              <Box>
+                <Typography
+                  sx={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.6px",
+                    color: t.muted2,
+                    mb: 0.5,
+                  }}
+                >
+                  Recent Transactions
+                </Typography>
+                {picked.recentMrfs.length === 0 ? (
+                  <Typography sx={{ fontSize: 12.5, color: t.muted }}>No recent activity</Typography>
+                ) : (
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                    {picked.recentMrfs.map((mrf) => (
+                      <ButtonBase
+                        key={mrf.id}
+                        onClick={() => setDetailMrfId(mrf.id)}
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "flex-start",
+                          width: "100%",
+                          px: 1,
+                          py: 0.75,
+                          border: "1px solid",
+                          borderColor: t.line,
+                          borderRadius: "3px",
+                          textAlign: "left",
+                          "&:hover": { bgcolor: t.line2 },
+                        }}
+                      >
+                        <Typography sx={{ fontSize: 12, fontWeight: 700, color: t.primary.main, fontFamily: "'IBM Plex Mono', monospace" }}>
+                          {mrf.refNo}
+                        </Typography>
+                        <Typography sx={{ fontSize: 12, color: t.text2 }}>
+                          {mrf.itemSummary} × {mrf.qty}
+                        </Typography>
+                        <Typography sx={{ fontSize: 10.5, color: t.muted2 }}>
+                          {formatDate(new Date(mrf.date))}
+                        </Typography>
+                      </ButtonBase>
+                    ))}
+                  </Box>
+                )}
+              </Box>
             </Box>
           ) : (
             <Box sx={{ p: 1.75, fontSize: 12.5, color: t.muted }}>No technician selected.</Box>
@@ -170,6 +225,11 @@ export function TechniciansScreen({
           technician={editingTechnician}
         />
       )}
+      <MrfDetailModal
+        mrfId={detailMrfId}
+        open={Boolean(detailMrfId)}
+        onClose={() => setDetailMrfId(null)}
+      />
     </Box>
   );
 }

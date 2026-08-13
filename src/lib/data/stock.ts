@@ -4,25 +4,29 @@ import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 const PAGE_SIZE = 15;
 
 async function fetchStockInData(page: number) {
-  const [total, rows] = await Promise.all([
-    prisma.stockIn.count(),
-    prisma.stockIn.findMany({
+  // Paginate on batches (one SI-#### slip), then flatten to one row per item —
+  // the Stock In table still shows one row per product, sharing the batch's refNo/date.
+  const [total, batches] = await Promise.all([
+    prisma.stockInBatch.count(),
+    prisma.stockInBatch.findMany({
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { product: true, supplier: true },
+      include: { supplier: true, items: { include: { product: true } } },
     }),
   ]);
 
   return {
-    rows: rows.map((si) => ({
-      id: si.id,
-      ref: si.refNo,
-      date: si.createdAt.toISOString(),
-      supplier: si.supplier.name,
-      item: si.product.name,
-      qty: si.qty,
-    })),
+    rows: batches.flatMap((batch) =>
+      batch.items.map((item) => ({
+        id: item.id,
+        ref: batch.refNo,
+        date: batch.createdAt.toISOString(),
+        supplier: batch.supplier.name,
+        item: item.product.name,
+        qty: item.qty,
+      }))
+    ),
     page,
     totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
     total,
@@ -95,7 +99,15 @@ async function loadStockFormOptions() {
     prisma.product.findMany({
       where: { archivedAt: null },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, code: true, stocks: true, unit: true },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        stocks: true,
+        unit: true,
+        categoryId: true,
+        category: { select: { name: true } },
+      },
     }),
     prisma.supplier.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.technician.findMany({
@@ -173,7 +185,15 @@ async function loadMrfFilingProducts(): Promise<StockFormOptions> {
   const products = await prisma.product.findMany({
     where: { archivedAt: null },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, code: true, stocks: true, unit: true },
+    select: {
+      id: true,
+      name: true,
+      code: true,
+      stocks: true,
+      unit: true,
+      categoryId: true,
+      category: { select: { name: true } },
+    },
   });
 
   return {

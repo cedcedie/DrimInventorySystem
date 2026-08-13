@@ -35,6 +35,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unknown role" }, { status: 400 });
   }
 
+  // Guard against an Owner locking every Owner out of Users/Permissions by
+  // revoking the OWNER role's own view access to the "users" module —
+  // there's no other route back in once that happens.
+  if (roleMeta.name === "OWNER" && module === "users" && !permissions.canView) {
+    return NextResponse.json(
+      { error: "The Owner role must always be able to view the Users module" },
+      { status: 409 }
+    );
+  }
+
   try {
     // RoleDef rows are created lazily the first time a role's permissions are edited.
     const roleDef = await prisma.roleDef.upsert({
@@ -47,6 +57,17 @@ export async function POST(req: Request) {
       where: { roleDefId_module: { roleDefId: roleDef.id, module } },
       update: permissions,
       create: { roleDefId: roleDef.id, module, ...permissions },
+    });
+
+    const grants = (Object.keys(permissions) as Array<keyof typeof permissions>)
+      .filter((k) => permissions[k])
+      .join(", ") || "none";
+    await prisma.activityLog.create({
+      data: {
+        userId: auth.session.user.id,
+        action: `Set ${roleMeta.label} role's ${module} permissions — ${grants}`,
+        refNo: roleMeta.name,
+      },
     });
 
     revalidatePermissions();

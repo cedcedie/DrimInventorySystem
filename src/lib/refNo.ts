@@ -2,7 +2,7 @@ import { Prisma, type PrismaClient } from "@/generated/prisma";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
-type RefModel = "stockIn" | "stockOut" | "mrf" | "stockAdjustment";
+type RefModel = "stockInBatch" | "stockOut" | "mrf" | "stockAdjustment";
 
 /** Highest numeric suffix among refs like `PREFIX-0123`. Ignores malformed values. */
 export function maxRefSuffix(refs: string[], prefix: string): number {
@@ -31,7 +31,18 @@ export function isUniqueRefNoError(error: unknown): boolean {
   );
 }
 
-/** Retries a transaction when two requests race for the same ref number. */
+/** True for a Postgres Serializable-isolation write-conflict abort (Prisma P2034).
+ * This is the failure mode that actually fires when two requests race inside
+ * `nextRefNo`'s read-then-insert under Serializable isolation — the unique
+ * constraint on `refNo` is a backstop that rarely trips because the DB aborts
+ * the losing transaction first. Both need to be retried, or a race under real
+ * concurrent load surfaces as a raw, unretried error to the second user. */
+export function isSerializationConflictError(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+}
+
+/** Retries a transaction when two requests race for the same ref number, or
+ * more generally lose a Serializable-isolation write conflict. */
 export async function withRefNoRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
   let lastError: unknown;
 
@@ -39,7 +50,8 @@ export async function withRefNoRetry<T>(fn: () => Promise<T>, maxAttempts = 3): 
     try {
       return await fn();
     } catch (error) {
-      if (!isUniqueRefNoError(error) || attempt === maxAttempts - 1) throw error;
+      const retryable = isUniqueRefNoError(error) || isSerializationConflictError(error);
+      if (!retryable || attempt === maxAttempts - 1) throw error;
       lastError = error;
     }
   }

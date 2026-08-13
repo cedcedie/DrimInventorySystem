@@ -8,8 +8,8 @@ export async function getSuppliersData() {
   const suppliers = await prisma.supplier.findMany({
     orderBy: { name: "asc" },
     include: {
-      stockIns: { orderBy: { createdAt: "desc" }, take: 1 },
-      _count: { select: { stockIns: true } },
+      stockInBatches: { orderBy: { createdAt: "desc" }, take: 1 },
+      _count: { select: { stockInBatches: true } },
     },
     take: 500,
   });
@@ -20,8 +20,8 @@ export async function getSuppliersData() {
       name: s.name,
       contact: s.contact,
       supplies: s.supplies,
-      lastDelivery: s.stockIns[0]?.createdAt.toISOString() ?? null,
-      deliveryCount: s._count.stockIns,
+      lastDelivery: s.stockInBatches[0]?.createdAt.toISOString() ?? null,
+      deliveryCount: s._count.stockInBatches,
     })),
   };
 }

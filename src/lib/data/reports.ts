@@ -62,7 +62,7 @@ export async function buildReportData(
     const [stockIns, stockOuts, adjustments] = await Promise.all([
       prisma.stockIn.findMany({
         where: { createdAt: { gte: from, lte: to } },
-        include: { product: true, supplier: true },
+        include: { product: true, stockInBatch: { include: { supplier: true } } },
         orderBy: { createdAt: "desc" },
         take: REPORT_ROW_CAP,
       }),
@@ -87,9 +87,9 @@ export async function buildReportData(
       ...stockIns.map((si) => [
         si.createdAt.toLocaleDateString("en-PH"),
         "Stock-In",
-        si.refNo,
+        si.stockInBatch.refNo,
         "—",
-        `${si.qty} × ${si.product.name} from ${si.supplier.name}`,
+        `${si.qty} × ${si.product.name} from ${si.stockInBatch.supplier.name}`,
       ]),
       ...stockOuts.map((so) => [
         so.createdAt.toLocaleDateString("en-PH"),
@@ -223,7 +223,10 @@ export async function buildReportData(
   // Supplier Report
   const suppliers = await prisma.supplier.findMany({
     include: {
-      stockIns: { where: { createdAt: { gte: from, lte: to } } },
+      stockInBatches: {
+        where: { createdAt: { gte: from, lte: to } },
+        include: { items: true },
+      },
     },
     orderBy: { name: "asc" },
     take: REPORT_ROW_CAP,
@@ -232,8 +235,8 @@ export async function buildReportData(
     headers: ["Supplier", "Deliveries in Range", "Total Qty"],
     rows: suppliers.map((s) => [
       s.name,
-      String(s.stockIns.length),
-      String(s.stockIns.reduce((acc, si) => acc + si.qty, 0)),
+      String(s.stockInBatches.length),
+      String(s.stockInBatches.reduce((acc, b) => acc + b.items.reduce((sum, i) => sum + i.qty, 0), 0)),
     ]),
     summary: `${suppliers.length} suppliers · ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")}${capNote(suppliers.length)}`,
   };

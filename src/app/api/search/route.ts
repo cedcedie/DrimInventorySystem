@@ -66,7 +66,7 @@ export async function GET(req: Request) {
           take: 5,
         }),
     includeSlips
-      ? prisma.stockIn.findMany({
+      ? prisma.stockInBatch.findMany({
           where: { refNo: { contains: like, mode: "insensitive" } },
           select: { id: true, refNo: true },
           take: 3,

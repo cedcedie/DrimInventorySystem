@@ -10,7 +10,7 @@ export async function getTechniciansData() {
     include: {
       mrfs: {
         orderBy: { createdAt: "desc" },
-        take: 1,
+        take: 5,
         include: { items: { include: { product: { select: { name: true } } } } },
       },
     },
@@ -18,23 +18,27 @@ export async function getTechniciansData() {
   });
 
   return {
-    rows: technicians.map((t) => {
-      const recentMrf = t.mrfs[0];
-      const firstItem = recentMrf?.items[0];
-      const summary =
-        recentMrf && firstItem
-          ? recentMrf.items.length === 1
-            ? `${recentMrf.refNo} · ${firstItem.product.name} × ${firstItem.qtyRequested}`
-            : `${recentMrf.refNo} · ${recentMrf.items.length} items`
-          : "No recent activity";
-      return {
-        id: t.id,
-        name: t.name,
-        empNo: t.empNo,
-        position: t.position,
-        recent: summary,
-      };
-    }),
+    rows: technicians.map((t) => ({
+      id: t.id,
+      name: t.name,
+      empNo: t.empNo,
+      position: t.position,
+      recentMrfs: t.mrfs.map((mrf) => {
+        const firstItem = mrf.items[0];
+        const qty = mrf.items.reduce((sum, item) => sum + item.qtyRequested, 0);
+        const itemSummary =
+          mrf.items.length <= 1
+            ? (firstItem?.product.name ?? "No items")
+            : `${mrf.items.length} items`;
+        return {
+          id: mrf.id,
+          refNo: mrf.refNo,
+          itemSummary,
+          qty,
+          date: mrf.createdAt.toISOString(),
+        };
+      }),
+    })),
   };
 }
 

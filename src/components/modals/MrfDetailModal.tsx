@@ -108,7 +108,7 @@ export function MrfDetailModal({
       showToast(mrfCancelToast(res.refNo, Boolean(res.anyReleased)));
       onClose();
     },
-    onError: (e: Error) => showToast(e.message),
+    onError: (e: Error) => showToast(e.message, "error"),
   });
 
   const bulkLines =
@@ -134,7 +134,7 @@ export function MrfDetailModal({
       setConfirmBulk(false);
       onClose();
     },
-    onError: (e: Error) => showToast(e.message),
+    onError: (e: Error) => showToast(e.message, "error"),
   });
 
   const anyReleased = Boolean(data && data.totalFulfilled > 0);

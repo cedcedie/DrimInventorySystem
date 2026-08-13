@@ -145,7 +145,7 @@ export function PermissionsScreen() {
       applyLiveIfCurrentRole(payload.roleId, payload.module, payload.permissions);
       return { previous };
     },
-    onError: (_err, payload, ctx) => {
+    onError: (err, payload, ctx) => {
       if (ctx?.previous) queryClient.setQueryData(["role-permissions"], ctx.previous);
       const prevRow = ctx?.previous?.permissions.find(
         (p) => p.roleId === payload.roleId && p.module === payload.module
@@ -153,7 +153,7 @@ export function PermissionsScreen() {
       if (prevRow) {
         applyLiveIfCurrentRole(payload.roleId, payload.module, prevRow);
       }
-      showToast("Could not update role permissions");
+      showToast(err instanceof Error ? err.message : "Could not update role permissions", "error");
     },
     onSuccess: () => {
       showToast("Role permissions updated");
@@ -198,9 +198,9 @@ export function PermissionsScreen() {
       applyLiveIfCurrentUser(payload.userId, payload.module, payload.permissions, target?.role);
       return { previous };
     },
-    onError: (_err, payload, ctx) => {
+    onError: (err, payload, ctx) => {
       if (ctx?.previous) queryClient.setQueryData(["user-permissions"], ctx.previous);
-      showToast("Could not update user permissions");
+      showToast(err instanceof Error ? err.message : "Could not update user permissions", "error");
       refreshAccess();
       void payload;
     },

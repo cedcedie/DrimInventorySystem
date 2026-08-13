@@ -19,6 +19,7 @@ import { MrfDetailModal } from "@/components/modals/MrfDetailModal";
 import { AdjustStockModal, type AdjustableProduct } from "@/components/modals/AdjustStockModal";
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
+import { ViewOnlyBanner } from "@/components/ViewOnlyBanner";
 import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@/generated/prisma";
 import type { StockInData, StockOutData } from "@/lib/data/stock";
@@ -138,24 +139,6 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
   );
 }
 
-function ViewOnlyNotice({ text }: { text: string }) {
-  const t = useTheme().palette;
-  return (
-    <Box
-      sx={{
-        ml: "auto",
-        fontSize: 11,
-        color: t.muted2,
-        border: "1px dashed",
-        borderColor: t.border,
-        px: 1.375,
-        py: 0.75,
-      }}
-    >
-      {text}
-    </Box>
-  );
-}
 
 function OpenMrfsTab({
   canStock,
@@ -191,11 +174,13 @@ function OpenMrfsTab({
 
   return (
     <Box>
+      {viewOnly && (
+        <ViewOnlyBanner text="View only — fulfilling material requests requires Stock Out permission" />
+      )}
       <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
         <Typography sx={{ fontSize: 12, color: t.muted }}>
           Material requests awaiting warehouse release — fulfill against the request # (MRF)
         </Typography>
-        {viewOnly && <ViewOnlyNotice text="View only — fulfillment requires Stock Out permission" />}
       </Box>
 
       {!data ? (
@@ -303,6 +288,7 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
 
   return (
     <Box>
+      {viewOnly && <ViewOnlyBanner text="View only — recording Stock In requires create permission" />}
       <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
         <Typography sx={{ fontSize: 12, color: t.muted }}>
           Receipt slips (SI) — incoming stock from suppliers
@@ -325,7 +311,6 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
             + New Stock In
           </ButtonBase>
         )}
-        {viewOnly && <ViewOnlyNotice text="View only — Stock In requires create permission" />}
       </Box>
 
       {!data ? (
@@ -431,6 +416,7 @@ function StockOutTab({
   return (
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
       <Box sx={{ flex: "2.4 1 460px", minWidth: 460 }}>
+        {viewOnly && <ViewOnlyBanner text="View only — releasing Stock Out requires create permission" />}
         <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
           <Typography sx={{ fontSize: 12, color: t.muted }}>
             Release slips (SO) — stock issued against material requests
@@ -453,7 +439,6 @@ function StockOutTab({
               + Fulfill MRF
             </ButtonBase>
           )}
-          {viewOnly && <ViewOnlyNotice text="View only — Stock Out requires create permission" />}
         </Box>
 
         {!data ? (

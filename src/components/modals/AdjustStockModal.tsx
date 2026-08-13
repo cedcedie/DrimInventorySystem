@@ -30,9 +30,14 @@ export type AdjustableProduct = {
 export function AdjustStockModal({
   product,
   onClose,
+  initialNote,
 }: {
   product: AdjustableProduct | null;
   onClose: () => void;
+  /** Pre-fills the note and defaults the reason to Correction — used when
+   * opened from "Correct this" on a specific SI/SO slip, so the audit trail
+   * references which slip prompted the fix. */
+  initialNote?: string;
 }) {
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
@@ -47,11 +52,11 @@ export function AdjustStockModal({
   useEffect(() => {
     if (product) {
       setQtyAfter(String(product.stocks));
-      setReason("MISCOUNT");
-      setNote("");
+      setReason(initialNote ? "CORRECTION" : "MISCOUNT");
+      setNote(initialNote ?? "");
       setError("");
     }
-  }, [product]);
+  }, [product, initialNote]);
 
   const mutation = useMutation({
     mutationFn: () =>

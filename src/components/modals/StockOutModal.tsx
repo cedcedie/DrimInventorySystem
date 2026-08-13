@@ -50,15 +50,15 @@ export function StockOutModal({
     }
   }, [open, initialMrfItemId]);
 
-  useEffect(() => {
-    if (!open || !mrfItemId || !options) return;
-    const item = options.pendingMrfItems.find((m) => m.id === mrfItemId);
-    if (item && !qty) {
-      setQty(String(item.qtyRemaining));
-    }
-  }, [open, mrfItemId, options, qty]);
-
   const selectedMrfItem = options?.pendingMrfItems.find((m) => m.id === mrfItemId);
+
+  // Deliberately no auto-fill to the full remaining qty here — a warehouse worker
+  // hitting Enter without editing the field should not release everything at once.
+  const qtyNum = Number(qty);
+  const maxQty = selectedMrfItem
+    ? Math.min(selectedMrfItem.qtyRemaining, selectedMrfItem.availableStock)
+    : undefined;
+  const qtyExceedsMax = Boolean(qty && selectedMrfItem && qtyNum > maxQty!);
 
   const mutation = useMutation({
     mutationFn: () => postJson<{ refNo: string }>("/api/stock-out", { mrfItemId, qty }),
@@ -81,7 +81,16 @@ export function StockOutModal({
       setQty("");
       onClose();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => {
+      // A same-item race (another warehouse worker fulfilled this line moments
+      // ago) surfaces here as a rejected transaction — the numbers on screen are
+      // now stale. Refetch immediately so the visible remaining/stock counts
+      // reflect what actually happened, instead of leaving the old numbers up
+      // with no explanation for why the submit was rejected.
+      queryClient.invalidateQueries({ queryKey: queryKeys.stockOptions });
+      queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
+      setError(`${e.message} — numbers below have been refreshed to reflect the current state.`);
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -193,10 +202,28 @@ export function StockOutModal({
               type="number"
               value={qty}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQty(e.target.value)}
-              placeholder={selectedMrfItem ? String(selectedMrfItem.qtyRemaining) : "0"}
-              max={selectedMrfItem?.qtyRemaining}
-              sx={fieldInputSx(t)}
+              placeholder="0"
+              max={maxQty}
+              aria-invalid={qtyExceedsMax}
+              sx={{
+                ...fieldInputSx(t),
+                ...(qtyExceedsMax && { borderColor: t.warn, color: t.warn }),
+              }}
             />
+            {selectedMrfItem && (
+              <Box
+                component="span"
+                sx={{ fontSize: 11, mt: 0.375, color: qtyExceedsMax ? t.warn : t.muted }}
+              >
+                {qtyExceedsMax
+                  ? `Max ${maxQty} ${selectedMrfItem.unit} — limited by ${
+                      selectedMrfItem.qtyRemaining <= selectedMrfItem.availableStock
+                        ? "remaining request qty"
+                        : "available stock"
+                    }`
+                  : `Max ${maxQty} ${selectedMrfItem.unit} available to release`}
+              </Box>
+            )}
           </FormField>
         </Box>
 
@@ -206,7 +233,11 @@ export function StockOutModal({
           </Alert>
         )}
 
-        <ModalFormActions onCancel={onClose} submitLabel="Record release (SO)" disabled={mutation.isPending} />
+        <ModalFormActions
+          onCancel={onClose}
+          submitLabel="Record release (SO)"
+          disabled={mutation.isPending || qtyExceedsMax}
+        />
       </Box>
     </EntityModal>
   );

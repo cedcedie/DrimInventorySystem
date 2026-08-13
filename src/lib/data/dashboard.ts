@@ -78,8 +78,22 @@ async function getTechnicianDashboard(technicianId: string) {
       user: string;
       link: string;
     }>,
-    lowAlerts: [] as Array<{ product: string; category: string; qty: number; unit: string }>,
-    outAlerts: [] as Array<{ product: string; category: string; qty: number; unit: string }>,
+    lowAlerts: [] as Array<{
+      product: string;
+      category: string;
+      qty: number;
+      unit: string;
+      supplier: string | null;
+      supplierContact: string | null;
+    }>,
+    outAlerts: [] as Array<{
+      product: string;
+      category: string;
+      qty: number;
+      unit: string;
+      supplier: string | null;
+      supplierContact: string | null;
+    }>,
   };
 }
 
@@ -112,17 +126,26 @@ async function getWarehouseDashboard() {
       SELECT COUNT(*)::bigint AS count FROM "Product" WHERE "archivedAt" IS NULL AND stocks > 0 AND stocks <= "minLevel"
     `,
     prisma.product.count({ where: { stocks: 0, archivedAt: null } }),
-    prisma.$queryRaw<{ name: string; stocks: number; unit: string; category: string }[]>`
-      SELECT p.name, p.stocks, p.unit, c.name AS category
+    prisma.$queryRaw<
+      { name: string; stocks: number; unit: string; category: string; supplier: string | null; supplierContact: string | null }[]
+    >`
+      SELECT p.name, p.stocks, p.unit, c.name AS category, s.name AS supplier, s.contact AS "supplierContact"
       FROM "Product" p
       JOIN "Category" c ON c.id = p."categoryId"
+      LEFT JOIN "Supplier" s ON s.id = p."supplierId"
       WHERE p."archivedAt" IS NULL AND p.stocks > 0 AND p.stocks <= p."minLevel"
       ORDER BY p.name ASC
       LIMIT 8
     `,
     prisma.product.findMany({
       where: { stocks: 0, archivedAt: null },
-      select: { name: true, stocks: true, unit: true, category: { select: { name: true } } },
+      select: {
+        name: true,
+        stocks: true,
+        unit: true,
+        category: { select: { name: true } },
+        supplier: { select: { name: true, contact: true } },
+      },
       orderBy: { name: "asc" },
       take: 8,
     }),
@@ -276,12 +299,16 @@ async function getWarehouseDashboard() {
       category: p.category,
       qty: p.stocks,
       unit: p.unit,
+      supplier: p.supplier,
+      supplierContact: p.supplierContact,
     })),
     outAlerts: outOfStockRows.map((p) => ({
       product: p.name,
       category: p.category.name,
       qty: 0,
       unit: p.unit,
+      supplier: p.supplier?.name ?? null,
+      supplierContact: p.supplier?.contact ?? null,
     })),
   };
 }

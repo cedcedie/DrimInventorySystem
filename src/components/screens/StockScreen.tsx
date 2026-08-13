@@ -9,13 +9,14 @@ import { queryKeys } from "@/lib/queryKeys";
 import { liveHot, liveWarm } from "@/lib/liveQuery";
 import { formatDate } from "@/lib/format";
 import { parseStockTab, type StockTab } from "@/lib/stockTabs";
-import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
+import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination, RowActionButton } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
 import { StatusChip } from "@/components/StatusChip";
 import { useTheme } from "@mui/material/styles";
 import { StockInModal } from "@/components/modals/StockInModal";
 import { StockOutModal } from "@/components/modals/StockOutModal";
 import { MrfDetailModal } from "@/components/modals/MrfDetailModal";
+import { AdjustStockModal, type AdjustableProduct } from "@/components/modals/AdjustStockModal";
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { useCan } from "@/components/PermissionsProvider";
@@ -23,7 +24,7 @@ import type { Role } from "@/generated/prisma";
 import type { StockInData, StockOutData } from "@/lib/data/stock";
 import type { OpenMrfsQueueData } from "@/lib/data/mrf";
 
-const SI_COLS = "110px 106px minmax(0,1.2fr) minmax(0,1.2fr) 80px";
+const SI_COLS = "110px 106px minmax(0,1.1fr) minmax(0,1.1fr) 76px 40px";
 const SO_COLS = "92px 96px minmax(0,1fr) minmax(0,1.1fr) 48px 84px minmax(0,1fr)";
 const MRF_COLS = "100px 96px minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) 72px 72px 72px 88px";
 
@@ -287,6 +288,8 @@ function OpenMrfsTab({
 function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boolean }) {
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
+  const [correcting, setCorrecting] = useState<{ product: AdjustableProduct; note: string } | null>(null);
+  const canCorrect = useCan("inventory", "canEdit");
   const t = useTheme().palette;
 
   const { data, isFetching } = useQuery({
@@ -295,6 +298,8 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
     placeholderData: keepPreviousData,
     ...liveWarm,
   });
+
+  const cols = canCorrect ? SI_COLS : "110px 106px minmax(0,1.2fr) minmax(0,1.2fr) 80px";
 
   return (
     <Box>
@@ -328,11 +333,15 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
       ) : (
         <TableShell minWidth={620} dimmed={isFetching}>
           <TableHeaderRow
-            columns={SI_COLS}
-            headers={["Receipt slip (SI)", "Date", "Supplier", "Item", "Quantity"]}
+            columns={cols}
+            headers={
+              canCorrect
+                ? ["Receipt slip (SI)", "Date", "Supplier", "Item", "Quantity", ""]
+                : ["Receipt slip (SI)", "Date", "Supplier", "Item", "Quantity"]
+            }
           />
           {data.rows.map((r) => (
-            <TableRow key={r.id} columns={SI_COLS}>
+            <TableRow key={r.id} columns={cols}>
               <TableCell mono color={t.primary.main}>
                 {r.ref}
               </TableCell>
@@ -340,6 +349,26 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
               <TableCell>{r.supplier}</TableCell>
               <TableCell>{r.item}</TableCell>
               <TableCell bold>{r.qty}</TableCell>
+              {canCorrect && (
+                <TableCell>
+                  <RowActionButton
+                    kind="adjust"
+                    label={`Correct ${r.item} count`}
+                    onClick={() =>
+                      setCorrecting({
+                        product: {
+                          id: r.productId,
+                          name: r.item,
+                          code: r.productCode,
+                          unit: r.productUnit,
+                          stocks: r.productStocks,
+                        },
+                        note: `Correcting Stock In ${r.ref} — recorded ${r.qty} ${r.productUnit}`,
+                      })
+                    }
+                  />
+                </TableCell>
+              )}
             </TableRow>
           ))}
           {data.rows.length === 0 && (
@@ -364,6 +393,13 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
       )}
 
       {canStock && <StockInModal open={modalOpen} onClose={() => setModalOpen(false)} />}
+      {canCorrect && (
+        <AdjustStockModal
+          product={correcting?.product ?? null}
+          initialNote={correcting?.note}
+          onClose={() => setCorrecting(null)}
+        />
+      )}
     </Box>
   );
 }
@@ -379,6 +415,8 @@ function StockOutTab({
 }) {
   const [page, setPage] = useState(1);
   const [pickedIdx, setPickedIdx] = useState(0);
+  const [correcting, setCorrecting] = useState<{ product: AdjustableProduct; note: string } | null>(null);
+  const canCorrect = useCan("inventory", "canEdit");
   const t = useTheme().palette;
 
   const { data, isFetching } = useQuery({
@@ -482,11 +520,48 @@ function StockOutTab({
             <ProfileField label="Item" value={`${picked.item} × ${picked.qty}`} />
             <ProfileField label="Project" value={picked.project} />
             <ProfileField label="Released" value={formatDate(new Date(picked.date))} />
+            {canCorrect && (
+              <ButtonBase
+                onClick={() =>
+                  setCorrecting({
+                    product: {
+                      id: picked.productId,
+                      name: picked.item,
+                      code: picked.productCode,
+                      unit: picked.productUnit,
+                      stocks: picked.productStocks,
+                    },
+                    note: `Correcting Stock Out ${picked.ref} — released ${picked.qty} ${picked.productUnit}`,
+                  })
+                }
+                sx={{
+                  mt: 0.5,
+                  alignSelf: "flex-start",
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: t.warning.main,
+                  border: "1px solid",
+                  borderColor: t.warning.main,
+                  px: 1.25,
+                  py: 0.625,
+                }}
+              >
+                Correct this release
+              </ButtonBase>
+            )}
           </Box>
         ) : (
           <Box sx={{ p: 1.75, fontSize: 12.5, color: t.muted }}>No release selected.</Box>
         )}
       </Box>
+
+      {canCorrect && (
+        <AdjustStockModal
+          product={correcting?.product ?? null}
+          initialNote={correcting?.note}
+          onClose={() => setCorrecting(null)}
+        />
+      )}
     </Box>
   );
 }

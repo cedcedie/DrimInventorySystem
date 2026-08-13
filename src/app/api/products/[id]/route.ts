@@ -67,6 +67,36 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Product is already archived" }, { status: 409 });
   }
 
+  // Archiving blocks new MRF requests and new Stock In receipts for this product
+  // (see isProductRequestable / stock-in validation) — if an MRF still has an open
+  // line for it, archiving now would leave that request permanently unfulfillable
+  // with no way for warehouse to restock it. Surface the open MRFs so whoever's
+  // archiving can close/redirect them first instead of hitting a silent dead end.
+  const openItems = await prisma.mrfItem.findMany({
+    where: {
+      productId: id,
+      mrf: { status: { in: ["PENDING", "PARTIAL"] } },
+    },
+    select: {
+      qtyRequested: true,
+      qtyFulfilled: true,
+      mrf: { select: { refNo: true } },
+    },
+  });
+  const openRefNos = [
+    ...new Set(
+      openItems.filter((item) => item.qtyFulfilled < item.qtyRequested).map((item) => item.mrf.refNo)
+    ),
+  ];
+  if (openRefNos.length > 0) {
+    return NextResponse.json(
+      {
+        error: `Can't archive — ${openRefNos.length} open request(s) still reference this product (${openRefNos.join(", ")}). Fulfill or close them first.`,
+      },
+      { status: 409 }
+    );
+  }
+
   const [siCount, soCount, mrfCount, adjCount] = await Promise.all([
     prisma.stockIn.count({ where: { productId: id } }),
     prisma.stockOut.count({ where: { productId: id } }),

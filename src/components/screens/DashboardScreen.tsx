@@ -276,7 +276,14 @@ function AlertPanel({
 }: {
   title: string;
   dotColor: string;
-  rows: { product: string; category: string; qty: number; unit: string }[];
+  rows: {
+    product: string;
+    category: string;
+    qty: number;
+    unit: string;
+    supplier: string | null;
+    supplierContact: string | null;
+  }[];
   qtyColor: string;
   emptyMessage: string;
 }) {
@@ -319,6 +326,12 @@ function AlertPanel({
                 {a.product}
               </Typography>
               <Typography sx={{ fontSize: 11.5, color: t.muted }}>{a.category}</Typography>
+              {a.supplier && (
+                <Typography sx={{ fontSize: 10.5, color: t.muted2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  Reorder from {a.supplier}
+                  {a.supplierContact ? ` · ${a.supplierContact}` : ""}
+                </Typography>
+              )}
             </Box>
             <Typography sx={{ fontSize: 13, fontWeight: 800, color: qtyColor, flexShrink: 0 }}>
               {a.qty} {a.unit}

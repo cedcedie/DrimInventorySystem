@@ -56,7 +56,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <PermissionsProvider permissions={perms}>
+    <PermissionsProvider permissions={perms} role={role}>
       <AppShell
         userName={session.user.name ?? session.user.username}
         role={role}

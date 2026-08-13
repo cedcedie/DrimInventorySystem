@@ -9,6 +9,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { fetchJson } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
+import { liveCool } from "@/lib/liveQuery";
 import type { PermissionSet } from "@/lib/permissionDefaults";
 
 type PermissionsMap = Record<string, PermissionSet>;
@@ -51,16 +56,46 @@ const PermissionsContext = createContext<PermissionsContextValue>({
 
 export function PermissionsProvider({
   permissions,
+  role,
   children,
 }: {
   permissions: PermissionsMap;
+  /** Current role as computed server-side — used only to detect a role
+   * change out from under an open tab; not read for permission checks. */
+  role?: string;
   children: ReactNode;
 }) {
+  const router = useRouter();
   const [live, setLive] = useState(permissions);
 
   useEffect(() => {
     setLive((prev) => (permissionsEqual(prev, permissions) ? prev : permissions));
   }, [permissions]);
+
+  // Poll our own effective permissions so a change an Owner makes (role
+  // defaults or a per-user override) reaches this tab within ~45s without
+  // the affected user having to navigate or reload — server-side enforcement
+  // is already immediate on every API call; this closes the client-UI gap
+  // (buttons/nav staying stale) that server enforcement alone doesn't cover.
+  const { data: polled } = useQuery({
+    queryKey: queryKeys.myPermissions,
+    queryFn: () => fetchJson<{ role: string; permissions: PermissionsMap }>("/api/me/permissions"),
+    ...liveCool,
+  });
+
+  useEffect(() => {
+    if (!polled) return;
+    setLive((prev) => (permissionsEqual(prev, polled.permissions) ? prev : polled.permissions));
+    // A role change (not just a permission edit) also changes which nav
+    // segments this user may see — that's computed server-side in the (app)
+    // layout, so a client-side permission sync alone can't catch it. Force a
+    // server re-render to recompute accessSegments / redirect off a page the
+    // new role can no longer reach, instead of leaving stale nav items up.
+    if (role && polled.role !== role) {
+      router.refresh();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [polled, role]);
 
   const patchModule = useCallback((module: string, set: PermissionSet | null) => {
     setLive((prev) => {

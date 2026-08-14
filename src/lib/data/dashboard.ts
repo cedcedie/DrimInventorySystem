@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { MrfStatus } from "@/generated/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
+import { getActivityFeedWidgetData } from "@/lib/data/activityFeed";
 
 /** When `technicianId` is set (technician dashboard), only that tech's open MRFs
  * are returned — no warehouse SI/SO feeds, stock KPIs, or global activity. */
@@ -22,7 +23,7 @@ async function getTechnicianDashboard(technicianId: string) {
     technicianId,
   };
 
-  const [pendingMrfCount, pendingMrfs] = await Promise.all([
+  const [pendingMrfCount, pendingMrfs, activityFeed] = await Promise.all([
     prisma.mrf.count({ where: mrfOpenFilter }),
     prisma.mrf.findMany({
       where: mrfOpenFilter,
@@ -38,6 +39,7 @@ async function getTechnicianDashboard(technicianId: string) {
         items: { select: { qtyRequested: true, qtyFulfilled: true } },
       },
     }),
+    getActivityFeedWidgetData(),
   ]);
 
   return {
@@ -54,6 +56,7 @@ async function getTechnicianDashboard(technicianId: string) {
       stockIn: number;
       stockOut: number;
     }>,
+    activityFeed: activityFeed.rows,
     pendingMrfs: pendingMrfs.map((m) => {
       const requested = m.items.reduce((s, i) => s + i.qtyRequested, 0);
       const fulfilled = m.items.reduce((s, i) => s + i.qtyFulfilled, 0);
@@ -119,6 +122,7 @@ async function getWarehouseDashboard() {
     recentActivity,
     weeklyIn,
     weeklyOut,
+    activityFeed,
   ] = await Promise.all([
     prisma.product.count({ where: { archivedAt: null } }),
     prisma.category.count(),
@@ -210,6 +214,7 @@ async function getWarehouseDashboard() {
       where: { createdAt: { gte: weekAgo } },
       select: { createdAt: true, qty: true },
     }),
+    getActivityFeedWidgetData(),
   ]);
 
   const lowStockCount = Number(lowStockCountRows[0]?.count ?? 0);
@@ -293,6 +298,7 @@ async function getWarehouseDashboard() {
       refNo: a.refNo,
       user: a.user.name,
     })),
+    activityFeed: activityFeed.rows,
     transactions,
     lowAlerts: lowStockRows.map((p) => ({
       product: p.name,

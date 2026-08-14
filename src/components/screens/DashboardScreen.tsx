@@ -21,6 +21,7 @@ import { StatusChip } from "@/components/StatusChip";
 import { EmptyState } from "@/components/EmptyState";
 import { KpiSkeleton, TableSkeleton } from "@/components/Skeleton";
 import { LastUpdated } from "@/components/LastUpdated";
+import { ActivityFeedWidget } from "@/components/dashboard/ActivityFeedWidget";
 import { useTheme } from "@mui/material/styles";
 import type { Role } from "@/generated/prisma";
 import type { DashboardData } from "@/lib/data/dashboard";
@@ -202,6 +203,10 @@ export function DashboardScreen({
             ))
           )}
         </Box>
+      </Box>
+
+      <Box sx={{ mb: 2 }}>
+        <ActivityFeedWidget rows={data.activityFeed} />
       </Box>
 
       {!isTech && (

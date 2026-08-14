@@ -42,6 +42,7 @@ export async function POST(req: Request) {
           userId: auth.session.user.id,
           action: `Created user account for ${created.name}`,
           refNo: created.username,
+          sensitive: true,
         },
       });
       return created;

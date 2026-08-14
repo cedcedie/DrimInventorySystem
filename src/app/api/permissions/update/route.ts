@@ -67,6 +67,7 @@ export async function POST(req: Request) {
         userId: auth.session.user.id,
         action: `Set ${roleMeta.label} role's ${module} permissions — ${grants}`,
         refNo: roleMeta.name,
+        sensitive: true,
       },
     });
 

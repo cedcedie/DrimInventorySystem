@@ -2,11 +2,14 @@ import { prisma } from "@/lib/prisma";
 
 type NotifyInput = {
   userId: string;
-  type: "mrf_filed" | "mrf_fulfilled" | "mrf_closed" | "low_stock";
+  type: "mrf_filed" | "mrf_fulfilled" | "mrf_closed" | "low_stock" | "manual";
   title: string;
   body: string;
   href: string;
   refNo?: string;
+  /** Set only for manually-composed notifications — who sent it. Undefined
+   * for every automatic, event-triggered notification. */
+  senderUserId?: string;
 };
 
 /** Fan-out helpers — durable in Neon so every Vercel instance / user sees the same inbox. */
@@ -20,8 +23,31 @@ export async function createNotifications(inputs: NotifyInput[]) {
       body: n.body,
       href: n.href,
       refNo: n.refNo ?? null,
+      senderUserId: n.senderUserId ?? null,
     })),
   });
+}
+
+/** Manually-composed notification, sent by an Owner/Admin to one or more
+ * specific users or role-groups (resolved to userIds by the caller). */
+export async function sendManualNotification(opts: {
+  recipientUserIds: string[];
+  senderUserId: string;
+  title: string;
+  body: string;
+}) {
+  await createNotifications(
+    opts.recipientUserIds
+      .filter((id) => id !== opts.senderUserId) // sending to yourself is a no-op
+      .map((userId) => ({
+        userId,
+        type: "manual" as const,
+        title: opts.title,
+        body: opts.body,
+        href: "/dashboard",
+        senderUserId: opts.senderUserId,
+      }))
+  );
 }
 
 /** Active warehouse-side accounts (not technicians). */

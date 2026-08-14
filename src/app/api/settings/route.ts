@@ -39,6 +39,7 @@ export async function PATCH(req: Request) {
         userId: auth.session.user.id,
         action: `Updated company profile — ${name}`,
         refNo: "SETTINGS",
+        sensitive: true,
       },
     });
   });

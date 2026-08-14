@@ -8,6 +8,7 @@ export type CacheTag =
   | "technicians"
   | "users"
   | "activity"
+  | "activity-feed"
   | "stock-in"
   | "stock-out"
   | "mrf"
@@ -16,12 +17,13 @@ export type CacheTag =
   | "permissions"
   | "purchase-orders";
 
-/** Every mutation writes an ActivityLog row, so "activity" + "dashboard"
- * (recent transactions feed) are revalidated alongside whichever module's
- * own data changed. Extra dynamic tags (e.g. a per-technician MRF cache key)
- * can be passed via extraTags. */
+/** Every mutation writes an ActivityLog row, so "activity" (full audit log),
+ * "activity-feed" (system-wide feed), and "dashboard" (recent transactions +
+ * feed widget) are revalidated alongside whichever module's own data
+ * changed. Extra dynamic tags (e.g. a per-technician MRF cache key) can be
+ * passed via extraTags. */
 export function revalidateAfterMutation(tags: CacheTag[], extraTags: string[] = []) {
-  const unique = new Set<string>([...tags, ...extraTags, "activity", "dashboard"]);
+  const unique = new Set<string>([...tags, ...extraTags, "activity", "activity-feed", "dashboard"]);
   for (const tag of unique) revalidateTag(tag);
 }
 

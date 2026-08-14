@@ -26,6 +26,7 @@ export async function GET() {
         refNo: true,
         readAt: true,
         createdAt: true,
+        sender: { select: { name: true } },
       },
     }),
   ]);
@@ -33,7 +34,13 @@ export async function GET() {
   return NextResponse.json({
     unreadCount,
     items: rows.map((n) => ({
-      ...n,
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      body: n.body,
+      href: n.href,
+      refNo: n.refNo,
+      senderName: n.sender?.name ?? null,
       createdAt: n.createdAt.toISOString(),
       readAt: n.readAt?.toISOString() ?? null,
     })),

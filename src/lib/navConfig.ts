@@ -3,7 +3,10 @@ import type { Role } from "@/generated/prisma";
 export const NAV_GROUPS = [
   {
     label: "Main",
-    items: [{ segment: "dashboard", label: "Dashboard" }],
+    items: [
+      { segment: "dashboard", label: "Dashboard" },
+      { segment: "activity-feed", label: "Activity Feed" },
+    ],
   },
   {
     label: "Inventory",
@@ -39,6 +42,7 @@ export const NAV_GROUPS = [
 
 export const SCREEN_TITLES: Record<string, string> = {
   dashboard: "Dashboard",
+  "activity-feed": "Activity Feed",
   inventory: "Inventory",
   products: "Products/Materials",
   suppliers: "Suppliers",
@@ -56,6 +60,7 @@ export const SCREEN_TITLES: Record<string, string> = {
 
 export const SCREEN_SUBTITLES: Record<string, string> = {
   dashboard: "Live overview of stock movement and alerts",
+  "activity-feed": "What's happening across DRIM, live",
   inventory: "Stock on hand by product and category",
   products: "Master product catalog",
   suppliers: "Accredited supplier registry",

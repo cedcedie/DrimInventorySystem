@@ -165,3 +165,12 @@ export const reportExportSchema = z.object({
   to: z.string().min(1, "End date is required"),
   format: z.enum(["pdf", "excel"], { message: "A valid format is required" }).default("pdf"),
 });
+
+export const manualNotificationSchema = z.object({
+  title: name("Title", 120),
+  body: z.string().trim().min(1, "Message is required").max(1000, "Message is too long"),
+  // Individually-picked users and/or whole roles — resolved and merged
+  // server-side into a deduplicated recipient list.
+  userIds: z.array(id).default([]),
+  roles: z.array(z.enum(["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"])).default([]),
+});

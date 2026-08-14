@@ -62,6 +62,7 @@ export async function POST(req: Request) {
           userId: auth.session.user.id,
           action: `Cleared ${user.username}'s ${module} permission override (back to role default)`,
           refNo: user.username,
+          sensitive: true,
         },
       });
     } else {
@@ -79,6 +80,7 @@ export async function POST(req: Request) {
           userId: auth.session.user.id,
           action: `Overrode ${user.username}'s ${module} permissions — ${grants}`,
           refNo: user.username,
+          sensitive: true,
         },
       });
     }

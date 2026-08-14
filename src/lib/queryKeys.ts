@@ -20,4 +20,5 @@ export const queryKeys = {
   notifications: ["notifications"] as const,
   myPermissions: ["me-permissions"] as const,
   purchaseOrders: (params: { page?: number }) => ["purchase-orders", params] as const,
+  activityFeed: (params: { page?: number }) => ["activity-feed", params] as const,
 };

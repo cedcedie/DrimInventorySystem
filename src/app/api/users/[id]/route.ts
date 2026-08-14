@@ -45,6 +45,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           userId: auth.session.user.id,
           action: `Updated account ${user.username} — ${user.role}, ${user.status}`,
           refNo: user.username,
+          sensitive: true,
         },
       });
       return user;

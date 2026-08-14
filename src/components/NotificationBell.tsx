@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import { Box, ButtonBase, Typography, Popover } from "@mui/material";
 import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
 import Link from "next/link";
@@ -12,6 +13,7 @@ import { patchJson } from "@/lib/mutate";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDateTime } from "@/lib/format";
 import { liveNotifications } from "@/lib/liveQuery";
+import { SendNotificationModal } from "@/components/modals/SendNotificationModal";
 
 type NotificationsPayload = {
   unreadCount: number;
@@ -24,6 +26,7 @@ type NotificationsPayload = {
     refNo: string | null;
     readAt: string | null;
     createdAt: string;
+    senderName: string | null;
   }>;
 };
 
@@ -35,7 +38,10 @@ export function NotificationBell({
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const canSend = session?.user?.role === "OWNER" || session?.user?.role === "ADMIN";
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [composeOpen, setComposeOpen] = useState(false);
 
   const { data } = useQuery({
     queryKey: queryKeys.notifications,
@@ -116,14 +122,27 @@ export function NotificationBell({
           }}
         >
           <Typography sx={{ fontSize: 13, fontWeight: 800 }}>Notifications</Typography>
-          {unread > 0 && (
-            <ButtonBase
-              onClick={() => markRead.mutate({ action: "markAllRead" })}
-              sx={{ fontSize: 11.5, fontWeight: 700, color: ACCENT }}
-            >
-              Mark all read
-            </ButtonBase>
-          )}
+          <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.25 }}>
+            {canSend && (
+              <ButtonBase
+                onClick={() => {
+                  setComposeOpen(true);
+                  setAnchor(null);
+                }}
+                sx={{ fontSize: 11.5, fontWeight: 700, color: ACCENT }}
+              >
+                Send
+              </ButtonBase>
+            )}
+            {unread > 0 && (
+              <ButtonBase
+                onClick={() => markRead.mutate({ action: "markAllRead" })}
+                sx={{ fontSize: 11.5, fontWeight: 700, color: ACCENT }}
+              >
+                Mark all read
+              </ButtonBase>
+            )}
+          </Box>
         </Box>
 
         <Box sx={{ maxHeight: 380, overflowY: "auto" }}>
@@ -156,6 +175,11 @@ export function NotificationBell({
                 <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{n.title}</Typography>
                 <Typography sx={{ fontSize: 12.5, color: t.text2, mt: 0.25 }}>{n.body}</Typography>
                 <Typography sx={{ fontSize: 11, color: t.muted2, mt: 0.5 }}>
+                  {n.senderName && (
+                    <Box component="span" sx={{ fontWeight: 600, color: ACCENT }}>
+                      From {n.senderName} ·{" "}
+                    </Box>
+                  )}
                   {formatDateTime(new Date(n.createdAt))}
                 </Typography>
               </Box>
@@ -163,6 +187,8 @@ export function NotificationBell({
           )}
         </Box>
       </Popover>
+
+      {canSend && <SendNotificationModal open={composeOpen} onClose={() => setComposeOpen(false)} />}
     </>
   );
 }

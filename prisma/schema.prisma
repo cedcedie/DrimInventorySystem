@@ -62,6 +62,7 @@ model User {
   technician          Technician?
   permissions         Permission[] // NEW: Direct permissions
   notifications       Notification[]
+  sentNotifications   Notification[]    @relation("NotificationSender")
   purchaseOrders      PurchaseOrder[]
   createdAt           DateTime          @default(now())
 }
@@ -343,25 +344,35 @@ model ActivityLog {
   user      User     @relation(fields: [userId], references: [id])
   action    String // "Recorded Stock In — 24 × Galvanized Sheet 4x8"
   refNo     String // SI-0442 / SO-0290 / MRF-118 / RPT-088 / product code
+  // NEW: true for account/permission/company-config changes — kept out of the
+  // system-wide activity feed (everyone) and only shown on the full admin
+  // audit log (Owner/Admin, unchanged/unfiltered as before this column existed).
+  sensitive Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+  @@index([sensitive, createdAt])
 }
 
 /**
  * In-app inbox — polled by clients; works for multi-user Vercel + Neon.
  */
 model Notification {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String // mrf_filed | mrf_fulfilled | mrf_closed
-  title     String
-  body      String
-  href      String
-  refNo     String?
-  readAt    DateTime?
-  createdAt DateTime  @default(now())
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String // mrf_filed | mrf_fulfilled | mrf_closed | low_stock | manual
+  title        String
+  body         String
+  href         String
+  refNo        String?
+  readAt       DateTime?
+  createdAt    DateTime  @default(now())
+  // NEW: set only for manually-sent notifications (type "manual") — who sent
+  // it, shown to the recipient as "from <name>". Null for every automatic,
+  // event-triggered notification (MRF filed, low stock, etc).
+  senderUserId String?
+  sender       User?     @relation("NotificationSender", fields: [senderUserId], references: [id], onDelete: SetNull)
 
   @@index([userId, readAt, createdAt])
   @@index([userId, createdAt])

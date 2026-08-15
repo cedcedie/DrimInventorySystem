@@ -169,6 +169,7 @@ export function SendNotificationModal({
             Or pick specific people
           </Typography>
           <Box
+            className="scroll-hidden"
             sx={{
               maxHeight: 180,
               overflowY: "auto",

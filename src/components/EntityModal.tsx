@@ -44,6 +44,13 @@ export function EntityModal({
           sx: {
             width,
             maxWidth: "92vw",
+            // Caps the dialog against the viewport instead of letting long
+            // content (a big item cart, extra fields, a validation alert)
+            // push it taller than the screen with nowhere for the extra
+            // height to go — the body below scrolls internally instead.
+            maxHeight: "88vh",
+            display: "flex",
+            flexDirection: "column",
             bgcolor: t.surface,
             borderRadius: "12px",
             border: `1px solid ${t.line}`,
@@ -65,6 +72,7 @@ export function EntityModal({
           px: 2.25,
           borderBottom: "1px solid",
           borderColor: t.line,
+          flexShrink: 0,
         }}
       >
         {title}
@@ -72,7 +80,9 @@ export function EntityModal({
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
-      {children}
+      <Box className="scroll-hidden" sx={{ overflowY: "auto", minHeight: 0 }}>
+        {children}
+      </Box>
     </Dialog>
   );
 }

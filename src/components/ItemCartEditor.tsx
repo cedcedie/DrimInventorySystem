@@ -210,7 +210,7 @@ export function ItemCartEditor({
               Total: {totalItems} items
             </Typography>
           </Box>
-          <Box sx={{ maxHeight: 280, overflowY: "auto" }}>
+          <Box className="scroll-hidden" sx={{ maxHeight: 280, overflowY: "auto" }}>
             {items.map((item, index) => (
               <Box
                 key={index}

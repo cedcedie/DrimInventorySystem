@@ -3,17 +3,7 @@
 import { useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import {
-  Box,
-  ButtonBase,
-  Checkbox,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  IconButton,
-  Typography,
-} from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import { Box, ButtonBase, Checkbox, CircularProgress, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDateTime } from "@/lib/format";
@@ -22,6 +12,7 @@ import { StatusChip } from "@/components/StatusChip";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
 import { ROLE_LABELS } from "@/lib/navConfig";
+import { EntityModal } from "@/components/EntityModal";
 import { UserModal } from "@/components/modals/UserModal";
 import { EditUserModal, type EditableUser } from "@/components/modals/EditUserModal";
 import { SendNotificationModal } from "@/components/modals/SendNotificationModal";
@@ -210,36 +201,12 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
         </TableShell>
       )}
 
-      <Dialog
+      <EntityModal
         open={!!selectedUser}
         onClose={() => setSelectedUser(null)}
-        maxWidth={false}
-        aria-labelledby="user-history-modal-title"
-        slotProps={{ paper: { sx: { width: 660, maxWidth: "92vw", bgcolor: t.surface } } }}
+        title={`Activity History — ${selectedUser?.name ?? ""}`}
+        width={660}
       >
-        <DialogTitle
-          id="user-history-modal-title"
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            fontSize: "14.5px",
-            fontWeight: 700,
-            py: 1.75,
-            px: 2.25,
-            borderBottom: "1px solid",
-            borderColor: t.line,
-          }}
-        >
-          Activity History — {selectedUser?.name}
-          <IconButton
-            aria-label="Close dialog"
-            onClick={() => setSelectedUser(null)}
-            size="small"
-            sx={{ ml: "auto", color: t.muted2 }}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
         <Box sx={{ pb: 0.75 }}>
           <TableHeaderRow columns={HIST_COLS} headers={["Date & Time", "Action", "Reference"]} />
           {historyLoading ? (
@@ -263,7 +230,7 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
             </>
           )}
         </Box>
-      </Dialog>
+      </EntityModal>
 
       {canCreate && <UserModal open={addUserOpen} onClose={() => setAddUserOpen(false)} />}
       {canEdit && <EditUserModal user={editingUser} onClose={() => setEditingUser(null)} />}

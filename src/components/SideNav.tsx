@@ -115,7 +115,7 @@ export function SideNav({
   const navContent = (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <Logo />
-      <Box sx={{ flex: 1, overflowY: "auto", px: 1.5, pb: 1 }}>
+      <Box className="scroll-hidden" sx={{ flex: 1, overflowY: "auto", px: 1.5, pb: 1 }}>
         {NAV_GROUPS.map((group) => {
           const items = group.items.filter((item) => canShowSegment(item.segment));
           if (!items.length) return null;

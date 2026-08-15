@@ -145,7 +145,7 @@ export function NotificationBell({
           </Box>
         </Box>
 
-        <Box sx={{ maxHeight: 380, overflowY: "auto" }}>
+        <Box className="scroll-hidden" sx={{ maxHeight: 380, overflowY: "auto" }}>
           {(data?.items.length ?? 0) === 0 ? (
             <Typography sx={{ p: 2, fontSize: 13, color: t.muted }}>
               No notifications yet. New MRFs and releases will show up here.

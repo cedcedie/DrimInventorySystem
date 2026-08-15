@@ -53,7 +53,7 @@ export function ActivityFeedWidget({ rows }: { rows: ActivityFeedRow[] }) {
       {rows.length === 0 ? (
         <EmptyState message="Nothing recorded yet — actions across the system will show up here." />
       ) : (
-        <Box sx={{ maxHeight: 320, overflowY: "auto" }}>
+        <Box className="scroll-hidden" sx={{ maxHeight: 320, overflowY: "auto" }}>
           {rows.map((row, i) => (
             <Box
               key={row.id}

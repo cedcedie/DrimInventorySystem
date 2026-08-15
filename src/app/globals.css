@@ -7,3 +7,14 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* Scrollable regions that stay scrollable (wheel, trackpad, keyboard, drag)
+ * but hide the visible scrollbar track/thumb — used on modal bodies, the
+ * sidebar nav, and other panels where a bar competes with a tight layout. */
+.scroll-hidden {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge/IE */
+}
+.scroll-hidden::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, new Edge */
+}

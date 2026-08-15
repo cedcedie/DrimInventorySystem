@@ -2,7 +2,15 @@ import { prisma } from "@/lib/prisma";
 
 type NotifyInput = {
   userId: string;
-  type: "mrf_filed" | "mrf_fulfilled" | "mrf_closed" | "low_stock" | "manual";
+  type:
+    | "mrf_filed"
+    | "mrf_fulfilled"
+    | "mrf_closed"
+    | "low_stock"
+    | "manual"
+    | "pr_filed"
+    | "pr_approved"
+    | "pr_rejected";
   title: string;
   body: string;
   href: string;
@@ -108,6 +116,63 @@ export async function notifyLowStock(opts: {
       refNo: undefined,
     }))
   );
+}
+
+/** Active Owner/Admin accounts — the only roles that decide a PR. */
+export async function decisionMakerIds(excludeUserId?: string): Promise<string[]> {
+  const users = await prisma.user.findMany({
+    where: {
+      status: "ACTIVE",
+      role: { in: ["OWNER", "ADMIN"] },
+      ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+    },
+    select: { id: true },
+  });
+  return users.map((u) => u.id);
+}
+
+export async function notifyOwnersPrFiled(opts: {
+  prRefNo: string;
+  itemSummary: string;
+  requesterName: string;
+  excludeUserId?: string;
+}) {
+  const ids = await decisionMakerIds(opts.excludeUserId);
+  await createNotifications(
+    ids.map((userId) => ({
+      userId,
+      type: "pr_filed" as const,
+      title: `New Purchase Request ${opts.prRefNo}`,
+      body: `${opts.requesterName} requested ${opts.itemSummary}`,
+      href: "/purchaseRequests",
+      refNo: opts.prRefNo,
+    }))
+  );
+}
+
+export async function notifyRequesterPrDecided(opts: {
+  requesterUserId: string;
+  decision: "approved" | "rejected";
+  prRefNo: string;
+  poRefNo?: string;
+  reason?: string;
+}) {
+  await createNotifications([
+    {
+      userId: opts.requesterUserId,
+      type: opts.decision === "approved" ? ("pr_approved" as const) : ("pr_rejected" as const),
+      title:
+        opts.decision === "approved"
+          ? `Purchase Request ${opts.prRefNo} approved`
+          : `Purchase Request ${opts.prRefNo} rejected`,
+      body:
+        opts.decision === "approved"
+          ? `Converted to Purchase Order ${opts.poRefNo ?? ""}.`.trim()
+          : opts.reason ?? "No reason given.",
+      href: "/purchaseRequests",
+      refNo: opts.prRefNo,
+    },
+  ]);
 }
 
 export async function notifyTechMrfUpdate(opts: {

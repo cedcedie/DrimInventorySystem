@@ -6,7 +6,7 @@ import { Box, ButtonBase, Typography, Alert } from "@mui/material";
 import { EntityModal } from "@/components/EntityModal";
 import { StatusChip } from "@/components/StatusChip";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { lightTokens, darkTokens, ACCENT, motion } from "@/theme/tokens";
 import { fetchJson } from "@/lib/api";
 import { patchJson, postJson } from "@/lib/mutate";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -193,7 +193,7 @@ export function MrfDetailModal({
 
             <Box>
               <Label>Line items</Label>
-              <Box sx={{ border: "1px solid", borderColor: t.line, borderRadius: "4px", overflow: "hidden" }}>
+              <Box sx={{ border: "1px solid", borderColor: t.line, borderRadius: "8px", overflow: "hidden" }}>
                 {data.items.map((item, i) => (
                   <Box
                     key={item.id}
@@ -210,7 +210,7 @@ export function MrfDetailModal({
                   >
                     <Box>
                       <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{item.productName}</Typography>
-                      <Typography sx={{ fontSize: 11, color: t.muted2, fontFamily: "monospace" }}>
+                      <Typography sx={{ fontSize: 11, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
                         {item.productCode}
                       </Typography>
                     </Box>
@@ -247,7 +247,10 @@ export function MrfDetailModal({
                           py: 0.5,
                           border: "1px solid",
                           borderColor: ACCENT,
+                          borderRadius: "8px",
                           justifySelf: "end",
+                          transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
+                          "&:hover": { bgcolor: ACCENT, color: "#fff" },
                         }}
                       >
                         Fulfill
@@ -279,9 +282,10 @@ export function MrfDetailModal({
                         bgcolor: t.bg,
                         border: "1px solid",
                         borderColor: t.line2,
+                        borderRadius: "8px",
                       }}
                     >
-                      <Box component="span" sx={{ fontFamily: "monospace", fontWeight: 700, color: ACCENT }}>
+                      <Box component="span" sx={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, color: ACCENT }}>
                         {so.refNo}
                       </Box>
                       <span>

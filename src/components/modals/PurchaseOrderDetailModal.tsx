@@ -83,7 +83,7 @@ export function PurchaseOrderDetailModal({
 
             <Box>
               <Label>Line items</Label>
-              <Box sx={{ border: "1px solid", borderColor: t.line, borderRadius: "4px", overflow: "hidden" }}>
+              <Box sx={{ border: "1px solid", borderColor: t.line, borderRadius: "8px", overflow: "hidden" }}>
                 {data.items.map((item, i) => (
                   <Box
                     key={item.id}
@@ -100,7 +100,7 @@ export function PurchaseOrderDetailModal({
                   >
                     <Box>
                       <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{item.productName}</Typography>
-                      <Typography sx={{ fontSize: 11, color: t.muted2, fontFamily: "monospace" }}>
+                      <Typography sx={{ fontSize: 11, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
                         {item.productCode}
                       </Typography>
                     </Box>
@@ -135,9 +135,10 @@ export function PurchaseOrderDetailModal({
                         bgcolor: t.bg,
                         border: "1px solid",
                         borderColor: t.line2,
+                        borderRadius: "8px",
                       }}
                     >
-                      <Box component="span" sx={{ fontFamily: "monospace", fontWeight: 700, color: ACCENT }}>
+                      <Box component="span" sx={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, color: ACCENT }}>
                         {d.refNo}
                       </Box>
                       <span>{d.qty} total qty</span>

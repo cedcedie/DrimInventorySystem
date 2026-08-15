@@ -142,7 +142,7 @@ export function StockOutModal({
           {selectedMrfItem && (
             <>
               <FormField label="Request # (MRF)">
-                <Box sx={{ fontSize: 12.5, py: 1, color: ACCENT, fontFamily: "monospace", fontWeight: 600 }}>
+                <Box sx={{ fontSize: 12.5, py: 1, color: ACCENT, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600 }}>
                   {selectedMrfItem.mrfRefNo}
                 </Box>
               </FormField>

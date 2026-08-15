@@ -175,7 +175,7 @@ export function SendNotificationModal({
               overflowY: "auto",
               border: "1px solid",
               borderColor: t.line,
-              borderRadius: "4px",
+              borderRadius: "8px",
             }}
           >
             {options?.map((u) => (

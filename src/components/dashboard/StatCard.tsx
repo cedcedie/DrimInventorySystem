@@ -2,77 +2,94 @@
 
 import { Box, Typography } from "@mui/material";
 import type { ReactNode } from "react";
+import { useColorMode } from "@/theme/ThemeRegistry";
+import { lightTokens, darkTokens, lightChips, darkChips, motion } from "@/theme/tokens";
+import type { ChipTone } from "@/components/StatusChip";
 
 /**
- * DreamsPOS-style solid summary card: colored background, white text,
- * icon in a translucent rounded square on the left.
+ * Dashboard KPI card: white surface, 34px tinted icon chip (tone bg + tone
+ * text), label 13/700 muted, value 28px mono 600, optional 12px muted-2 sub.
  */
 export function StatCard({
   label,
   value,
   sub,
-  color = "#FE9F43",
+  tone = "warn",
   icon,
-  span = 1,
+  index = 0,
 }: {
   label: string;
   value: string | number;
   sub?: string;
-  /** Solid background color of the card. */
-  color?: string;
+  /** Status tone driving the icon chip's soft tint — reuses the same
+   * success/warn/danger/info/neutral scale as StatusChip. */
+  tone?: ChipTone;
   icon?: ReactNode;
-  span?: 1 | 2;
+  /** Position in the KPI row — staggers the entrance animation 50ms each. */
+  index?: number;
 }) {
+  const { mode } = useColorMode();
+  const t = mode === "dark" ? darkTokens : lightTokens;
+  const chips = mode === "dark" ? darkChips : lightChips;
+  const [, chipBg, chipFg] = chips[tone];
+
   return (
     <Box
       sx={{
-        gridColumn: { xs: "span 1", sm: span === 2 ? "span 2" : "span 1" },
-        bgcolor: color,
-        color: "#fff",
-        borderRadius: "8px",
-        px: 2.25,
+        bgcolor: t.surface,
+        border: "1px solid",
+        borderColor: t.line,
+        borderRadius: "12px",
+        boxShadow: "0 1px 2px rgba(16,24,40,0.04)",
+        px: 2,
         py: 2,
         display: "flex",
-        alignItems: "center",
-        gap: 1.75,
+        flexDirection: "column",
+        gap: 1,
         minWidth: 0,
-        boxShadow: "0 4px 14px rgba(16, 24, 40, 0.08)",
+        animation: `drim-kpi-enter 240ms ${motion.easing.standard} both`,
+        animationDelay: `${index * 50}ms`,
+        "@keyframes drim-kpi-enter": {
+          from: { opacity: 0, transform: "translateY(6px)" },
+          to: { opacity: 1, transform: "translateY(0)" },
+        },
       }}
     >
-      {icon && (
-        <Box
-          sx={{
-            width: 46,
-            height: 46,
-            borderRadius: "8px",
-            bgcolor: "rgba(255,255,255,0.2)",
-            display: "grid",
-            placeItems: "center",
-            flexShrink: 0,
-            "& svg": { fontSize: 24, color: "#fff" },
-          }}
-        >
-          {icon}
-        </Box>
-      )}
-      <Box sx={{ minWidth: 0 }}>
-        <Typography
-          sx={{
-            fontSize: 12.5,
-            fontWeight: 600,
-            color: "rgba(255,255,255,0.85)",
-            lineHeight: 1.3,
-          }}
-        >
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, color: t.muted, lineHeight: 1.3 }}>
           {label}
         </Typography>
-        <Typography sx={{ fontSize: 24, fontWeight: 800, lineHeight: 1.25 }}>{value}</Typography>
-        {sub && (
-          <Typography sx={{ fontSize: 11.5, color: "rgba(255,255,255,0.75)", lineHeight: 1.3 }}>
-            {sub}
-          </Typography>
+        {icon && (
+          <Box
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: "8px",
+              bgcolor: chipBg,
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
+              "& svg": { fontSize: 18, color: chipFg },
+            }}
+          >
+            {icon}
+          </Box>
         )}
       </Box>
+      <Typography
+        sx={{
+          fontSize: 28,
+          fontWeight: 600,
+          lineHeight: 1.15,
+          color: t.text,
+          fontFamily: "'IBM Plex Mono', monospace",
+        }}
+      >
+        {value}
+      </Typography>
+      {sub && (
+        <Typography sx={{ fontSize: 12, color: t.muted2, lineHeight: 1.3 }}>{sub}</Typography>
+      )}
     </Box>
   );
 }

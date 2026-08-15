@@ -12,7 +12,12 @@ import {
   Legend,
 } from "recharts";
 import { useTheme } from "@mui/material/styles";
-import { ACCENT, KPI_COLORS } from "@/theme/tokens";
+import { ACCENT } from "@/theme/tokens";
+
+// Received (Stock In) = success green, released (Stock Out) = brand orange,
+// per the README's Dashboard chart spec.
+const RECEIVED_COLOR = "#12805C";
+const RELEASED_COLOR = ACCENT;
 
 export function StockMovementChart({
   data,
@@ -56,8 +61,8 @@ export function StockMovementChart({
             wrapperStyle={{ fontSize: 12 }}
             formatter={(value) => <span style={{ color: t.muted }}>{value}</span>}
           />
-          <Bar dataKey="stockIn" name="Stock In" fill={ACCENT} radius={[4, 4, 0, 0]} />
-          <Bar dataKey="stockOut" name="Stock Out" fill={KPI_COLORS.navy} radius={[4, 4, 0, 0]} />
+          <Bar dataKey="stockIn" name="Received" fill={RECEIVED_COLOR} radius={[4, 4, 0, 0]} />
+          <Bar dataKey="stockOut" name="Released" fill={RELEASED_COLOR} radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </Box>

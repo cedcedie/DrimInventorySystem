@@ -15,7 +15,7 @@ import PendingActionsOutlinedIcon from "@mui/icons-material/PendingActionsOutlin
 import ProductionQuantityLimitsOutlinedIcon from "@mui/icons-material/ProductionQuantityLimitsOutlined";
 import TrendingDownOutlinedIcon from "@mui/icons-material/TrendingDownOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
-import { KPI_COLORS, ACCENT } from "@/theme/tokens";
+import { ACCENT } from "@/theme/tokens";
 import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
 import { EmptyState } from "@/components/EmptyState";
@@ -74,7 +74,8 @@ export function DashboardScreen({
             label="Pending MRFs"
             value={data.kpis.pendingMrfCount}
             sub={isTech ? "your open requests" : "awaiting fulfillment"}
-            color={KPI_COLORS.orange}
+            tone="warn"
+            index={0}
             icon={<PendingActionsOutlinedIcon />}
           />
           {!isTech && (
@@ -83,21 +84,24 @@ export function DashboardScreen({
                 label="Out of Stock"
                 value={data.kpis.outOfStockCount}
                 sub="needs replenishment"
-                color={KPI_COLORS.navy}
+                tone="danger"
+                index={1}
                 icon={<ProductionQuantityLimitsOutlinedIcon />}
               />
               <StatCard
                 label="Low Stock"
                 value={data.kpis.lowStockCount}
                 sub="at or below min. level"
-                color={KPI_COLORS.teal}
+                tone="info"
+                index={2}
                 icon={<TrendingDownOutlinedIcon />}
               />
               <StatCard
                 label="Products Tracked"
                 value={data.kpis.totalProducts}
                 sub={`${data.kpis.categoryCount} categories`}
-                color={KPI_COLORS.blue}
+                tone="success"
+                index={3}
                 icon={<Inventory2OutlinedIcon />}
               />
             </>
@@ -114,7 +118,7 @@ export function DashboardScreen({
               bgcolor: t.surface,
               border: "1px solid",
               borderColor: t.line,
-              borderRadius: "8px",
+              borderRadius: "12px",
               p: 2,
             }}
           >
@@ -138,7 +142,7 @@ export function DashboardScreen({
             bgcolor: t.surface,
             border: "1px solid",
             borderColor: t.line,
-            borderRadius: "8px",
+            borderRadius: "12px",
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -186,7 +190,7 @@ export function DashboardScreen({
                 }}
               >
                 <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
-                  <Typography sx={{ fontSize: 13, fontWeight: 800, color: ACCENT, fontFamily: "monospace" }}>
+                  <Typography sx={{ fontSize: 13, fontWeight: 800, color: ACCENT, fontFamily: "'IBM Plex Mono', monospace" }}>
                     {m.refNo}
                   </Typography>
                   <StatusChip label={m.status === "PARTIAL" ? "Partial" : "Pending"} />

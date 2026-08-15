@@ -8,7 +8,7 @@ import AddIcon from "@mui/icons-material/Add";
 import Link from "next/link";
 import type { Role } from "@/generated/prisma";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT, ACCENT_HOVER, NAVY } from "@/theme/tokens";
+import { lightTokens, darkTokens, ACCENT, ACCENT_HOVER, NAVY, motion } from "@/theme/tokens";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import { SIDENAV_WIDTH } from "@/components/SideNav";
 import { useCan } from "@/components/PermissionsProvider";
@@ -30,12 +30,16 @@ export function ChromeBar({
   role,
   activeSegment,
   onMenuClick,
+  railWidth,
 }: {
   userName: string;
   role: Role;
   activeSegment: string;
   /** Opens the mobile nav drawer; the button is hidden at `md` and up. */
   onMenuClick?: () => void;
+  /** Current desktop sidebar width (collapses 252→76) — keeps the bar's left
+   * offset in sync so it never overlaps or gaps against the rail. */
+  railWidth?: number;
 }) {
   const { mode, toggleMode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
@@ -51,6 +55,7 @@ export function ChromeBar({
     borderColor: t.line,
     color: t.muted,
     bgcolor: t.surface,
+    transition: `border-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
     "&:hover": { borderColor: ACCENT, color: ACCENT },
   } as const;
 
@@ -59,7 +64,7 @@ export function ChromeBar({
       sx={{
         position: "fixed",
         top: 0,
-        left: { xs: 0, md: `${SIDENAV_WIDTH}px` },
+        left: { xs: 0, md: `${railWidth ?? SIDENAV_WIDTH}px` },
         right: 0,
         height: 64,
         bgcolor: t.surface,
@@ -70,6 +75,7 @@ export function ChromeBar({
         gap: 1.5,
         px: 2.5,
         zIndex: 1201,
+        transition: `left ${motion.duration.sidebar}ms ${motion.easing.standard}`,
       }}
     >
       <ButtonBase
@@ -106,7 +112,9 @@ export function ChromeBar({
               height: 38,
               fontSize: 13.5,
               fontWeight: 700,
+              transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
               "&:hover": { bgcolor: ACCENT_HOVER },
+              "&:active": { transform: "scale(0.98)" },
             }}
           >
             <AddIcon sx={{ fontSize: 17 }} />

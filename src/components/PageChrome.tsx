@@ -6,7 +6,7 @@ import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
 import GridOnOutlinedIcon from "@mui/icons-material/GridOnOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT, ACCENT_HOVER } from "@/theme/tokens";
+import { lightTokens, darkTokens, ACCENT, ACCENT_HOVER, motion } from "@/theme/tokens";
 
 /**
  * Shared list-page chrome: title + breadcrumb on the left,
@@ -42,7 +42,7 @@ export function PageChrome({
     borderColor: t.line,
     bgcolor: t.surface,
     color: t.muted,
-    transition: "border-color 0.15s ease, color 0.15s ease",
+    transition: `border-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
     "&:hover": { borderColor: ACCENT, color: ACCENT },
   } as const;
 
@@ -110,8 +110,9 @@ export function PageChrome({
               height: 38,
               fontSize: 13.5,
               fontWeight: 700,
-              transition: "background-color 0.15s ease",
+              transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
               "&:hover": { bgcolor: ACCENT_HOVER },
+              "&:active": { transform: "scale(0.98)" },
             }}
           >
             <AddIcon sx={{ fontSize: 17 }} />

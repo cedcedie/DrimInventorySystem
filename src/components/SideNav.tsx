@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Box, ButtonBase, Drawer, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, ButtonBase, Drawer, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
 import GridViewOutlinedIcon from "@mui/icons-material/GridViewOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import SellOutlinedIcon from "@mui/icons-material/SellOutlined";
@@ -17,6 +17,9 @@ import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettin
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import FirstPageOutlinedIcon from "@mui/icons-material/FirstPageOutlined";
+import LastPageOutlinedIcon from "@mui/icons-material/LastPageOutlined";
 import { signOut } from "next-auth/react";
 import type { Role } from "@/generated/prisma";
 import { MODULE_ACCESS } from "@/lib/rbac";
@@ -24,15 +27,17 @@ import { NAV_GROUPS, screenTitleForRole } from "@/lib/navConfig";
 import { isConfigurableModule } from "@/lib/permissionDefaults";
 import { usePermissions } from "@/components/PermissionsProvider";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT, ACCENT_SOFT } from "@/theme/tokens";
+import { lightTokens, darkTokens, ACCENT, ACCENT_SOFT, motion } from "@/theme/tokens";
 
 export const SIDENAV_WIDTH = 252;
+export const SIDENAV_WIDTH_COLLAPSED = 76;
 
 const SEGMENT_ICONS: Record<string, React.ElementType> = {
   dashboard: GridViewOutlinedIcon,
   inventory: Inventory2OutlinedIcon,
   products: SellOutlinedIcon,
   suppliers: LocalShippingOutlinedIcon,
+  purchaseOrders: ShoppingCartOutlinedIcon,
   adjustments: TuneOutlinedIcon,
   stock: SwapVertOutlinedIcon,
   technicians: EngineeringOutlinedIcon,
@@ -43,7 +48,7 @@ const SEGMENT_ICONS: Record<string, React.ElementType> = {
   settings: SettingsOutlinedIcon,
 };
 
-function Logo() {
+function Logo({ collapsed }: { collapsed: boolean }) {
   return (
     <Box
       component={Link}
@@ -52,7 +57,8 @@ function Logo() {
         display: "flex",
         alignItems: "center",
         gap: 1.25,
-        px: 2.5,
+        px: collapsed ? 0 : 2.5,
+        justifyContent: collapsed ? "center" : "flex-start",
         height: 64,
         flexShrink: 0,
         textDecoration: "none",
@@ -62,14 +68,16 @@ function Logo() {
         component="img"
         src="/images/drim-d-transparent.png"
         alt="DRIM"
-        sx={{ width: 36, height: 36 }}
+        sx={{ width: 32, height: 32, flexShrink: 0 }}
       />
-      <Typography sx={{ fontSize: 20, fontWeight: 800, color: "text.primary", letterSpacing: "-0.3px" }}>
-        DRIM{" "}
-        <Box component="span" sx={{ color: ACCENT }}>
-          IMS
-        </Box>
-      </Typography>
+      {!collapsed && (
+        <Typography sx={{ fontSize: 20, fontWeight: 800, color: "text.primary", letterSpacing: "-0.3px", whiteSpace: "nowrap" }}>
+          DRIM{" "}
+          <Box component="span" sx={{ color: ACCENT }}>
+            IMS
+          </Box>
+        </Typography>
+      )}
     </Box>
   );
 }
@@ -80,6 +88,9 @@ export function SideNav({
   accessSegments,
   mobileOpen = false,
   onMobileClose,
+  collapsed = false,
+  hydrated = true,
+  onToggleCollapsed,
 }: {
   role: Role;
   badges: Record<string, string>;
@@ -88,6 +99,13 @@ export function SideNav({
   /** Controls the temporary Drawer below the `md` breakpoint. */
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  /** Desktop-rail collapse state — owned by AppShell so ChromeBar/main canvas
+   * can react to the same value (width affects their offsets too). */
+  collapsed?: boolean;
+  /** False until the persisted collapse preference has been read from
+   * localStorage — avoids a layout flash/transition on first paint. */
+  hydrated?: boolean;
+  onToggleCollapsed?: () => void;
 }) {
   const access = accessSegments ?? MODULE_ACCESS[role] ?? [];
   const { permissions } = usePermissions();
@@ -112,36 +130,45 @@ export function SideNav({
     return access.includes(segment);
   };
 
+  // Collapse only applies to the fixed desktop rail — the mobile Drawer is
+  // always full-width regardless of this state.
+  const effectiveCollapsed = !isMobile && collapsed && hydrated;
+
   const navContent = (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Logo />
-      <Box className="scroll-hidden" sx={{ flex: 1, overflowY: "auto", px: 1.5, pb: 1 }}>
+      <Logo collapsed={effectiveCollapsed} />
+      <Box className="scroll-hidden" sx={{ flex: 1, overflowY: "auto", overflowX: "hidden", px: effectiveCollapsed ? 1 : 1.5, pb: 1 }}>
         {NAV_GROUPS.map((group) => {
           const items = group.items.filter((item) => canShowSegment(item.segment));
           if (!items.length) return null;
           return (
             <Box key={group.label} sx={{ mb: 0.5 }}>
-              <Typography
-                sx={{
-                  px: 1.25,
-                  pt: 2,
-                  pb: 0.75,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.8px",
-                  color: t.muted2,
-                }}
-              >
-                {group.label}
-              </Typography>
+              {effectiveCollapsed ? (
+                <Box sx={{ height: "1px", bgcolor: t.line, mx: 0.5, my: 1.25 }} />
+              ) : (
+                <Typography
+                  sx={{
+                    px: 1.25,
+                    pt: 2,
+                    pb: 0.75,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: t.muted2,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {group.label}
+                </Typography>
+              )}
               {items.map((item) => {
                 const active = item.segment === activeSegment;
                 const pending = pendingSegment === item.segment;
                 const label = screenTitleForRole(item.segment, role);
                 const badge = badges[item.segment] ?? "";
                 const Icon = SEGMENT_ICONS[item.segment] ?? GridViewOutlinedIcon;
-                return (
+                const row = (
                   <Box
                     key={item.segment}
                     component={Link}
@@ -152,11 +179,13 @@ export function SideNav({
                       if (item.segment !== activeSegment) setPendingSegment(item.segment);
                     }}
                     sx={{
+                      position: "relative",
                       display: "flex",
                       alignItems: "center",
+                      justifyContent: effectiveCollapsed ? "center" : "flex-start",
                       gap: 1.25,
                       textDecoration: "none",
-                      px: 1.25,
+                      px: effectiveCollapsed ? 0 : 1.25,
                       py: "9px",
                       mb: "2px",
                       borderRadius: "8px",
@@ -172,7 +201,7 @@ export function SideNav({
                         ? t.hover
                         : "transparent",
                       opacity: pending ? 0.7 : 1,
-                      transition: "background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease",
+                      transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}, opacity ${motion.duration.color}ms ${motion.easing.standard}`,
                       "&:hover": {
                         bgcolor: active ? (mode === "dark" ? t.rowSel : ACCENT_SOFT) : t.hover,
                         color: active ? ACCENT : t.text,
@@ -181,25 +210,54 @@ export function SideNav({
                         outline: `2px solid ${ACCENT}`,
                         outlineOffset: "-2px",
                       },
+                      // Active-item indicator — 3px rounded bar at the sidebar's left edge.
+                      "&::before": active
+                        ? {
+                            content: '""',
+                            position: "absolute",
+                            left: -6,
+                            top: 8,
+                            bottom: 8,
+                            width: 3,
+                            borderRadius: 999,
+                            bgcolor: ACCENT,
+                          }
+                        : undefined,
                     }}
                   >
-                    <Icon sx={{ fontSize: 19, color: active ? ACCENT : t.muted }} />
-                    <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {label}
-                    </Box>
-                    {badge && !pending && (
-                      <Box
-                        component="span"
-                        sx={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: active ? ACCENT : t.muted2,
-                        }}
-                      >
-                        {badge}
-                      </Box>
+                    <Icon sx={{ fontSize: 19, color: active ? ACCENT : t.muted, flexShrink: 0 }} />
+                    {!effectiveCollapsed && (
+                      <>
+                        <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {label}
+                        </Box>
+                        {badge && !pending && (
+                          <Box
+                            component="span"
+                            sx={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              fontFamily: "'IBM Plex Mono', monospace",
+                              color: active ? ACCENT : t.muted2,
+                              bgcolor: t.hover,
+                              borderRadius: 999,
+                              px: 0.75,
+                              py: "1px",
+                            }}
+                          >
+                            {badge}
+                          </Box>
+                        )}
+                      </>
                     )}
                   </Box>
+                );
+                return effectiveCollapsed ? (
+                  <Tooltip key={item.segment} title={label} placement="right">
+                    {row}
+                  </Tooltip>
+                ) : (
+                  row
                 );
               })}
             </Box>
@@ -207,17 +265,45 @@ export function SideNav({
         })}
       </Box>
 
+      {/* Collapse toggle */}
+      {!isMobile && (
+        <Box sx={{ px: effectiveCollapsed ? 1 : 1.5, py: 1, borderTop: "1px solid", borderColor: t.line }}>
+          <ButtonBase
+            onClick={onToggleCollapsed}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: effectiveCollapsed ? "center" : "flex-start",
+              gap: 1.25,
+              width: "100%",
+              px: effectiveCollapsed ? 0 : 1.25,
+              py: "9px",
+              borderRadius: "8px",
+              fontSize: 13,
+              fontWeight: 600,
+              color: t.muted,
+              "&:hover": { bgcolor: t.hover, color: t.text },
+            }}
+          >
+            {collapsed ? <LastPageOutlinedIcon sx={{ fontSize: 19 }} /> : <FirstPageOutlinedIcon sx={{ fontSize: 19 }} />}
+            {!effectiveCollapsed && "Collapse"}
+          </ButtonBase>
+        </Box>
+      )}
+
       {/* Logout pinned at bottom, matching the reference layout */}
-      <Box sx={{ px: 1.5, py: 1.5, borderTop: "1px solid", borderColor: t.line }}>
+      <Box sx={{ px: effectiveCollapsed ? 1 : 1.5, py: 1.5, borderTop: "1px solid", borderColor: t.line }}>
         <ButtonBase
           onClick={() => signOut({ callbackUrl: "/login" })}
+          aria-label="Logout"
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-start",
+            justifyContent: effectiveCollapsed ? "center" : "flex-start",
             gap: 1.25,
             width: "100%",
-            px: 1.25,
+            px: effectiveCollapsed ? 0 : 1.25,
             py: "9px",
             borderRadius: "8px",
             fontSize: 14,
@@ -227,7 +313,7 @@ export function SideNav({
           }}
         >
           <LogoutOutlinedIcon sx={{ fontSize: 19 }} />
-          Logout
+          {!effectiveCollapsed && "Logout"}
         </ButtonBase>
       </Box>
     </Box>
@@ -262,12 +348,14 @@ export function SideNav({
         position: "fixed",
         top: 0,
         left: 0,
-        width: SIDENAV_WIDTH,
+        width: effectiveCollapsed ? SIDENAV_WIDTH_COLLAPSED : SIDENAV_WIDTH,
         bottom: 0,
         bgcolor: t.surface,
         borderRight: "1px solid",
         borderColor: t.line,
         zIndex: 1202,
+        transition: hydrated ? `width ${motion.duration.sidebar}ms ${motion.easing.standard}` : undefined,
+        overflow: "hidden",
       }}
     >
       {navContent}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Box, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { lightTokens, darkTokens, ACCENT, motion } from "@/theme/tokens";
 import { fetchJson } from "@/lib/api";
 
 interface SearchHit {
@@ -68,13 +68,13 @@ export function GlobalSearch() {
           gap: 1,
           width: 340,
           maxWidth: "38vw",
-          height: 40,
+          height: 38,
           px: 1.5,
           borderRadius: "8px",
           border: "1px solid",
           borderColor: open ? ACCENT : t.line,
-          bgcolor: mode === "dark" ? t.bg2 : "#FAFBFE",
-          transition: "border-color 0.15s ease",
+          bgcolor: t.surface2,
+          transition: `border-color ${motion.duration.color}ms ${motion.easing.standard}`,
         }}
       >
         <SearchIcon sx={{ fontSize: 18, color: t.muted2 }} />
@@ -112,7 +112,7 @@ export function GlobalSearch() {
             border: "1px solid",
             borderColor: t.line,
             borderRadius: "8px",
-            boxShadow: "0 12px 32px rgba(16,24,40,0.12)",
+            boxShadow: "0 4px 12px rgba(16,24,40,0.10)",
             zIndex: 1300,
             overflow: "hidden",
           }}

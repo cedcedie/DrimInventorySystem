@@ -15,6 +15,7 @@ import { MultiItemMrfModal } from "@/components/modals/MultiItemMrfModal";
 import { MrfDetailModal } from "@/components/modals/MrfDetailModal";
 import type { MrfListData } from "@/lib/data/mrf";
 import { mrfStatusLabel } from "@/lib/mrfLifecycle";
+import { ACCENT_HOVER, motion } from "@/theme/tokens";
 
 const COLS = "100px 100px minmax(0,1.2fr) 90px minmax(0,1.2fr) 100px";
 const FILE_HIGHLIGHT_KEY = "drim-mrf-filed";
@@ -63,11 +64,14 @@ export function MrfScreen({
               border: "none",
               bgcolor: t.primary.main,
               color: "#fff",
-              borderRadius: "2px",
+              borderRadius: "8px",
               px: 1.625,
               py: 1,
               fontSize: 12,
               fontWeight: 600,
+              transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
+              "&:hover": { bgcolor: ACCENT_HOVER },
+              "&:active": { transform: "scale(0.98)" },
             }}
           >
             + File MRF
@@ -122,7 +126,17 @@ export function MrfScreen({
         )}
       </Box>
 
-      <Box sx={{ flex: "1 1 250px", minWidth: 250, bgcolor: t.surface, border: "1px solid", borderColor: t.line }}>
+      <Box
+        sx={{
+          flex: "1 1 250px",
+          minWidth: 250,
+          bgcolor: t.surface,
+          border: "1px solid",
+          borderColor: t.line,
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
+      >
         <Box sx={{ px: 1.75, py: 1.25, borderBottom: "1px solid", borderColor: t.line }}>
           <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>My Profile</Typography>
         </Box>

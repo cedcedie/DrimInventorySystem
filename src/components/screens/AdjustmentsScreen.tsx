@@ -46,7 +46,7 @@ export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustme
             <TableCell color={t.text2}>{formatDateTime(new Date(row.dt))}</TableCell>
             <TableCell>
               {row.product}
-              <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2, fontFamily: "monospace" }}>
+              <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
                 {row.code}
               </Box>
             </TableCell>

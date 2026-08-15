@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@/generated/prisma";
 import type { TechniciansData } from "@/lib/data/technicians";
+import { motion } from "@/theme/tokens";
 
 const COLS = "minmax(0,1.1fr) 110px minmax(0,1fr) minmax(0,1.4fr)";
 
@@ -153,7 +154,17 @@ export function TechniciansScreen({
           </TableShell>
         </Box>
 
-        <Box sx={{ flex: "1 1 250px", minWidth: 250, bgcolor: t.surface, border: "1px solid", borderColor: t.line }}>
+        <Box
+          sx={{
+            flex: "1 1 250px",
+            minWidth: 250,
+            bgcolor: t.surface,
+            border: "1px solid",
+            borderColor: t.line,
+            borderRadius: "12px",
+            overflow: "hidden",
+          }}
+        >
           <Box sx={{ px: 1.75, py: 1.25, borderBottom: "1px solid", borderColor: t.line }}>
             <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>Technician Profile</Typography>
           </Box>
@@ -192,8 +203,9 @@ export function TechniciansScreen({
                           py: 0.75,
                           border: "1px solid",
                           borderColor: t.line,
-                          borderRadius: "3px",
+                          borderRadius: "8px",
                           textAlign: "left",
+                          transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}`,
                           "&:hover": { bgcolor: t.line2 },
                         }}
                       >

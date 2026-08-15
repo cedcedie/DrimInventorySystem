@@ -16,7 +16,7 @@ import { postJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { usePermissions } from "@/components/PermissionsProvider";
 import { useTheme } from "@mui/material/styles";
-import { ACCENT, ACCENT_SOFT } from "@/theme/tokens";
+import { ACCENT, ACCENT_SOFT, motion } from "@/theme/tokens";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import type { Role } from "@/generated/prisma";
 
@@ -73,6 +73,30 @@ const PERMISSIONS = [
 
 const GRID = "minmax(150px, 200px) repeat(5, 1fr) 110px";
 const GRID_ROLE = "minmax(150px, 200px) repeat(5, 1fr)";
+
+// Permissions-matrix checkbox per the README spec: 18px box, radius 4,
+// 1.5px #98A2B3 border; checked = solid orange fill + white check mark;
+// hover border orange.
+function permCheckboxSx() {
+  return {
+    p: 0,
+    "& .MuiSvgIcon-root": {
+      width: 18,
+      height: 18,
+      borderRadius: "4px",
+      color: "transparent",
+      border: "1.5px solid #98A2B3",
+      boxSizing: "border-box",
+      transition: `border-color ${motion.duration.color}ms ${motion.easing.standard}, background-color ${motion.duration.color}ms ${motion.easing.standard}`,
+    },
+    "&:hover .MuiSvgIcon-root": { borderColor: ACCENT },
+    "&.Mui-checked .MuiSvgIcon-root": {
+      color: "#fff",
+      bgcolor: ACCENT,
+      borderColor: ACCENT,
+    },
+  } as const;
+}
 
 export function PermissionsScreen() {
   const t = useTheme().palette;
@@ -529,7 +553,7 @@ function UserMatrix({
                     slotProps={{
                       input: { "aria-label": `${user.name}: ${module.label} — ${perm.label}` },
                     }}
-                    sx={{ color: t.muted3, "&.Mui-checked": { color: ACCENT } }}
+                    sx={permCheckboxSx()}
                   />
                 </Box>
               ))}

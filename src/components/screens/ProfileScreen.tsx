@@ -11,6 +11,7 @@ import { TableSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import type { Role } from "@/generated/prisma";
+import { ACCENT_HOVER, motion } from "@/theme/tokens";
 
 type ProfileData = {
   id: string;
@@ -225,6 +226,8 @@ function Panel({
         bgcolor: t.surface,
         border: "1px solid",
         borderColor: t.line,
+        borderRadius: "12px",
+        overflow: "hidden",
       }}
     >
       <Box sx={{ px: 1.75, py: 1.25, borderBottom: "1px solid", borderColor: t.line }}>
@@ -285,12 +288,13 @@ function inputSx(t: Palette) {
   return {
     border: "1px solid",
     borderColor: t.border,
-    borderRadius: "2px",
+    borderRadius: "8px",
     px: 1.25,
     py: 1,
     fontSize: 12.5,
     mt: 0.5,
     bgcolor: t.surface,
+    transition: `border-color ${motion.duration.color}ms ${motion.easing.standard}`,
     "&.Mui-focused": { borderColor: t.primary.main },
   };
 }
@@ -302,11 +306,14 @@ function buttonSx(t: Palette, disabled: boolean) {
     bgcolor: t.primary.main,
     color: "#fff",
     opacity: disabled ? 0.5 : 1,
-    borderRadius: "2px",
+    borderRadius: "8px",
     px: 1.75,
     py: 1,
     fontSize: 12,
     fontWeight: 600,
+    transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
+    "&:hover": disabled ? undefined : { bgcolor: ACCENT_HOVER },
+    "&:active": disabled ? undefined : { transform: "scale(0.98)" },
     "&:focus-visible": { outline: `2px solid ${t.primary.main}`, outlineOffset: "2px" },
   };
 }

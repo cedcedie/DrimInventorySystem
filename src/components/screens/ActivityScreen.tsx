@@ -125,7 +125,7 @@ function DetailRow({
       >
         {label}
       </Typography>
-      <Typography sx={{ fontSize: 13, fontWeight: 600, color: t.text.primary, fontFamily: mono ? "monospace" : undefined }}>
+      <Typography sx={{ fontSize: 13, fontWeight: 600, color: t.text.primary, fontFamily: mono ? "'IBM Plex Mono', monospace" : undefined }}>
         {value}
       </Typography>
     </Box>

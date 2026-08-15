@@ -10,6 +10,7 @@ import { TableSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { useTheme, type Palette } from "@mui/material/styles";
 import type { SettingsData } from "@/lib/data/settings";
+import { ACCENT_HOVER, motion } from "@/theme/tokens";
 
 export function SettingsScreen({ initialData }: { initialData?: SettingsData }) {
   const { data } = useQuery({
@@ -36,7 +37,17 @@ export function SettingsScreen({ initialData }: { initialData?: SettingsData }) 
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
       <CompanyProfilePanel company={data.company} t={t} />
 
-      <Box sx={{ flex: "1 1 320px", minWidth: 320, bgcolor: t.surface, border: "1px solid", borderColor: t.line }}>
+      <Box
+        sx={{
+          flex: "1 1 320px",
+          minWidth: 320,
+          bgcolor: t.surface,
+          border: "1px solid",
+          borderColor: t.line,
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
+      >
         <Box sx={{ px: 1.75, py: 1.25, borderBottom: "1px solid", borderColor: t.line }}>
           <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>Role Permission Matrix</Typography>
         </Box>
@@ -113,6 +124,8 @@ function CompanyProfilePanel({
         bgcolor: t.surface,
         border: "1px solid",
         borderColor: t.line,
+        borderRadius: "12px",
+        overflow: "hidden",
       }}
     >
       <Box sx={{ px: 1.75, py: 1.25, borderBottom: "1px solid", borderColor: t.line }}>
@@ -143,11 +156,14 @@ function CompanyProfilePanel({
             bgcolor: t.primary.main,
             color: "#fff",
             opacity: save.isPending || unchanged || incomplete ? 0.5 : 1,
-            borderRadius: "2px",
+            borderRadius: "8px",
             px: 1.75,
             py: 1,
             fontSize: 12,
             fontWeight: 600,
+            transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
+            "&:hover": save.isPending || unchanged || incomplete ? undefined : { bgcolor: ACCENT_HOVER },
+            "&:active": save.isPending || unchanged || incomplete ? undefined : { transform: "scale(0.98)" },
             "&:focus-visible": { outline: `2px solid ${t.primary.main}`, outlineOffset: "2px" },
           }}
         >
@@ -180,12 +196,13 @@ function EditableField({
         sx={{
           border: "1px solid",
           borderColor: t.border,
-          borderRadius: "2px",
+          borderRadius: "8px",
           px: 1.25,
           py: 1,
           fontSize: 12.5,
           mt: 0.5,
           bgcolor: t.surface,
+          transition: `border-color ${motion.duration.color}ms ${motion.easing.standard}`,
           "&.Mui-focused": { borderColor: t.primary.main },
         }}
       />

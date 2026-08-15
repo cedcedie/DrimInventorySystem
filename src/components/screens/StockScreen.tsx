@@ -25,6 +25,7 @@ import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@/generated/prisma";
 import type { StockInData, StockOutData } from "@/lib/data/stock";
 import type { OpenMrfsQueueData } from "@/lib/data/mrf";
+import { ACCENT_HOVER, motion } from "@/theme/tokens";
 
 const SI_COLS = "110px 106px minmax(0,1.1fr) minmax(0,1.1fr) 76px 40px";
 const SO_COLS = "92px 96px minmax(0,1fr) minmax(0,1.1fr) 48px 84px minmax(0,1fr)";
@@ -221,7 +222,7 @@ function OpenMrfsTab({
               </TableCell>
               <TableCell>
                 {row.productName}
-                <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2, fontFamily: "monospace" }}>
+                <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
                   {row.productCode}
                 </Box>
               </TableCell>
@@ -255,6 +256,9 @@ function OpenMrfsTab({
                       py: 0.5,
                       border: "1px solid",
                       borderColor: t.primary.main,
+                      borderRadius: "8px",
+                      transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
+                      "&:hover": { bgcolor: t.primary.main, color: "#fff" },
                     }}
                   >
                     Fulfill
@@ -305,11 +309,14 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
               border: "none",
               bgcolor: t.primary.main,
               color: "#fff",
-              borderRadius: "2px",
+              borderRadius: "8px",
               px: 1.625,
               py: 1,
               fontSize: 12,
               fontWeight: 600,
+              transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
+              "&:hover": { bgcolor: ACCENT_HOVER },
+              "&:active": { transform: "scale(0.98)" },
             }}
           >
             + New Stock In
@@ -496,7 +503,17 @@ function StockOutTab({
         )}
       </Box>
 
-      <Box sx={{ flex: "1 1 250px", minWidth: 250, bgcolor: t.surface, border: "1px solid", borderColor: t.line }}>
+      <Box
+        sx={{
+          flex: "1 1 250px",
+          minWidth: 250,
+          bgcolor: t.surface,
+          border: "1px solid",
+          borderColor: t.line,
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
+      >
         <Box sx={{ px: 1.75, py: 1.25, borderBottom: "1px solid", borderColor: t.line }}>
           <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>Release detail</Typography>
         </Box>
@@ -531,8 +548,11 @@ function StockOutTab({
                   color: t.warning.main,
                   border: "1px solid",
                   borderColor: t.warning.main,
+                  borderRadius: "8px",
                   px: 1.25,
                   py: 0.625,
+                  transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
+                  "&:hover": { bgcolor: t.warning.main, color: "#fff" },
                 }}
               >
                 Correct this release

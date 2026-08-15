@@ -87,7 +87,7 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
             py: 1,
             bgcolor: t.primary.main,
             color: "#fff",
-            borderRadius: "4px",
+            borderRadius: "8px",
           }}
         >
           <Typography sx={{ fontSize: 12.5, fontWeight: 600 }}>
@@ -103,7 +103,7 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
               color: t.primary.main,
               px: 1.5,
               py: 0.625,
-              borderRadius: "3px",
+              borderRadius: "8px",
             }}
           >
             Notify selected

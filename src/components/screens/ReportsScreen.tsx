@@ -11,6 +11,7 @@ import { useToast } from "@/components/Toast";
 import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@/generated/prisma";
 import type { DashboardData } from "@/lib/data/dashboard";
+import { ACCENT_HOVER, motion } from "@/theme/tokens";
 
 const REPORT_TYPES = [
   { title: "Stock Report", desc: "Current stock levels across all categories (prices for Owner/Admin only)." },
@@ -118,6 +119,7 @@ export function ReportsScreen({
           bgcolor: t.surface,
           border: "1px solid",
           borderColor: t.line,
+          borderRadius: "12px",
           px: 1.75,
           py: 1.5,
         }}
@@ -182,11 +184,14 @@ export function ReportsScreen({
                 border: "none",
                 bgcolor: t.primary.main,
                 color: "#fff",
-                borderRadius: "2px",
+                borderRadius: "8px",
                 px: 1.625,
                 py: 1,
                 fontSize: 12,
                 fontWeight: 600,
+                transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
+                "&:hover": { bgcolor: ACCENT_HOVER },
+                "&:active": { transform: "scale(0.98)" },
                 "&.Mui-disabled": { opacity: 0.6 },
               }}
             >
@@ -201,6 +206,7 @@ export function ReportsScreen({
               color: t.muted2,
               border: "1px dashed",
               borderColor: t.border,
+              borderRadius: "8px",
               px: 1.375,
               py: 0.75,
             }}
@@ -241,12 +247,18 @@ export function ReportsScreen({
                 borderColor: selectedType === rp.title ? t.primary.main : t.line,
                 borderTop: "3px solid",
                 borderTopColor: t.primary.main,
+                borderRadius: "12px",
                 px: 2,
                 py: 1.75,
                 display: "flex",
                 flexDirection: "column",
                 gap: 0.75,
                 cursor: "pointer",
+                transition: `transform ${motion.duration.dropdown}ms ${motion.easing.standard}, box-shadow ${motion.duration.dropdown}ms ${motion.easing.standard}`,
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 4px 12px rgba(16,24,40,0.10)",
+                },
               }}
             >
               <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{rp.title}</Typography>
@@ -305,7 +317,7 @@ function DateField({
         sx={{
           border: "1px solid",
           borderColor: t.border,
-          borderRadius: "2px",
+          borderRadius: "8px",
           px: 1.125,
           py: 0.75,
           fontSize: 12,

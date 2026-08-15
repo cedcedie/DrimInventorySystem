@@ -24,6 +24,7 @@ import { ProductModal, type ProductFormRow } from "@/components/modals/ProductMo
 import { useCan } from "@/components/PermissionsProvider";
 import type { Role } from "@/generated/prisma";
 import type { ProductsData } from "@/lib/data/products";
+import { motion } from "@/theme/tokens";
 
 function thumbSrc(imageKey: string | null | undefined) {
   if (!imageKey) return null;
@@ -135,7 +136,7 @@ export function ProductsScreen({
           bgcolor: t.surface,
           border: "1px solid",
           borderColor: t.line,
-          borderRadius: "8px",
+          borderRadius: "12px",
         }}
       >
         <InputBase
@@ -150,7 +151,7 @@ export function ProductsScreen({
             px: 1.375,
             py: 0.75,
             fontSize: 13,
-            bgcolor: t.mode === "dark" ? "background.default" : "#FAFBFE",
+            bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
           }}
         />
         <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
@@ -170,7 +171,7 @@ export function ProductsScreen({
                   py: 0.625,
                   fontSize: 12,
                   fontWeight: 700,
-                  transition: "background-color 0.15s ease, border-color 0.15s ease",
+                  transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, border-color ${motion.duration.color}ms ${motion.easing.standard}`,
                 }}
               >
                 {c}

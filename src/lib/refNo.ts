@@ -2,7 +2,7 @@ import { Prisma, type PrismaClient } from "@/generated/prisma";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
-type RefModel = "stockInBatch" | "stockOut" | "mrf" | "stockAdjustment" | "purchaseOrder";
+type RefModel = "stockInBatch" | "stockOut" | "mrf" | "stockAdjustment" | "purchaseOrder" | "purchaseRequest";
 
 /** Highest numeric suffix among refs like `PREFIX-0123`. Ignores malformed values. */
 export function maxRefSuffix(refs: string[], prefix: string): number {

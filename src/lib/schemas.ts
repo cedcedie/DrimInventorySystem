@@ -125,6 +125,30 @@ export const purchaseOrderStatusSchema = z.object({
   status: z.enum(["SENT", "CANCELLED"], { message: "Invalid status transition" }),
 });
 
+export const purchaseRequestCreateSchema = z.object({
+  // Optional — a requester may not know the supplier yet; required at
+  // decision time instead (see purchaseRequestDecideSchema).
+  supplierId: id.optional(),
+  items: z
+    .array(z.object({ productId: id, qty: positiveQty }))
+    .min(1, "At least one item is required"),
+  notes: z.string().trim().max(500, "Note is too long").optional(),
+});
+
+export const purchaseRequestDecideSchema = z.discriminatedUnion("decision", [
+  z.object({
+    decision: z.literal("approve"),
+    // Required when the PR didn't specify one; if the PR already has a
+    // supplier this can be omitted to keep it, or passed to override it.
+    supplierId: id.optional(),
+    note: z.string().trim().max(500, "Note is too long").optional(),
+  }),
+  z.object({
+    decision: z.literal("reject"),
+    note: z.string().trim().min(1, "A reason is required").max(500, "Note is too long"),
+  }),
+]);
+
 export const stockOutSchema = z.object({
   mrfItemId: id,
   qty: positiveQty,

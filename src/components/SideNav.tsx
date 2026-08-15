@@ -18,6 +18,7 @@ import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import PlaylistAddCheckOutlinedIcon from "@mui/icons-material/PlaylistAddCheckOutlined";
 import FirstPageOutlinedIcon from "@mui/icons-material/FirstPageOutlined";
 import LastPageOutlinedIcon from "@mui/icons-material/LastPageOutlined";
 import { signOut } from "next-auth/react";
@@ -37,6 +38,7 @@ const SEGMENT_ICONS: Record<string, React.ElementType> = {
   inventory: Inventory2OutlinedIcon,
   products: SellOutlinedIcon,
   suppliers: LocalShippingOutlinedIcon,
+  purchaseRequests: PlaylistAddCheckOutlinedIcon,
   purchaseOrders: ShoppingCartOutlinedIcon,
   adjustments: TuneOutlinedIcon,
   stock: SwapVertOutlinedIcon,

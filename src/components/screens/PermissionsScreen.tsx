@@ -58,6 +58,8 @@ const MODULES = [
   { id: "stock", label: "Stock In/Out" },
   { id: "mrf", label: "Material Requests" },
   { id: "suppliers", label: "Suppliers" },
+  { id: "purchaseRequests", label: "Purchase Requests" },
+  { id: "purchaseOrders", label: "Purchase Orders" },
   { id: "technicians", label: "Technicians" },
   { id: "users", label: "Users" },
   { id: "reports", label: "Reports" },

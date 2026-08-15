@@ -14,7 +14,8 @@ export type CacheTag =
   | "adjustments"
   | "settings"
   | "permissions"
-  | "purchase-orders";
+  | "purchase-orders"
+  | "purchase-requests";
 
 /** Every mutation writes an ActivityLog row, so "activity" (the shared
  * activity log, role-filtered — see getActivityData) and "dashboard"

@@ -50,7 +50,16 @@ describe("canAccess", () => {
     expect(canAccess("TECHNICIAN", "inventory")).toBe(false);
     expect(canAccess("TECHNICIAN", "products")).toBe(false);
     expect(canAccess("TECHNICIAN", "reports")).toBe(false);
-    expect(canAccess("TECHNICIAN", "activity")).toBe(false);
+  });
+
+  it("gives every role the shared activity log, filtered server-side by role", () => {
+    // Everyone can view /activity — getActivityData excludes sensitive rows
+    // (account/permission/settings changes) for non-Owner/Admin viewers,
+    // rather than hiding the page itself from anyone.
+    expect(canAccess("OWNER", "activity")).toBe(true);
+    expect(canAccess("ADMIN", "activity")).toBe(true);
+    expect(canAccess("WAREHOUSE_STAFF", "activity")).toBe(true);
+    expect(canAccess("TECHNICIAN", "activity")).toBe(true);
   });
 
   it("gives Admin operations but not user or settings administration", () => {

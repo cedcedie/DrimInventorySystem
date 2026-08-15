@@ -1,10 +1,12 @@
 import type { Role } from "@/generated/prisma";
 
 // README "RBAC (exact matrix from prototype)"
-// "activity-feed" is deliberately on every role's list — it's the shared,
-// system-wide operational timeline everyone sees (see ActivityLog.sensitive
-// for what's excluded from it at the data layer), unlike "activity" (the
-// full unfiltered audit log, Owner/Admin only).
+// "activity" is on every role's list — it's the shared activity log
+// everyone can see, filtered server-side by role (see getActivityData /
+// ActivityLog.sensitive): Owner/Admin see every row including account/
+// permission/company-config changes, every other role sees the same
+// operational events (stock, MRF, purchase orders, catalog) with sensitive
+// rows excluded. One page, one route, filtered by who's asking.
 export const MODULE_ACCESS: Record<Role, string[]> = {
   OWNER: [
     "dashboard",
@@ -19,7 +21,6 @@ export const MODULE_ACCESS: Record<Role, string[]> = {
     "users",
     "permissions",
     "activity",
-    "activity-feed",
     "settings",
   ],
   ADMIN: [
@@ -33,10 +34,9 @@ export const MODULE_ACCESS: Record<Role, string[]> = {
     "technicians",
     "reports",
     "activity",
-    "activity-feed",
   ],
-  WAREHOUSE_STAFF: ["dashboard", "inventory", "adjustments", "stock", "purchaseOrders", "activity-feed"],
-  TECHNICIAN: ["dashboard", "stock", "activity-feed"],
+  WAREHOUSE_STAFF: ["dashboard", "inventory", "adjustments", "stock", "purchaseOrders", "activity"],
+  TECHNICIAN: ["dashboard", "stock", "activity"],
 };
 
 export function canAccess(role: Role, moduleSegment: string): boolean {

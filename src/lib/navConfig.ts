@@ -5,7 +5,7 @@ export const NAV_GROUPS = [
     label: "Main",
     items: [
       { segment: "dashboard", label: "Dashboard" },
-      { segment: "activity-feed", label: "Activity Feed" },
+      { segment: "activity", label: "Activity Log" },
     ],
   },
   {
@@ -34,7 +34,6 @@ export const NAV_GROUPS = [
     items: [
       { segment: "reports", label: "Reports" },
       { segment: "permissions", label: "Permissions" },
-      { segment: "activity", label: "Activity Log" },
       { segment: "settings", label: "Settings" },
     ],
   },
@@ -42,7 +41,6 @@ export const NAV_GROUPS = [
 
 export const SCREEN_TITLES: Record<string, string> = {
   dashboard: "Dashboard",
-  "activity-feed": "Activity Feed",
   inventory: "Inventory",
   products: "Products/Materials",
   suppliers: "Suppliers",
@@ -60,7 +58,6 @@ export const SCREEN_TITLES: Record<string, string> = {
 
 export const SCREEN_SUBTITLES: Record<string, string> = {
   dashboard: "Live overview of stock movement and alerts",
-  "activity-feed": "What's happening across DRIM, live",
   inventory: "Stock on hand by product and category",
   products: "Master product catalog",
   suppliers: "Accredited supplier registry",
@@ -71,7 +68,7 @@ export const SCREEN_SUBTITLES: Record<string, string> = {
   reports: "Generate and export operational reports",
   users: "System accounts and roles",
   permissions: "Configure what each role can access",
-  activity: "Complete audit trail of system actions",
+  activity: "What's happening across DRIM",
   settings: "Company profile and system configuration",
   profile: "Your display name and password",
 };

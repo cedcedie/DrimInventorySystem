@@ -7,7 +7,10 @@ export async function GET(req: Request) {
   if ("error" in auth) return auth.error;
 
   const { searchParams } = new URL(req.url);
-  const data = await getActivityData({ page: Number(searchParams.get("page") ?? "1") });
+  const data = await getActivityData({
+    page: Number(searchParams.get("page") ?? "1"),
+    role: auth.role,
+  });
 
   return NextResponse.json(data);
 }

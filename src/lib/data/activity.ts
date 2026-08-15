@@ -1,21 +1,37 @@
 import { prisma } from "@/lib/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
+import type { Role } from "@/generated/prisma";
 
 const PAGE_SIZE = 15;
+const WIDGET_SIZE = 10;
 
-async function fetchActivityData(page: number) {
+function isPrivileged(role: Role) {
+  return role === "OWNER" || role === "ADMIN";
+}
+
+/** Everyone can see the activity log — Owner/Admin see every row including
+ * account/permission/company-config changes; every other role sees the same
+ * operational events (stock, MRF, purchase orders, catalog) with sensitive
+ * rows excluded. One table, one page, filtered by who's asking — replaces
+ * what used to be two parallel surfaces (an Owner/Admin-only log and a
+ * separate "activity feed" for everyone else) reading the same data. */
+async function fetchActivityData(page: number, includeSensitive: boolean, take = PAGE_SIZE) {
+  const where = includeSensitive ? {} : { sensitive: false };
+
   const [total, activities] = await Promise.all([
-    prisma.activityLog.count(),
+    prisma.activityLog.count({ where }),
     prisma.activityLog.findMany({
+      where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      include: { user: true },
+      skip: (page - 1) * take,
+      take,
+      include: { user: { select: { name: true, role: true } } },
     }),
   ]);
 
   return {
     rows: activities.map((a) => ({
+      id: a.id,
       dt: a.createdAt.toISOString(),
       user: a.user.name,
       role: a.user.role,
@@ -23,21 +39,37 @@ async function fetchActivityData(page: number) {
       ref: a.refNo,
     })),
     page,
-    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+    totalPages: Math.max(1, Math.ceil(total / take)),
     total,
   };
 }
 
-async function loadFirstPageActivity() {
+async function loadFirstPageActivity(role: Role) {
   "use cache";
   tagAndLife("activity", CACHE_SECONDS.short);
-  return fetchActivityData(1);
+  return fetchActivityData(1, isPrivileged(role));
 }
 
-export async function getActivityData(params: { page?: number }) {
+export async function getActivityData(params: { page?: number; role: Role }) {
   const page = Math.max(1, params.page ?? 1);
-  if (page === 1) return loadFirstPageActivity();
-  return fetchActivityData(page);
+  if (page === 1) return loadFirstPageActivity(params.role);
+  return fetchActivityData(page, isPrivileged(params.role));
+}
+
+async function loadActivityWidget() {
+  "use cache";
+  tagAndLife("activity", CACHE_SECONDS.dashboard);
+  // Always the filtered (operational-only) view, regardless of viewer role —
+  // this is a compact "pulse" preview, not the audit surface; Owner/Admin
+  // who want the unfiltered picture (including sensitive rows) already have
+  // the full /activity page for that.
+  return fetchActivityData(1, false, WIDGET_SIZE);
+}
+
+/** Compact last-10 rows for the Dashboard widget — always the filtered
+ * (non-sensitive) view, for every role. */
+export async function getActivityWidgetData() {
+  return loadActivityWidget();
 }
 
 export type ActivityData = Awaited<ReturnType<typeof getActivityData>>;

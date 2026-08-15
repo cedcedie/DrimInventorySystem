@@ -18,10 +18,11 @@ export interface ActivityFeedRow {
   ref: string;
 }
 
-/** System-wide "what's happening" feed — every logged-in user sees this,
- * regardless of role. Account/permission/company-config changes are
- * excluded server-side (ActivityLog.sensitive); this only ever shows
- * operational events (stock, MRF, purchase orders, catalog). */
+/** Compact preview of the shared Activity Log, every logged-in user sees
+ * this regardless of role. Account/permission/company-config changes are
+ * excluded server-side (ActivityLog.sensitive) for non-Owner/Admin viewers;
+ * "View all" links to the full /activity page, which applies the same
+ * per-role filtering (Owner/Admin see the unfiltered log there). */
 export function ActivityFeedWidget({ rows }: { rows: ActivityFeedRow[] }) {
   const t = useTheme().palette;
 
@@ -42,7 +43,7 @@ export function ActivityFeedWidget({ rows }: { rows: ActivityFeedRow[] }) {
         <Typography sx={{ fontSize: 11, color: t.muted2 }}>What&apos;s happening across DRIM</Typography>
         <Box
           component={NextLink}
-          href="/activity-feed"
+          href="/activity"
           sx={{ ml: "auto", fontSize: 11.5, fontWeight: 600, color: t.primary.main, textDecoration: "none" }}
         >
           View all

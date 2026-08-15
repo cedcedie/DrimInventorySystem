@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { MrfStatus } from "@/generated/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
-import { getActivityFeedWidgetData } from "@/lib/data/activityFeed";
+import { getActivityWidgetData } from "@/lib/data/activity";
 
 /** When `technicianId` is set (technician dashboard), only that tech's open MRFs
  * are returned — no warehouse SI/SO feeds, stock KPIs, or global activity. */
@@ -39,7 +39,7 @@ async function getTechnicianDashboard(technicianId: string) {
         items: { select: { qtyRequested: true, qtyFulfilled: true } },
       },
     }),
-    getActivityFeedWidgetData(),
+    getActivityWidgetData(),
   ]);
 
   return {
@@ -214,7 +214,7 @@ async function getWarehouseDashboard() {
       where: { createdAt: { gte: weekAgo } },
       select: { createdAt: true, qty: true },
     }),
-    getActivityFeedWidgetData(),
+    getActivityWidgetData(),
   ]);
 
   const lowStockCount = Number(lowStockCountRows[0]?.count ?? 0);

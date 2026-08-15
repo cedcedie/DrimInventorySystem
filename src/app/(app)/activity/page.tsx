@@ -12,8 +12,9 @@ export const metadata: Metadata = {
 };
 
 export default async function ActivityPage() {
-  const [session, data] = await Promise.all([auth(), getActivityData({})]);
+  const session = await auth();
   const role = session!.user.role as Role;
+  const data = await getActivityData({ role });
 
   return (
     <>

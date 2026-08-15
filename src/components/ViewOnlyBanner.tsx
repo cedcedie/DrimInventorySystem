@@ -25,10 +25,8 @@ export function ViewOnlyBanner({ text }: { text: string }) {
         py: 1,
         mb: 1.5,
         width: "100%",
-        border: "1px solid",
-        borderColor: mode === "dark" ? "rgba(254,159,67,0.35)" : "#FBD9AE",
-        bgcolor: mode === "dark" ? "rgba(254,159,67,0.08)" : "#FFF6EE",
-        borderRadius: "4px",
+        bgcolor: mode === "dark" ? "rgba(245,158,11,0.14)" : "#FEF4E6",
+        borderRadius: "8px",
       }}
     >
       <LockOutlinedIcon sx={{ fontSize: 16, color: t.warn, flexShrink: 0 }} />

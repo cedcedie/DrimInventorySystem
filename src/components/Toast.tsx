@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { Box } from "@mui/material";
-import { lightTokens } from "@/theme/tokens";
+import { lightTokens, motion } from "@/theme/tokens";
 
 export type ToastSeverity = "success" | "error";
 
@@ -71,6 +71,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             borderLeft: `3px solid ${severity === "error" ? lightTokens.danger : lightTokens.success}`,
             boxShadow: "0 8px 30px rgba(0,0,0,0.3)",
             zIndex: 1400,
+            animation: `drim-toast-enter ${motion.duration.enter}ms ${motion.easing.entrance}`,
+            "@keyframes drim-toast-enter": {
+              from: { opacity: 0, transform: "translateY(12px)" },
+              to: { opacity: 1, transform: "translateY(0)" },
+            },
           }}
         >
           <Box component="span" sx={{ flex: 1 }}>

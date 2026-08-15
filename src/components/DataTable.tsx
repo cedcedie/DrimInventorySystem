@@ -7,7 +7,7 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { lightTokens, darkTokens, ACCENT, motion } from "@/theme/tokens";
 
 export function TableShell({
   minWidth,
@@ -29,11 +29,12 @@ export function TableShell({
         bgcolor: t.surface,
         border: "1px solid",
         borderColor: t.line,
-        borderRadius: "8px",
+        borderRadius: "12px",
+        boxShadow: "0 1px 2px rgba(16,24,40,0.04)",
         overflow: "hidden",
         overflowX: "auto",
         opacity: dimmed ? 0.55 : 1,
-        transition: "opacity 0.12s ease",
+        transition: `opacity ${motion.duration.color}ms ${motion.easing.standard}`,
       }}
     >
       <Box sx={{ minWidth }}>{children}</Box>
@@ -116,7 +117,7 @@ export function TableRow({
         alignItems: "center",
         cursor: onClick ? "pointer" : "default",
         bgcolor: selected ? t.rowSel : "transparent",
-        transition: "background-color 0.12s ease",
+        transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}`,
         "&:last-of-type": { borderBottom: "none" },
         "&:hover": onClick || selected !== undefined ? { bgcolor: t.rowSel } : { bgcolor: t.hover },
         "&:focus-visible": onClick
@@ -195,10 +196,11 @@ export function RowActionButton({
         border: "1px solid",
         borderColor: t.line,
         bgcolor: t.surface,
-        color: isDelete ? "#EF3826" : t.muted,
+        color: isDelete ? "#B42318" : t.muted,
         opacity: disabled ? 0.5 : 1,
+        transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, border-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
         "&:hover": isDelete
-          ? { borderColor: "#EF3826", bgcolor: "rgba(239,56,38,0.06)" }
+          ? { borderColor: "#B42318", bgcolor: "#FEEDEB" }
           : { borderColor: ACCENT, color: ACCENT },
       }}
     >

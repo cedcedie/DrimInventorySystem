@@ -3,7 +3,7 @@
 import { Dialog, DialogTitle, IconButton, Box, ButtonBase, Typography } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { lightTokens, darkTokens, ACCENT, motion } from "@/theme/tokens";
 
 export type ModalWidth = 420 | 560 | 660;
 
@@ -40,6 +40,12 @@ export function EntityModal({
       maxWidth={false}
       aria-labelledby="entity-modal-title"
       slotProps={{
+        backdrop: {
+          sx: {
+            bgcolor: "rgba(16,24,40,0.5)",
+            transition: `opacity ${motion.duration.exit}ms ${motion.easing.standard} !important`,
+          },
+        },
         paper: {
           sx: {
             width,
@@ -54,9 +60,9 @@ export function EntityModal({
             bgcolor: t.surface,
             borderRadius: "12px",
             border: `1px solid ${t.line}`,
-            boxShadow: "0 16px 48px rgba(16,24,40,0.14)",
+            boxShadow: "0 16px 40px rgba(16,24,40,0.16)",
             overflow: "hidden",
-            transition: "opacity 0.15s ease",
+            transition: `transform ${motion.duration.enter}ms ${motion.easing.entrance}, opacity ${motion.duration.enter}ms ${motion.easing.entrance} !important`,
           },
         },
       }}
@@ -108,12 +114,14 @@ export function ModalFormActions({
           border: "1px solid",
           borderColor: t.border,
           bgcolor: t.surface,
-          borderRadius: "2px",
+          borderRadius: "8px",
           px: 1.75,
           py: 1,
           fontSize: 12,
           fontWeight: 600,
           color: t.text2,
+          transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
+          "&:active": { transform: "scale(0.98)" },
         }}
       >
         Cancel
@@ -125,11 +133,13 @@ export function ModalFormActions({
           border: "none",
           bgcolor: ACCENT,
           color: "#fff",
-          borderRadius: "2px",
+          borderRadius: "8px",
           px: 2,
           py: 1,
           fontSize: 12,
           fontWeight: 600,
+          transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
+          "&:active": { transform: "scale(0.98)" },
           "&.Mui-disabled": { opacity: 0.6 },
         }}
       >
@@ -173,7 +183,7 @@ export function FormField({
 export const fieldInputSx = (t: typeof lightTokens | typeof darkTokens, mono?: boolean) => ({
   border: "1px solid",
   borderColor: t.border,
-  borderRadius: "2px",
+  borderRadius: "8px",
   px: 1.25,
   py: 1,
   fontSize: 12.5,
@@ -182,4 +192,6 @@ export const fieldInputSx = (t: typeof lightTokens | typeof darkTokens, mono?: b
   color: t.text,
   width: "100%",
   boxSizing: "border-box" as const,
+  transition: `border-color ${motion.duration.color}ms ${motion.easing.standard}`,
+  "&:focus": { outline: "none", borderColor: ACCENT },
 });

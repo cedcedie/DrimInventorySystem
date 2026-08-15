@@ -3,7 +3,7 @@
 import { Box, ButtonBase, Typography } from "@mui/material";
 import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
+import { lightTokens, darkTokens, ACCENT, ACCENT_SOFT, motion } from "@/theme/tokens";
 
 /** Consistent empty state for tables / panels. */
 export function EmptyState({
@@ -35,7 +35,7 @@ export function EmptyState({
           width: 48,
           height: 48,
           borderRadius: "12px",
-          bgcolor: mode === "dark" ? t.bg2 : "#FFF6EE",
+          bgcolor: mode === "dark" ? t.bg2 : ACCENT_SOFT,
           display: "grid",
           placeItems: "center",
           color: ACCENT,
@@ -56,6 +56,7 @@ export function EmptyState({
             fontSize: 13.5,
             fontWeight: 700,
             textDecoration: "underline",
+            transition: `opacity ${motion.duration.color}ms ${motion.easing.standard}`,
             "&:hover": { opacity: 0.85 },
           }}
         >

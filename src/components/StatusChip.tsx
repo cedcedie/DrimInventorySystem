@@ -36,7 +36,7 @@ export function StatusChip({ label, tone }: { label: string; tone?: ChipTone }) 
   const { mode } = useColorMode();
   const chips = mode === "dark" ? darkChips : lightChips;
   const resolvedTone = tone ?? toneForLabel(label);
-  const [border, bg, fg] = chips[resolvedTone];
+  const [, bg, fg] = chips[resolvedTone];
 
   return (
     <Box
@@ -46,9 +46,7 @@ export function StatusChip({ label, tone }: { label: string; tone?: ChipTone }) 
         fontSize: 11,
         fontWeight: 700,
         padding: "3px 10px",
-        borderRadius: "4px",
-        border: "1px solid",
-        borderColor: border,
+        borderRadius: "999px",
         bgcolor: bg,
         color: fg,
         whiteSpace: "nowrap",

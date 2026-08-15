@@ -37,6 +37,19 @@ enum PurchaseOrderStatus {
   CANCELLED
 }
 
+// NEW: Internal request that precedes a Purchase Order — DRIM's real process
+// is PR (raised internally) -> Owner/Admin approval -> PO (sent to supplier).
+// Kept separate from PurchaseOrder rather than reusing PurchaseOrderStatus
+// because the two have different lifecycles (a PR either dies at
+// rejected/cancelled or becomes exactly one PO; a PO tracks delivery after
+// that point) and different actors gate each transition.
+enum PurchaseRequestStatus {
+  PENDING // filed, awaiting Owner/Admin decision
+  APPROVED // approved and converted to a PurchaseOrder in the same step
+  REJECTED // declined with a reason
+  CANCELLED // withdrawn by the requester before a decision
+}
+
 enum AdjustmentReason {
   MISCOUNT // physical count didn't match the system
   DAMAGED // goods damaged or otherwise unusable
@@ -47,24 +60,26 @@ enum AdjustmentReason {
 }
 
 model User {
-  id                  String            @id @default(cuid())
-  username            String            @unique
-  passwordHash        String
-  name                String
-  role                Role
-  status              UserStatus        @default(ACTIVE)
-  permissionOverrides Json? // NEW: User-specific permission overrides
-  activities          ActivityLog[]
-  stockInBatches      StockInBatch[]
-  stockOuts           StockOut[]
-  adjustments         StockAdjustment[]
-  settingsEdits       CompanySettings[]
-  technician          Technician?
-  permissions         Permission[] // NEW: Direct permissions
-  notifications       Notification[]
-  sentNotifications   Notification[]    @relation("NotificationSender")
-  purchaseOrders      PurchaseOrder[]
-  createdAt           DateTime          @default(now())
+  id                       String            @id @default(cuid())
+  username                 String            @unique
+  passwordHash             String
+  name                     String
+  role                     Role
+  status                   UserStatus        @default(ACTIVE)
+  permissionOverrides      Json? // NEW: User-specific permission overrides
+  activities               ActivityLog[]
+  stockInBatches           StockInBatch[]
+  stockOuts                StockOut[]
+  adjustments              StockAdjustment[]
+  settingsEdits            CompanySettings[]
+  technician               Technician?
+  permissions              Permission[] // NEW: Direct permissions
+  notifications            Notification[]
+  sentNotifications        Notification[]    @relation("NotificationSender")
+  purchaseOrders           PurchaseOrder[]
+  purchaseRequests         PurchaseRequest[] @relation("PurchaseRequestRequester")
+  purchaseRequestDecisions PurchaseRequest[] @relation("PurchaseRequestDecider")
+  createdAt                DateTime          @default(now())
 }
 
 model Category {
@@ -74,35 +89,37 @@ model Category {
 }
 
 model Supplier {
-  id             String          @id @default(cuid())
-  name           String          @unique
-  contact        String // phone or email
-  supplies       String // free-text description
-  products       Product[]
-  stockInBatches StockInBatch[]
-  purchaseOrders PurchaseOrder[]
+  id               String            @id @default(cuid())
+  name             String            @unique
+  contact          String // phone or email
+  supplies         String // free-text description
+  products         Product[]
+  stockInBatches   StockInBatch[]
+  purchaseOrders   PurchaseOrder[]
+  purchaseRequests PurchaseRequest[]
 }
 
 model Product {
-  id                 String              @id @default(cuid())
-  code               String              @unique // e.g. PIP-012 (prefix per category)
-  name               String
-  description        String?             @db.Text // NEW: Detailed product description/specs
-  categoryId         String
-  category           Category            @relation(fields: [categoryId], references: [id])
-  unit               String // Pcs | Meter | ...
-  amount             Decimal?            @db.Decimal(12, 2) // CHANGED: Optional unit price (hidden from most users)
-  stocks             Int                 @default(0)
-  minLevel           Int                 @default(0) // low-stock threshold
-  supplierId         String?
-  supplier           Supplier?           @relation(fields: [supplierId], references: [id])
-  imageKey           String? // R2 object key
-  archivedAt         DateTime? // Soft-archive — keeps SI/SO/MRF history; hidden from active catalog
-  stockIns           StockIn[]
-  stockOuts          StockOut[]
-  mrfItems           MrfItem[] // NEW: Changed from mrfs to mrfItems
-  adjustments        StockAdjustment[]
-  purchaseOrderItems PurchaseOrderItem[]
+  id                   String                @id @default(cuid())
+  code                 String                @unique // e.g. PIP-012 (prefix per category)
+  name                 String
+  description          String?               @db.Text // NEW: Detailed product description/specs
+  categoryId           String
+  category             Category              @relation(fields: [categoryId], references: [id])
+  unit                 String // Pcs | Meter | ...
+  amount               Decimal?              @db.Decimal(12, 2) // CHANGED: Optional unit price (hidden from most users)
+  stocks               Int                   @default(0)
+  minLevel             Int                   @default(0) // low-stock threshold
+  supplierId           String?
+  supplier             Supplier?             @relation(fields: [supplierId], references: [id])
+  imageKey             String? // R2 object key
+  archivedAt           DateTime? // Soft-archive — keeps SI/SO/MRF history; hidden from active catalog
+  stockIns             StockIn[]
+  stockOuts            StockOut[]
+  mrfItems             MrfItem[] // NEW: Changed from mrfs to mrfItems
+  adjustments          StockAdjustment[]
+  purchaseOrderItems   PurchaseOrderItem[]
+  purchaseRequestItems PurchaseRequestItem[]
 
   @@index([categoryId])
   @@index([supplierId])
@@ -181,17 +198,21 @@ model StockInBatch {
 // gap where Stock In was purely reactive to whatever already arrived, with
 // no visibility into what's already inbound before deciding to reorder.
 model PurchaseOrder {
-  id             String              @id @default(cuid())
-  refNo          String              @unique // PO-0001
-  supplierId     String
-  supplier       Supplier            @relation(fields: [supplierId], references: [id])
-  status         PurchaseOrderStatus @default(DRAFT)
-  notes          String?             @db.Text
-  byUserId       String
-  byUser         User                @relation(fields: [byUserId], references: [id])
-  createdAt      DateTime            @default(now())
-  items          PurchaseOrderItem[]
-  stockInBatches StockInBatch[]
+  id              String              @id @default(cuid())
+  refNo           String              @unique // PO-0001
+  supplierId      String
+  supplier        Supplier            @relation(fields: [supplierId], references: [id])
+  status          PurchaseOrderStatus @default(DRAFT)
+  notes           String?             @db.Text
+  byUserId        String
+  byUser          User                @relation(fields: [byUserId], references: [id])
+  createdAt       DateTime            @default(now())
+  items           PurchaseOrderItem[]
+  stockInBatches  StockInBatch[]
+  // Set when this PO was created by approving a PurchaseRequest rather than
+  // filed directly — back-reference lives on PurchaseRequest (it owns the
+  // unique FK) so a PO doesn't need to know it came from a PR to function.
+  purchaseRequest PurchaseRequest?
 
   @@index([supplierId])
   @@index([status])
@@ -208,6 +229,50 @@ model PurchaseOrderItem {
   qtyReceived     Int           @default(0)
 
   @@index([purchaseOrderId])
+  @@index([productId])
+}
+
+// NEW: Internal "we need to order this" request that precedes a PO. Raised
+// by Owner/Admin/Warehouse Staff, decided by Owner/Admin — approval creates
+// the PurchaseOrder atomically in the same transaction (see
+// POST /api/purchase-requests/[id]/decide), so PENDING -> APPROVED and the
+// PO's existence happen together or not at all.
+model PurchaseRequest {
+  id              String                @id @default(cuid())
+  refNo           String                @unique // PR-0001
+  // Optional — a requester may know what's needed without yet knowing which
+  // supplier to buy it from; the approver picks/confirms the supplier at
+  // decision time, when it becomes required to convert to a PO.
+  supplierId      String?
+  supplier        Supplier?             @relation(fields: [supplierId], references: [id])
+  status          PurchaseRequestStatus @default(PENDING)
+  notes           String?               @db.Text
+  byUserId        String
+  byUser          User                  @relation("PurchaseRequestRequester", fields: [byUserId], references: [id])
+  decidedById     String?
+  decidedBy       User?                 @relation("PurchaseRequestDecider", fields: [decidedById], references: [id])
+  decidedAt       DateTime?
+  // Rejection reason, or an optional note left on approval.
+  decisionNote    String?               @db.Text
+  purchaseOrderId String?               @unique
+  purchaseOrder   PurchaseOrder?        @relation(fields: [purchaseOrderId], references: [id])
+  createdAt       DateTime              @default(now())
+  items           PurchaseRequestItem[]
+
+  @@index([status])
+  @@index([byUserId])
+  @@index([createdAt])
+}
+
+model PurchaseRequestItem {
+  id                String          @id @default(cuid())
+  purchaseRequestId String
+  purchaseRequest   PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  productId         String
+  product           Product         @relation(fields: [productId], references: [id])
+  qtyRequested      Int
+
+  @@index([purchaseRequestId])
   @@index([productId])
 }
 

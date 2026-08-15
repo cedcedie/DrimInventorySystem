@@ -1,9 +1,27 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { readFile } from "fs/promises";
+import path from "path";
 
+// DRIM IMS PDF letterhead — mirrors `design_handoff_ui_refresh/PDF Report
+// Template.dc.html`. Colors below are the same hex values as
+// src/theme/tokens.ts's light palette (pdf-lib can't import the TS module,
+// so they're restated as rgb() literals — keep in sync by hand).
 const PAGE_WIDTH = 612;
 const PAGE_HEIGHT = 792;
 const MARGIN = 40;
 const ROW_HEIGHT = 16;
+
+const INK = rgb(0.0627, 0.0941, 0.1569); // #101828 — headings, body text
+const MUTED = rgb(0.4014, 0.4392, 0.4863); // #667085 — secondary text
+const MUTED2 = rgb(0.5961, 0.6353, 0.7020); // #98A2B3 — tracked labels, hairlines-adjacent
+const HAIRLINE = rgb(0.9412, 0.9490, 0.9608); // #F0F2F5 — table row dividers
+const RULE_DARK = rgb(0.0627, 0.0941, 0.1569); // #101828 — 1.5px table header rule
+const ACCENT = rgb(1, 0.4196, 0.1725); // #FF6B2C — letterhead rule
+const WARN = rgb(0.7098, 0.2784, 0.0314); // #B54708 — Low Stock values
+const DANGER = rgb(0.7059, 0.1373, 0.0941); // #B42318 — Out of Stock values
+
+const FOOTER_H = 28;
+const CONTENT_BOTTOM = MARGIN + FOOTER_H;
 
 interface ReportSection {
   /** Optional heading drawn above this table, e.g. "Line items" or "Releases". */
@@ -12,67 +30,104 @@ interface ReportSection {
   rows: string[][];
 }
 
+interface Kpi {
+  label: string;
+  value: string;
+  /** "warn" tints the value #B54708 (Low Stock), "danger" tints #B42318 (Out of Stock). */
+  tone?: "warn" | "danger";
+}
+
 export async function generateReportPdf(params: {
   title: string;
   summary: string;
   generatedAt: Date;
   /** Company profile for the letterhead; falls back to the product name. */
   company?: { name: string; warehouseLocation: string };
+  /** Shown right-aligned in the letterhead (e.g. "STOCK REPORT"). Defaults to title, uppercased. */
+  reportType?: string;
+  /** Mono reference number under the report type, e.g. "RPT-000123". */
+  refNo?: string;
+  /** Meta strip — GENERATED is always filled in from generatedAt. */
+  period?: string;
+  preparedBy?: string;
+  /** Optional KPI row under the meta strip, hairline-separated. */
+  kpis?: Kpi[];
   /** Single-table reports pass headers/rows directly (back-compat with existing callers). */
   headers?: string[];
   rows?: string[][];
   /** Multi-table reports (e.g. items + fulfillment history) pass sections instead. */
   sections?: ReportSection[];
 }): Promise<Uint8Array> {
-  const { title, summary, generatedAt, company } = params;
+  const { title, summary, generatedAt, company, period, preparedBy, kpis } = params;
   const sections: ReportSection[] =
     params.sections ?? [{ headers: params.headers ?? [], rows: params.rows ?? [] }];
+  const reportType = (params.reportType ?? title).toUpperCase();
+  const companyName = company?.name ?? "DRIM Inventory System";
 
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const dMark = await embedDMark(pdfDoc);
 
-  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  let y = PAGE_HEIGHT - MARGIN;
+  const pages: PDFPage[] = [];
+  const newPage = () => {
+    const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    pages.push(page);
+    return page;
+  };
 
-  page.drawText(company?.name ?? "DRIM Inventory System", {
-    x: MARGIN,
-    y,
-    size: 10,
-    font: boldFont,
-    color: rgb(0.24, 0.28, 0.33),
-  });
-  if (company?.warehouseLocation) {
-    y -= 11;
-    page.drawText(company.warehouseLocation, {
-      x: MARGIN,
-      y,
-      size: 8.5,
-      font,
-      color: rgb(0.55, 0.6, 0.65),
-    });
-  }
+  let page = newPage();
+  let y = drawLetterhead(page, { font, boldFont, dMark, companyName, company, reportType, refNo: params.refNo });
+
+  // Title + summary
+  page.drawText(title, { x: MARGIN, y, size: 23, font: boldFont, color: INK });
   y -= 20;
-  page.drawText(title, { x: MARGIN, y, size: 18, font: boldFont, color: rgb(0.14, 0.16, 0.2) });
+  page.drawText(summary, { x: MARGIN, y, size: 10, font, color: MUTED });
   y -= 16;
-  page.drawText(summary, { x: MARGIN, y, size: 10, font, color: rgb(0.42, 0.46, 0.51) });
+
+  // Meta strip: GENERATED / PERIOD / PREPARED BY / WAREHOUSE, between hairlines.
+  y -= 6;
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 0.75, color: HAIRLINE });
   y -= 14;
-  page.drawText(`Generated ${generatedAt.toLocaleString("en-PH")}`, {
-    x: MARGIN,
-    y,
-    size: 9,
-    font,
-    color: rgb(0.55, 0.6, 0.65),
+  const metaCols: [string, string][] = [
+    ["GENERATED", generatedAt.toLocaleString("en-PH")],
+    ...(period ? ([["PERIOD", period]] as [string, string][]) : []),
+    ...(preparedBy ? ([["PREPARED BY", preparedBy]] as [string, string][]) : []),
+    ...(company?.warehouseLocation ? ([["WAREHOUSE", company.warehouseLocation]] as [string, string][]) : []),
+  ];
+  const metaColWidth = (PAGE_WIDTH - MARGIN * 2) / metaCols.length;
+  metaCols.forEach(([label, value], i) => {
+    const x = MARGIN + i * metaColWidth;
+    page.drawText(label, { x, y, size: 8.5, font: boldFont, color: MUTED2 });
+    page.drawText(truncate(value, 34), { x, y: y - 12, size: 9.5, font: boldFont, color: INK });
   });
-  y -= 24;
+  y -= 30;
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 0.75, color: HAIRLINE });
+  y -= 18;
+
+  // KPI row, hairline column separators.
+  if (kpis && kpis.length > 0) {
+    const kpiColWidth = (PAGE_WIDTH - MARGIN * 2) / kpis.length;
+    kpis.forEach((kpi, i) => {
+      const x = MARGIN + i * kpiColWidth;
+      if (i > 0) {
+        page.drawLine({ start: { x, y: y + 14 }, end: { x, y: y - 18 }, thickness: 0.75, color: HAIRLINE });
+      }
+      const tx = x + (i > 0 ? 10 : 0);
+      page.drawText(kpi.label.toUpperCase(), { x: tx, y: y, size: 8, font: boldFont, color: MUTED2 });
+      const valueColor = kpi.tone === "danger" ? DANGER : kpi.tone === "warn" ? WARN : INK;
+      page.drawText(kpi.value, { x: tx, y: y - 16, size: 16, font: boldFont, color: valueColor });
+    });
+    y -= 42;
+  }
 
   for (const section of sections) {
     if (section.title) {
-      if (y < MARGIN + ROW_HEIGHT * 2) {
-        page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      if (y < CONTENT_BOTTOM + ROW_HEIGHT * 2) {
+        page = newPage();
         y = PAGE_HEIGHT - MARGIN;
       }
-      page.drawText(section.title, { x: MARGIN, y, size: 11, font: boldFont, color: rgb(0.14, 0.16, 0.2) });
+      page.drawText(section.title, { x: MARGIN, y, size: 11, font: boldFont, color: INK });
       y -= 18;
     }
 
@@ -80,19 +135,19 @@ export async function generateReportPdf(params: {
 
     const drawHeaderRow = (yPos: number) => {
       section.headers.forEach((h, i) => {
-        page.drawText(h, {
+        page.drawText(h.toUpperCase(), {
           x: MARGIN + i * colWidth,
           y: yPos,
-          size: 9,
+          size: 8.5,
           font: boldFont,
-          color: rgb(0.14, 0.16, 0.2),
+          color: MUTED,
         });
       });
       page.drawLine({
-        start: { x: MARGIN, y: yPos - 4 },
-        end: { x: PAGE_WIDTH - MARGIN, y: yPos - 4 },
-        thickness: 0.5,
-        color: rgb(0.8, 0.82, 0.85),
+        start: { x: MARGIN, y: yPos - 5 },
+        end: { x: PAGE_WIDTH - MARGIN, y: yPos - 5 },
+        thickness: 1.5,
+        color: RULE_DARK,
       });
     };
 
@@ -100,21 +155,26 @@ export async function generateReportPdf(params: {
     y -= ROW_HEIGHT;
 
     for (const row of section.rows) {
-      if (y < MARGIN + ROW_HEIGHT) {
-        page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      if (y < CONTENT_BOTTOM + ROW_HEIGHT) {
+        page = newPage();
         y = PAGE_HEIGHT - MARGIN;
         drawHeaderRow(y);
         y -= ROW_HEIGHT;
       }
       row.forEach((cell, i) => {
-        const truncated = cell.length > 38 ? cell.slice(0, 35) + "…" : cell;
-        page.drawText(truncated, {
+        page.drawText(truncate(cell, 38), {
           x: MARGIN + i * colWidth,
           y,
-          size: 8.5,
+          size: 10.5,
           font,
-          color: rgb(0.14, 0.16, 0.2),
+          color: INK,
         });
+      });
+      page.drawLine({
+        start: { x: MARGIN, y: y - 4 },
+        end: { x: PAGE_WIDTH - MARGIN, y: y - 4 },
+        thickness: 0.5,
+        color: HAIRLINE,
       });
       y -= ROW_HEIGHT;
     }
@@ -125,7 +185,7 @@ export async function generateReportPdf(params: {
         y,
         size: 9,
         font,
-        color: rgb(0.55, 0.6, 0.65),
+        color: MUTED,
       });
       y -= ROW_HEIGHT;
     }
@@ -133,5 +193,124 @@ export async function generateReportPdf(params: {
     y -= 10; // gap before next section
   }
 
+  // Footnote + signature rules on the last page.
+  if (y < CONTENT_BOTTOM + 70) {
+    page = newPage();
+    y = PAGE_HEIGHT - MARGIN;
+  }
+  y -= 8;
+  page.drawText(
+    "This report reflects DRIM Inventory System records at the time of generation and is not a substitute for a physical stock count.",
+    { x: MARGIN, y, size: 9, font, color: MUTED }
+  );
+  y -= 34;
+  const sigWidth = (PAGE_WIDTH - MARGIN * 2 - 40) / 3;
+  ["Prepared by", "Checked by", "Approved by"].forEach((label, i) => {
+    const x = MARGIN + i * (sigWidth + 20);
+    page.drawLine({ start: { x, y }, end: { x: x + sigWidth, y }, thickness: 0.75, color: MUTED2 });
+    page.drawText(label, { x, y: y - 12, size: 8.5, font, color: MUTED });
+  });
+
+  // Repeating footer + letterhead rule on every page (letterhead only repeats
+  // past page 1; the footer stamp repeats on all pages).
+  pages.forEach((p, i) => {
+    if (i > 0) {
+      drawLetterhead(p, { font, boldFont, dMark, companyName, company, reportType, refNo: params.refNo });
+    }
+    drawFooter(p, font, generatedAt, i + 1, pages.length);
+  });
+
   return pdfDoc.save();
+}
+
+async function embedDMark(pdfDoc: PDFDocument) {
+  try {
+    const bytes = await readFile(path.join(process.cwd(), "public/images/drim-d-transparent.png"));
+    return await pdfDoc.embedPng(bytes);
+  } catch {
+    return null;
+  }
+}
+
+function drawLetterhead(
+  page: PDFPage,
+  opts: {
+    font: PDFFont;
+    boldFont: PDFFont;
+    dMark: Awaited<ReturnType<typeof embedDMark>>;
+    companyName: string;
+    company?: { name: string; warehouseLocation: string };
+    reportType: string;
+    refNo?: string;
+  }
+): number {
+  const { font, boldFont, dMark, companyName, company, reportType, refNo } = opts;
+  let y = PAGE_HEIGHT - MARGIN;
+  const markSize = 26;
+
+  if (dMark) {
+    const scale = markSize / dMark.height;
+    page.drawImage(dMark, {
+      x: MARGIN,
+      y: y - markSize,
+      width: dMark.width * scale,
+      height: markSize,
+    });
+  }
+
+  const textX = dMark ? MARGIN + markSize + 10 : MARGIN;
+  page.drawText(companyName, { x: textX, y: y - 10, size: 11, font: boldFont, color: INK });
+  if (company?.warehouseLocation) {
+    page.drawText(truncate(company.warehouseLocation, 60), {
+      x: textX,
+      y: y - 22,
+      size: 8.5,
+      font,
+      color: MUTED,
+    });
+  }
+
+  // Right-aligned report type + mono ref no.
+  const typeWidth = boldFont.widthOfTextAtSize(reportType, 9);
+  page.drawText(reportType, {
+    x: PAGE_WIDTH - MARGIN - typeWidth,
+    y: y - 10,
+    size: 9,
+    font: boldFont,
+    color: MUTED,
+  });
+  if (refNo) {
+    const refWidth = boldFont.widthOfTextAtSize(refNo, 9);
+    page.drawText(refNo, {
+      x: PAGE_WIDTH - MARGIN - refWidth,
+      y: y - 22,
+      size: 9,
+      font: boldFont,
+      color: ACCENT,
+    });
+  }
+
+  y -= markSize + 8;
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 2, color: ACCENT });
+  y -= 22;
+  return y;
+}
+
+function drawFooter(page: PDFPage, font: PDFFont, generatedAt: Date, pageNum: number, pageCount: number) {
+  const y = MARGIN - 12;
+  page.drawLine({ start: { x: MARGIN, y: y + 14 }, end: { x: PAGE_WIDTH - MARGIN, y: y + 14 }, thickness: 0.5, color: HAIRLINE });
+  page.drawText(`Generated ${generatedAt.toLocaleString("en-PH")} · Internal use only`, {
+    x: MARGIN,
+    y,
+    size: 8,
+    font,
+    color: MUTED2,
+  });
+  const pageLabel = `Page ${pageNum} of ${pageCount}`;
+  const pageLabelWidth = font.widthOfTextAtSize(pageLabel, 8);
+  page.drawText(pageLabel, { x: PAGE_WIDTH - MARGIN - pageLabelWidth, y, size: 8, font, color: MUTED2 });
+}
+
+function truncate(value: string, max: number): string {
+  return value.length > max ? value.slice(0, max - 3) + "…" : value;
 }

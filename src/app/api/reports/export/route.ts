@@ -29,11 +29,14 @@ export async function POST(req: Request) {
 
   const includePricing = auth.role === "OWNER" || auth.role === "ADMIN";
 
-  const [{ headers, rows, summary }, company] = await Promise.all([
+  const [{ headers, rows, summary }, company, refNo] = await Promise.all([
     buildReportData(type, from, to, { includePricing }),
     getCompanySettings(),
+    prisma.$transaction((tx) => nextActivityRefNo(tx, "RPT", 3)),
   ]);
   const generatedAt = new Date();
+  const preparedBy = auth.session.user.name ?? auth.session.user.username ?? "Unknown";
+  const period = `${from.toLocaleDateString("en-PH")} – ${to.toLocaleDateString("en-PH")}`;
 
   // Generate report in requested format
   const reportBytes = format === "excel"
@@ -44,7 +47,7 @@ export async function POST(req: Request) {
         headers,
         rows,
         summary,
-        generatedBy: auth.session.user.name ?? auth.session.user.username ?? "Unknown",
+        generatedBy: preparedBy,
         companyName: company.name,
         warehouseLocation: company.warehouseLocation,
       })
@@ -55,9 +58,11 @@ export async function POST(req: Request) {
         rows,
         generatedAt,
         company,
+        refNo,
+        period,
+        preparedBy,
       });
 
-  const refNo = await prisma.$transaction((tx) => nextActivityRefNo(tx, "RPT", 3));
   const fileExtension = format === "excel" ? "xlsx" : "pdf";
   const contentType = format === "excel"
     ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

@@ -49,6 +49,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }`,
     generatedAt: new Date(),
     company,
+    reportType: "Material Request",
+    refNo: mrf.refNo,
+    preparedBy: session.user.name ?? session.user.username ?? undefined,
     sections: [
       {
         title: "Line items",

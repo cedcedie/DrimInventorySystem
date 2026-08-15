@@ -4,8 +4,7 @@ import { useState } from "react";
 import { Box, MenuItem, ListSubheader, Select, Typography, IconButton, Tooltip, ButtonBase } from "@mui/material";
 import { FormField, fieldInputSx } from "@/components/EntityModal";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens } from "@/theme/tokens";
-import { colors, borderRadius } from "@/theme/designTokens";
+import { lightTokens, darkTokens, colors, borderRadius } from "@/theme/tokens";
 import { groupByCategory } from "@/lib/groupByCategory";
 
 export interface CartProductOption {

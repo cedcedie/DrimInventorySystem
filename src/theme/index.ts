@@ -1,6 +1,5 @@
 import { createTheme, type ThemeOptions } from "@mui/material/styles";
-import { ACCENT, darkTokens, lightTokens } from "./tokens";
-import { colors, borderRadius, shadows, typography } from "./designTokens";
+import { ACCENT, darkTokens, lightTokens, colors, borderRadius, typography, motion } from "./tokens";
 
 /** Stock status palette - domain-named states for product inventory levels.
  * Includes partial status for multi-item MRF fulfillment. */
@@ -45,7 +44,7 @@ const shared: ThemeOptions = {
   shape: { borderRadius: borderRadius.md },
   typography: {
     fontFamily: typography.body.family,
-    button: { 
+    button: {
       textTransform: "none",
       fontWeight: typography.body.weight.semibold,
     },
@@ -65,35 +64,39 @@ const shared: ThemeOptions = {
   components: {
     MuiPaper: {
       styleOverrides: {
-        root: { 
+        // Elevation comes from borders, not shadows — see README "Elevation".
+        // Individual surfaces (cards, dropdowns, modals) opt into their own
+        // shadow via sx where the design calls for one.
+        root: {
           backgroundImage: "none",
-          boxShadow: shadows.md,
+          boxShadow: "none",
         },
       },
     },
     MuiButton: {
       defaultProps: { disableElevation: true },
-      styleOverrides: { 
-        root: { 
+      styleOverrides: {
+        root: {
           borderRadius: borderRadius.md,
-          transition: 'all 150ms ease-out',
+          transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, border-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
+          "&:active": { transform: "scale(0.98)" },
         },
       },
     },
     MuiCard: {
-      styleOverrides: { 
-        root: { 
-          boxShadow: shadows.sm,
+      styleOverrides: {
+        root: {
+          boxShadow: "none",
           borderRadius: borderRadius.lg,
-        } 
+        },
       },
     },
     MuiAppBar: {
-      styleOverrides: { 
-        root: { 
-          boxShadow: 'none',
-          borderBottom: '1px solid',
-        } 
+      styleOverrides: {
+        root: {
+          boxShadow: "none",
+          borderBottom: "1px solid",
+        },
       },
     },
   },

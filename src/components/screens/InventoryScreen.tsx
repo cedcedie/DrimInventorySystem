@@ -157,7 +157,7 @@ export function InventoryScreen({
           bgcolor: t.surface,
           border: "1px solid",
           borderColor: t.line,
-          borderRadius: "8px",
+          borderRadius: "12px",
         }}
       >
         <InputBase
@@ -175,7 +175,7 @@ export function InventoryScreen({
             px: 1.375,
             py: 0.75,
             fontSize: 13,
-            bgcolor: t.mode === "dark" ? "background.default" : "#FAFBFE",
+            bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
           }}
         />
         <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+doc-page:not(:defined){visibility:hidden;}
+html,body{margin:0;padding:0;}
+a{color:#B4501E;text-decoration:none;}a:hover{color:#FF6B2C;}
+</style>
+<script src="./doc-page.js"></script>
+</helmet>
+<doc-page>
+  <div slot="header" style="font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:10px;border-bottom:2px solid #FF6B2C;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <img src="public/images/drim-d-transparent.png" alt="DRIM" style="width:26px;height:26px;object-fit:contain;">
+      <div>
+        <div style="font-size:11px;font-weight:800;color:#101828;letter-spacing:0.01em;">DRIM Refrigeration &amp; Industrial Supply</div>
+        <div style="font-size:8.5px;color:#667085;margin-top:1px;">Bagumbayan, Quezon City, PH · (02) 8555 0142 · ops@drim.ph</div>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:9px;font-weight:800;letter-spacing:0.14em;color:#667085;">INVENTORY SUMMARY</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#101828;margin-top:2px;">RPT-2026-0815-01</div>
+    </div>
+  </div>
+  <div slot="footer" style="font-family:'Nunito',sans-serif;display:flex;justify-content:space-between;gap:16px;padding-top:8px;border-top:1px solid #E4E7EC;font-size:8.5px;color:#98A2B3;">
+    <span>DRIM Inventory Management System — generated Aug 15, 2026, 08:45 AM</span>
+    <span>Internal use only</span>
+  </div>
+  <div style="font-family:'Nunito',sans-serif;color:#101828;">
+    <div style="margin-top:18px;">
+      <h1 style="margin:0;font-size:23px;line-height:1.2;font-weight:800;">Inventory Summary Report</h1>
+      <p style="margin:4px 0 0;font-size:11.5px;color:#667085;">Stock on hand, valuation, and minimum-level status across all categories.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px;padding:10px 0;border-top:1px solid #E4E7EC;border-bottom:1px solid #E4E7EC;break-inside:avoid;">
+      <div>
+        <div style="font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#98A2B3;">GENERATED</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;margin-top:3px;">Aug 15, 2026 08:45</div>
+      </div>
+      <div>
+        <div style="font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#98A2B3;">PERIOD</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;margin-top:3px;">As of Aug 15, 2026</div>
+      </div>
+      <div>
+        <div style="font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#98A2B3;">PREPARED BY</div>
+        <div style="font-size:10px;font-weight:700;margin-top:3px;">Alyssa Cruz — Admin</div>
+      </div>
+      <div>
+        <div style="font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#98A2B3;">WAREHOUSE</div>
+        <div style="font-size:10px;font-weight:700;margin-top:3px;">Main — Quezon City</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);margin-top:16px;break-inside:avoid;">
+      <div style="padding:2px 14px 2px 0;">
+        <div style="font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#98A2B3;">PRODUCTS TRACKED</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:600;margin-top:2px;">128</div>
+      </div>
+      <div style="padding:2px 14px;border-left:1px solid #E4E7EC;">
+        <div style="font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#98A2B3;">TOTAL VALUE</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:600;margin-top:2px;">₱812,450</div>
+      </div>
+      <div style="padding:2px 14px;border-left:1px solid #E4E7EC;">
+        <div style="font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#98A2B3;">LOW STOCK</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:600;margin-top:2px;color:#B54708;">7</div>
+      </div>
+      <div style="padding:2px 14px;border-left:1px solid #E4E7EC;">
+        <div style="font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#98A2B3;">OUT OF STOCK</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:600;margin-top:2px;color:#B42318;">3</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-top:20px;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:7px 10px 7px 0;font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#667085;border-bottom:1.5px solid #101828;">CODE</th>
+          <th style="text-align:left;padding:7px 10px;font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#667085;border-bottom:1.5px solid #101828;">PRODUCT</th>
+          <th style="text-align:left;padding:7px 10px;font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#667085;border-bottom:1.5px solid #101828;">CATEGORY</th>
+          <th style="text-align:right;padding:7px 10px;font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#667085;border-bottom:1.5px solid #101828;">ON HAND</th>
+          <th style="text-align:right;padding:7px 10px;font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#667085;border-bottom:1.5px solid #101828;">MIN</th>
+          <th style="text-align:right;padding:7px 10px;font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#667085;border-bottom:1.5px solid #101828;">UNIT VALUE</th>
+          <th style="text-align:left;padding:7px 0 7px 10px;font-size:8.5px;font-weight:800;letter-spacing:0.1em;color:#667085;border-bottom:1.5px solid #101828;">STATUS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="break-inside:avoid;">
+          <td style="padding:7px 10px 7px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#475467;border-bottom:1px solid #F0F2F5;">PRD-0012</td>
+          <td style="padding:7px 10px;font-size:10.5px;font-weight:700;border-bottom:1px solid #F0F2F5;">Copper Tube 1/2" × 15m</td>
+          <td style="padding:7px 10px;font-size:10.5px;color:#667085;border-bottom:1px solid #F0F2F5;">Piping</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">42 roll</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;color:#98A2B3;border-bottom:1px solid #F0F2F5;">10</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">₱2,850.00</td>
+          <td style="padding:7px 0 7px 10px;border-bottom:1px solid #F0F2F5;"><span style="font-size:8.5px;font-weight:800;color:#12805C;">IN STOCK</span></td>
+        </tr>
+        <tr style="break-inside:avoid;">
+          <td style="padding:7px 10px 7px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#475467;border-bottom:1px solid #F0F2F5;">PRD-0027</td>
+          <td style="padding:7px 10px;font-size:10.5px;font-weight:700;border-bottom:1px solid #F0F2F5;">Refrigerant R-410A 11.3kg</td>
+          <td style="padding:7px 10px;font-size:10.5px;color:#667085;border-bottom:1px solid #F0F2F5;">Refrigerants</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">6 tank</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;color:#98A2B3;border-bottom:1px solid #F0F2F5;">8</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">₱6,200.00</td>
+          <td style="padding:7px 0 7px 10px;border-bottom:1px solid #F0F2F5;"><span style="font-size:8.5px;font-weight:800;color:#B54708;">LOW STOCK</span></td>
+        </tr>
+        <tr style="break-inside:avoid;">
+          <td style="padding:7px 10px 7px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#475467;border-bottom:1px solid #F0F2F5;">PRD-0031</td>
+          <td style="padding:7px 10px;font-size:10.5px;font-weight:700;border-bottom:1px solid #F0F2F5;">THHN Wire 3.5mm² × 150m</td>
+          <td style="padding:7px 10px;font-size:10.5px;color:#667085;border-bottom:1px solid #F0F2F5;">Electrical</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">0 box</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;color:#98A2B3;border-bottom:1px solid #F0F2F5;">5</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">₱4,480.00</td>
+          <td style="padding:7px 0 7px 10px;border-bottom:1px solid #F0F2F5;"><span style="font-size:8.5px;font-weight:800;color:#B42318;">OUT OF STOCK</span></td>
+        </tr>
+        <tr style="break-inside:avoid;">
+          <td style="padding:7px 10px 7px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#475467;border-bottom:1px solid #F0F2F5;">PRD-0044</td>
+          <td style="padding:7px 10px;font-size:10.5px;font-weight:700;border-bottom:1px solid #F0F2F5;">Circuit Breaker 20A 2P</td>
+          <td style="padding:7px 10px;font-size:10.5px;color:#667085;border-bottom:1px solid #F0F2F5;">Electrical</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">18 pcs</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;color:#98A2B3;border-bottom:1px solid #F0F2F5;">6</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">₱415.00</td>
+          <td style="padding:7px 0 7px 10px;border-bottom:1px solid #F0F2F5;"><span style="font-size:8.5px;font-weight:800;color:#12805C;">IN STOCK</span></td>
+        </tr>
+        <tr style="break-inside:avoid;">
+          <td style="padding:7px 10px 7px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#475467;border-bottom:1px solid #F0F2F5;">PRD-0052</td>
+          <td style="padding:7px 10px;font-size:10.5px;font-weight:700;border-bottom:1px solid #F0F2F5;">PVC Conduit 25mm × 3m</td>
+          <td style="padding:7px 10px;font-size:10.5px;color:#667085;border-bottom:1px solid #F0F2F5;">Piping</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">120 pcs</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;color:#98A2B3;border-bottom:1px solid #F0F2F5;">40</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">₱185.00</td>
+          <td style="padding:7px 0 7px 10px;border-bottom:1px solid #F0F2F5;"><span style="font-size:8.5px;font-weight:800;color:#12805C;">IN STOCK</span></td>
+        </tr>
+        <tr style="break-inside:avoid;">
+          <td style="padding:7px 10px 7px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#475467;border-bottom:1px solid #F0F2F5;">PRD-0063</td>
+          <td style="padding:7px 10px;font-size:10.5px;font-weight:700;border-bottom:1px solid #F0F2F5;">Contactor 32A 220V</td>
+          <td style="padding:7px 10px;font-size:10.5px;color:#667085;border-bottom:1px solid #F0F2F5;">Controls</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">4 pcs</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;color:#98A2B3;border-bottom:1px solid #F0F2F5;">6</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">₱980.00</td>
+          <td style="padding:7px 0 7px 10px;border-bottom:1px solid #F0F2F5;"><span style="font-size:8.5px;font-weight:800;color:#B54708;">LOW STOCK</span></td>
+        </tr>
+        <tr style="break-inside:avoid;">
+          <td style="padding:7px 10px 7px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#475467;border-bottom:1px solid #F0F2F5;">PRD-0071</td>
+          <td style="padding:7px 10px;font-size:10.5px;font-weight:700;border-bottom:1px solid #F0F2F5;">Condenser Fan Motor 1/4HP</td>
+          <td style="padding:7px 10px;font-size:10.5px;color:#667085;border-bottom:1px solid #F0F2F5;">Motors</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">9 pcs</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;color:#98A2B3;border-bottom:1px solid #F0F2F5;">3</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">₱2,150.00</td>
+          <td style="padding:7px 0 7px 10px;border-bottom:1px solid #F0F2F5;"><span style="font-size:8.5px;font-weight:800;color:#12805C;">IN STOCK</span></td>
+        </tr>
+        <tr style="break-inside:avoid;">
+          <td style="padding:7px 10px 7px 0;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#475467;border-bottom:1px solid #F0F2F5;">PRD-0088</td>
+          <td style="padding:7px 10px;font-size:10.5px;font-weight:700;border-bottom:1px solid #F0F2F5;">Insulation Tube 3/4" × 2m</td>
+          <td style="padding:7px 10px;font-size:10.5px;color:#667085;border-bottom:1px solid #F0F2F5;">Insulation</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">65 pcs</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;color:#98A2B3;border-bottom:1px solid #F0F2F5;">20</td>
+          <td style="padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;border-bottom:1px solid #F0F2F5;">₱320.00</td>
+          <td style="padding:7px 0 7px 10px;border-bottom:1px solid #F0F2F5;"><span style="font-size:8.5px;font-weight:800;color:#12805C;">IN STOCK</span></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5" style="padding:9px 10px 0 0;font-size:10.5px;font-weight:800;border-top:1.5px solid #101828;">Total inventory value</td>
+          <td style="padding:9px 10px 0;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;text-align:right;border-top:1.5px solid #101828;">₱812,450.00</td>
+          <td style="border-top:1.5px solid #101828;"></td>
+        </tr>
+      </tfoot>
+    </table>
+    <p style="margin:14px 0 0;font-size:9px;color:#98A2B3;">Valuation uses latest unit purchase cost. Low-stock threshold is each product's configured minimum level. Full 128-row extract available in the Excel export.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:48px;break-inside:avoid;">
+      <div>
+        <div style="border-top:1px solid #101828;padding-top:6px;font-size:9.5px;font-weight:800;">Prepared by</div>
+        <div style="font-size:8.5px;color:#667085;margin-top:1px;">Admin / Warehouse Staff</div>
+      </div>
+      <div>
+        <div style="border-top:1px solid #101828;padding-top:6px;font-size:9.5px;font-weight:800;">Checked by</div>
+        <div style="font-size:8.5px;color:#667085;margin-top:1px;">Warehouse Supervisor</div>
+      </div>
+      <div>
+        <div style="border-top:1px solid #101828;padding-top:6px;font-size:9.5px;font-weight:800;">Approved by</div>
+        <div style="font-size:8.5px;color:#667085;margin-top:1px;">Owner</div>
+      </div>
+    </div>
+  </div>
+</doc-page>
+</x-dc>
+</body>
+</html>

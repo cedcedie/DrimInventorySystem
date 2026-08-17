@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Box, Typography, Checkbox, Tabs, Tab, ButtonBase, MenuItem, Select } from "@mui/material";
+import { Box, Typography, Checkbox, Tabs, Tab, ButtonBase, MenuItem, Select, Collapse, useMediaQuery } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { fetchJson } from "@/lib/api";
 import { postJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
@@ -389,6 +390,13 @@ function RoleMatrix({
   onToggle: (roleId: string, module: string, perm: string, value: boolean) => void;
 }) {
   const t = useTheme().palette;
+  const theme = useTheme();
+  // Below `sm` the matrix's 6 columns can't fit without either shrinking
+  // checkboxes past a usable tap size or forcing horizontal scroll while
+  // trying to toggle something — bad for a read-only table, worse for a
+  // form. Mobile gets a per-module expandable card instead: tap a module
+  // to reveal its 5 permission rows as full-width, large-tap-target rows.
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const activeRole = selectedRole || data.roles[0]?.id;
   const rolePermissions = data.permissions.filter((p) => p.roleId === activeRole);
 
@@ -402,7 +410,7 @@ function RoleMatrix({
         overflow: "hidden",
       }}
     >
-      <Box sx={{ px: 2, borderBottom: "1px solid", borderColor: t.line }}>
+      <Box sx={{ px: { xs: 1, sm: 2 }, borderBottom: "1px solid", borderColor: t.line }}>
         <Tabs
           value={activeRole}
           onChange={(_, v) => onSelectRole(v)}
@@ -426,42 +434,184 @@ function RoleMatrix({
         </Tabs>
       </Box>
 
-      <Box sx={{ overflowX: "auto" }}>
-        <Box sx={{ minWidth: 620 }}>
-          <MatrixHeader grid={GRID_ROLE} />
-
+      {isMobile ? (
+        <Box>
           {MODULES.map((module, index) => {
             const perms = rolePermissions.find((p) => p.module === module.id);
+            const grantedCount = PERMISSIONS.filter((perm) => perms?.[perm.id]).length;
             return (
-              <Box
+              <PermissionModuleCard
                 key={module.id}
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: GRID_ROLE,
-                  borderBottom: index < MODULES.length - 1 ? "1px solid" : "none",
-                  borderColor: t.line,
-                  alignItems: "center",
-                  "&:hover": { bgcolor: t.hover },
-                }}
+                moduleLabel={module.label}
+                summary={`${grantedCount}/${PERMISSIONS.length} granted`}
+                isLast={index === MODULES.length - 1}
               >
-                <Box sx={{ px: 2, py: 0.75, fontSize: 14, fontWeight: 600 }}>{module.label}</Box>
                 {PERMISSIONS.map((perm) => (
-                  <Box key={perm.id} sx={{ display: "flex", justifyContent: "center" }}>
-                    <Checkbox
-                      checked={(perms?.[perm.id] as boolean) ?? false}
-                      onChange={(e) => onToggle(activeRole, module.id, perm.id, e.target.checked)}
-                      disabled={pending}
-                      slotProps={{ input: { "aria-label": `${module.label} — ${perm.label}` } }}
-                      sx={permCheckboxSx()}
-                    />
-                  </Box>
+                  <PermissionToggleRow
+                    key={perm.id}
+                    icon={perm.Icon}
+                    label={perm.label}
+                    checked={(perms?.[perm.id] as boolean) ?? false}
+                    disabled={pending}
+                    ariaLabel={`${module.label} — ${perm.label}`}
+                    onChange={(checked) => onToggle(activeRole, module.id, perm.id, checked)}
+                  />
                 ))}
-              </Box>
+              </PermissionModuleCard>
             );
           })}
         </Box>
-      </Box>
+      ) : (
+        <Box sx={{ overflowX: "auto" }}>
+          <Box sx={{ minWidth: 620 }}>
+            <MatrixHeader grid={GRID_ROLE} />
+
+            {MODULES.map((module, index) => {
+              const perms = rolePermissions.find((p) => p.module === module.id);
+              return (
+                <Box
+                  key={module.id}
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: GRID_ROLE,
+                    borderBottom: index < MODULES.length - 1 ? "1px solid" : "none",
+                    borderColor: t.line,
+                    alignItems: "center",
+                    "&:hover": { bgcolor: t.hover },
+                  }}
+                >
+                  <Box sx={{ px: 2, py: 0.75, fontSize: 14, fontWeight: 600 }}>{module.label}</Box>
+                  {PERMISSIONS.map((perm) => (
+                    <Box key={perm.id} sx={{ display: "flex", justifyContent: "center" }}>
+                      <Checkbox
+                        checked={(perms?.[perm.id] as boolean) ?? false}
+                        onChange={(e) => onToggle(activeRole, module.id, perm.id, e.target.checked)}
+                        disabled={pending}
+                        slotProps={{ input: { "aria-label": `${module.label} — ${perm.label}` } }}
+                        sx={permCheckboxSx()}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              );
+            })}
+          </Box>
+        </Box>
+      )}
     </Box>
+  );
+}
+
+/** Tap-to-expand module row for the mobile permissions layout — replaces a
+ * matrix column with a full-width card so each permission gets a real tap
+ * target instead of an 18px box reached by scrolling sideways. */
+function PermissionModuleCard({
+  moduleLabel,
+  summary,
+  isLast,
+  trailingBadge,
+  children,
+}: {
+  moduleLabel: string;
+  summary: string;
+  isLast: boolean;
+  /** Optional "Custom" chip shown next to the summary (User mode only). */
+  trailingBadge?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const t = useTheme().palette;
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Box sx={{ borderBottom: isLast ? "none" : "1px solid", borderColor: t.line }}>
+      <ButtonBase
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        sx={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1,
+          px: 2,
+          py: 1.5,
+          textAlign: "left",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+          <Typography sx={{ fontSize: 14, fontWeight: 600, color: t.text.primary }}>
+            {moduleLabel}
+          </Typography>
+          {trailingBadge}
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
+          <Typography sx={{ fontSize: 12, color: t.muted }}>{summary}</Typography>
+          <ExpandMoreIcon
+            sx={{
+              fontSize: 20,
+              color: t.muted,
+              transition: `transform ${motion.duration.dropdown}ms ${motion.easing.standard}`,
+              transform: open ? "rotate(180deg)" : "none",
+            }}
+          />
+        </Box>
+      </ButtonBase>
+      <Collapse in={open}>
+        <Box sx={{ px: 2, pb: 1.5, display: "flex", flexDirection: "column", gap: 0.25 }}>{children}</Box>
+      </Collapse>
+    </Box>
+  );
+}
+
+/** Full-width permission row for the mobile card — the whole row toggles
+ * the checkbox, giving a much larger tap target than the 18px box alone. */
+function PermissionToggleRow({
+  icon: Icon,
+  label,
+  checked,
+  disabled,
+  ariaLabel,
+  onChange,
+}: {
+  icon: React.ElementType;
+  label: string;
+  checked: boolean;
+  disabled: boolean;
+  ariaLabel: string;
+  onChange: (checked: boolean) => void;
+}) {
+  const t = useTheme().palette;
+
+  return (
+    <ButtonBase
+      onClick={() => onChange(!checked)}
+      disabled={disabled}
+      sx={{
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 1,
+        py: 1,
+        px: 1,
+        borderRadius: "8px",
+        minHeight: 44,
+        "&:hover": { bgcolor: t.hover },
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Icon sx={{ fontSize: 17, color: t.text2 }} />
+        <Typography sx={{ fontSize: 13.5, color: t.text.primary }}>{label}</Typography>
+      </Box>
+      <Checkbox
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        onClick={(e) => e.stopPropagation()}
+        disabled={disabled}
+        slotProps={{ input: { "aria-label": ariaLabel } }}
+        sx={permCheckboxSx()}
+      />
+    </ButtonBase>
   );
 }
 
@@ -483,6 +633,8 @@ function UserMatrix({
   onReset: (user: UserRow, module: string) => void;
 }) {
   const t = useTheme().palette;
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const user = users.find((u) => u.id === selectedUserId);
 
   return (
@@ -513,7 +665,7 @@ function UserMatrix({
           size="small"
           value={selectedUserId}
           onChange={(e) => onSelectUser(e.target.value)}
-          sx={{ minWidth: 260, fontSize: 13.5, borderRadius: "8px" }}
+          sx={{ minWidth: { xs: "100%", sm: 260 }, fontSize: 13.5, borderRadius: "8px" }}
         >
           {users.map((u) => (
             <MenuItem key={u.id} value={u.id} sx={{ fontSize: 13.5 }}>
@@ -528,76 +680,156 @@ function UserMatrix({
         )}
       </Box>
 
-      <Box sx={{ overflowX: "auto" }}>
-        <Box sx={{ minWidth: 700 }}>
-          <MatrixHeader grid={GRID} withStatus />
-
+      {isMobile ? (
+        <Box>
           {user &&
             MODULES.map((module, index) => {
               const override = user.permissions.find((p) => p.module === module.id);
               const effective = override ?? roleDefaultFor(user.role, module.id);
               const isCustom = Boolean(override);
+              const grantedCount = PERMISSIONS.filter((perm) => effective[perm.id]).length;
 
               return (
-                <Box
+                <PermissionModuleCard
                   key={module.id}
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: GRID,
-                    borderBottom: index < MODULES.length - 1 ? "1px solid" : "none",
-                    borderColor: t.line,
-                    alignItems: "center",
-                    bgcolor: isCustom ? (t.mode === "dark" ? t.rowSel : ACCENT_SOFT) : "transparent",
-                    "&:hover": { bgcolor: isCustom ? undefined : t.hover },
-                  }}
-                >
-                  <Box sx={{ px: 2, py: 0.75, fontSize: 14, fontWeight: 600 }}>{module.label}</Box>
-                  {PERMISSIONS.map((perm) => (
-                    <Box key={perm.id} sx={{ display: "flex", justifyContent: "center" }}>
-                      <Checkbox
-                        checked={effective[perm.id]}
-                        onChange={(e) => onToggle(user, module.id, perm.id, e.target.checked)}
-                        disabled={pending}
-                        slotProps={{
-                          input: { "aria-label": `${user.name}: ${module.label} — ${perm.label}` },
+                  moduleLabel={module.label}
+                  summary={`${grantedCount}/${PERMISSIONS.length} granted`}
+                  isLast={index === MODULES.length - 1}
+                  trailingBadge={
+                    isCustom ? (
+                      <Box
+                        component="span"
+                        sx={{
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          color: ACCENT,
+                          bgcolor: t.mode === "dark" ? t.rowSel : ACCENT_SOFT,
+                          borderRadius: "999px",
+                          px: 0.875,
+                          py: 0.25,
                         }}
-                        sx={permCheckboxSx()}
-                      />
-                    </Box>
+                      >
+                        Custom
+                      </Box>
+                    ) : undefined
+                  }
+                >
+                  {PERMISSIONS.map((perm) => (
+                    <PermissionToggleRow
+                      key={perm.id}
+                      icon={perm.Icon}
+                      label={perm.label}
+                      checked={effective[perm.id]}
+                      disabled={pending}
+                      ariaLabel={`${user.name}: ${module.label} — ${perm.label}`}
+                      onChange={(checked) => onToggle(user, module.id, perm.id, checked)}
+                    />
                   ))}
-                  <Box sx={{ px: 1, display: "flex", alignItems: "center", gap: 0.5 }}>
+                  <Box sx={{ display: "flex", justifyContent: "flex-end", pt: 0.5 }}>
                     {isCustom ? (
-                      <>
-                        <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: ACCENT }}>
-                          Custom
-                        </Typography>
-                        <ButtonBase
-                          title="Reset to role default"
-                          aria-label={`Reset ${module.label} to role default`}
-                          onClick={() => onReset(user, module.id)}
-                          disabled={pending}
-                          sx={{
-                            width: 26,
-                            height: 26,
-                            borderRadius: "6px",
-                            border: "1px solid",
-                            borderColor: t.line,
-                            color: t.muted,
-                            "&:hover": { borderColor: ACCENT, color: ACCENT },
-                          }}
-                        >
-                          <RestartAltIcon sx={{ fontSize: 15 }} />
-                        </ButtonBase>
-                      </>
+                      <ButtonBase
+                        onClick={() => onReset(user, module.id)}
+                        disabled={pending}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.5,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: t.muted,
+                          border: "1px solid",
+                          borderColor: t.line,
+                          borderRadius: "8px",
+                          px: 1.25,
+                          py: 0.625,
+                          "&:hover": { borderColor: ACCENT, color: ACCENT },
+                        }}
+                      >
+                        <RestartAltIcon sx={{ fontSize: 15 }} />
+                        Reset to role default
+                      </ButtonBase>
                     ) : (
-                      <Typography sx={{ fontSize: 11.5, color: t.muted2 }}>Role default</Typography>
+                      <Typography sx={{ fontSize: 11.5, color: t.muted2 }}>
+                        Following {ROLE_LABELS[user.role]} role default
+                      </Typography>
                     )}
                   </Box>
-                </Box>
+                </PermissionModuleCard>
               );
             })}
         </Box>
-      </Box>
+      ) : (
+        <Box sx={{ overflowX: "auto" }}>
+          <Box sx={{ minWidth: 700 }}>
+            <MatrixHeader grid={GRID} withStatus />
+
+            {user &&
+              MODULES.map((module, index) => {
+                const override = user.permissions.find((p) => p.module === module.id);
+                const effective = override ?? roleDefaultFor(user.role, module.id);
+                const isCustom = Boolean(override);
+
+                return (
+                  <Box
+                    key={module.id}
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: GRID,
+                      borderBottom: index < MODULES.length - 1 ? "1px solid" : "none",
+                      borderColor: t.line,
+                      alignItems: "center",
+                      bgcolor: isCustom ? (t.mode === "dark" ? t.rowSel : ACCENT_SOFT) : "transparent",
+                      "&:hover": { bgcolor: isCustom ? undefined : t.hover },
+                    }}
+                  >
+                    <Box sx={{ px: 2, py: 0.75, fontSize: 14, fontWeight: 600 }}>{module.label}</Box>
+                    {PERMISSIONS.map((perm) => (
+                      <Box key={perm.id} sx={{ display: "flex", justifyContent: "center" }}>
+                        <Checkbox
+                          checked={effective[perm.id]}
+                          onChange={(e) => onToggle(user, module.id, perm.id, e.target.checked)}
+                          disabled={pending}
+                          slotProps={{
+                            input: { "aria-label": `${user.name}: ${module.label} — ${perm.label}` },
+                          }}
+                          sx={permCheckboxSx()}
+                        />
+                      </Box>
+                    ))}
+                    <Box sx={{ px: 1, display: "flex", alignItems: "center", gap: 0.5 }}>
+                      {isCustom ? (
+                        <>
+                          <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: ACCENT }}>
+                            Custom
+                          </Typography>
+                          <ButtonBase
+                            title="Reset to role default"
+                            aria-label={`Reset ${module.label} to role default`}
+                            onClick={() => onReset(user, module.id)}
+                            disabled={pending}
+                            sx={{
+                              width: 26,
+                              height: 26,
+                              borderRadius: "6px",
+                              border: "1px solid",
+                              borderColor: t.line,
+                              color: t.muted,
+                              "&:hover": { borderColor: ACCENT, color: ACCENT },
+                            }}
+                          >
+                            <RestartAltIcon sx={{ fontSize: 15 }} />
+                          </ButtonBase>
+                        </>
+                      ) : (
+                        <Typography sx={{ fontSize: 11.5, color: t.muted2 }}>Role default</Typography>
+                      )}
+                    </Box>
+                  </Box>
+                );
+              })}
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }

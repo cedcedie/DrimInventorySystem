@@ -3,7 +3,8 @@
 import { useCallback, useState, Suspense } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Box, ButtonBase, Typography } from "@mui/material";
+import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
+import { EntityModal } from "@/components/EntityModal";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveHot, liveWarm } from "@/lib/liveQuery";
@@ -12,7 +13,7 @@ import { parseStockTab, type StockTab } from "@/lib/stockTabs";
 import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination, RowActionButton } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
 import { StatusChip } from "@/components/StatusChip";
-import { useTheme } from "@mui/material/styles";
+import { useTheme, type Palette } from "@mui/material/styles";
 import { StockInModal } from "@/components/modals/StockInModal";
 import { StockOutModal } from "@/components/modals/StockOutModal";
 import { MrfDetailModal } from "@/components/modals/MrfDetailModal";
@@ -414,7 +415,15 @@ function StockOutTab({
   const [pickedIdx, setPickedIdx] = useState(0);
   const [correcting, setCorrecting] = useState<{ product: AdjustableProduct; note: string } | null>(null);
   const canCorrect = useCan("inventory", "canEdit");
-  const t = useTheme().palette;
+  const theme = useTheme();
+  const t = theme.palette;
+  // Below this width the inline "Release detail" side panel would render
+  // beneath the whole table instead of next to it — tapping a row would
+  // silently update a panel the user has to scroll past the table to see.
+  // Below that width a tap opens the same detail in a modal instead, so
+  // it's front-and-center regardless of which row was picked.
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   const { data, isFetching } = useQuery({
     queryKey: queryKeys.stockOut({ page }),
@@ -470,7 +479,15 @@ function StockOutTab({
               ]}
             />
             {data.rows.map((r, i) => (
-              <TableRow key={r.id} columns={SO_COLS} onClick={() => setPickedIdx(i)} selected={picked?.id === r.id}>
+              <TableRow
+                key={r.id}
+                columns={SO_COLS}
+                onClick={() => {
+                  setPickedIdx(i);
+                  if (isMobile) setMobileDetailOpen(true);
+                }}
+                selected={picked?.id === r.id}
+              >
                 <TableCell label="Release slip (SO)" mono color={t.primary.main}>
                   {r.ref}
                 </TableCell>
@@ -504,10 +521,15 @@ function StockOutTab({
         )}
       </Box>
 
+      {/* Desktop/tablet: inline side panel. Below `sm` this is replaced by
+          the modal opened on row-tap (see mobileDetailOpen) so the detail
+          is never rendered below content the user would have to scroll
+          past to reach. */}
       <Box
         sx={{
+          display: { xs: "none", sm: "block" },
           flex: "1 1 250px",
-          minWidth: { xs: "100%", sm: 250 },
+          minWidth: 250,
           bgcolor: t.surface,
           border: "1px solid",
           borderColor: t.line,
@@ -518,52 +540,26 @@ function StockOutTab({
         <Box sx={{ px: 1.75, py: 1.25, borderBottom: "1px solid", borderColor: t.line }}>
           <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>Release detail</Typography>
         </Box>
-        {picked ? (
-          <Box sx={{ p: 1.75, display: "flex", flexDirection: "column", gap: 1.375 }}>
-            <ProfileField label="Release slip (SO)" value={picked.ref} mono bold />
-            <ProfileField label="Request # (MRF)" value={picked.mrf} mono />
-            <ProfileField label="Technician" value={picked.tech} bold />
-            <ProfileField label="Employee Number" value={picked.empNo} mono />
-            <ProfileField label="Item" value={`${picked.item} × ${picked.qty}`} />
-            <ProfileField label="Project" value={picked.project} />
-            <ProfileField label="Released" value={formatDate(new Date(picked.date))} />
-            {canCorrect && (
-              <ButtonBase
-                onClick={() =>
-                  setCorrecting({
-                    product: {
-                      id: picked.productId,
-                      name: picked.item,
-                      code: picked.productCode,
-                      unit: picked.productUnit,
-                      stocks: picked.productStocks,
-                    },
-                    note: `Correcting Stock Out ${picked.ref} — released ${picked.qty} ${picked.productUnit}`,
-                  })
-                }
-                sx={{
-                  mt: 0.5,
-                  alignSelf: "flex-start",
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  color: t.warning.main,
-                  border: "1px solid",
-                  borderColor: t.warning.main,
-                  borderRadius: "8px",
-                  px: 1.25,
-                  py: 0.625,
-                  transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
-                  "&:hover": { bgcolor: t.warning.main, color: "#fff" },
-                }}
-              >
-                Correct this release
-              </ButtonBase>
-            )}
-          </Box>
-        ) : (
-          <Box sx={{ p: 1.75, fontSize: 12.5, color: t.muted }}>No release selected.</Box>
-        )}
+        <ReleaseDetailBody picked={picked} canCorrect={canCorrect} onCorrect={setCorrecting} t={t} />
       </Box>
+
+      <EntityModal
+        open={isMobile && mobileDetailOpen}
+        onClose={() => setMobileDetailOpen(false)}
+        title={picked ? `Release ${picked.ref}` : "Release detail"}
+        width={420}
+      >
+        <ReleaseDetailBody
+          picked={picked}
+          canCorrect={canCorrect}
+          onCorrect={(c) => {
+            setMobileDetailOpen(false);
+            setCorrecting(c);
+          }}
+          t={t}
+          padded
+        />
+      </EntityModal>
 
       {canCorrect && (
         <AdjustStockModal
@@ -571,6 +567,70 @@ function StockOutTab({
           initialNote={correcting?.note}
           onClose={() => setCorrecting(null)}
         />
+      )}
+    </Box>
+  );
+}
+
+function ReleaseDetailBody({
+  picked,
+  canCorrect,
+  onCorrect,
+  t,
+  padded,
+}: {
+  picked: StockOutData["rows"][number] | undefined;
+  canCorrect: boolean;
+  onCorrect: (c: { product: AdjustableProduct; note: string }) => void;
+  t: Palette;
+  /** The modal body needs its own padding; the inline panel already gets it
+   * from the surrounding card. */
+  padded?: boolean;
+}) {
+  if (!picked) {
+    return <Box sx={{ p: 1.75, fontSize: 12.5, color: t.muted }}>No release selected.</Box>;
+  }
+
+  return (
+    <Box sx={{ p: padded ? 2.25 : 1.75, display: "flex", flexDirection: "column", gap: 1.375 }}>
+      <ProfileField label="Release slip (SO)" value={picked.ref} mono bold />
+      <ProfileField label="Request # (MRF)" value={picked.mrf} mono />
+      <ProfileField label="Technician" value={picked.tech} bold />
+      <ProfileField label="Employee Number" value={picked.empNo} mono />
+      <ProfileField label="Item" value={`${picked.item} × ${picked.qty}`} />
+      <ProfileField label="Project" value={picked.project} />
+      <ProfileField label="Released" value={formatDate(new Date(picked.date))} />
+      {canCorrect && (
+        <ButtonBase
+          onClick={() =>
+            onCorrect({
+              product: {
+                id: picked.productId,
+                name: picked.item,
+                code: picked.productCode,
+                unit: picked.productUnit,
+                stocks: picked.productStocks,
+              },
+              note: `Correcting Stock Out ${picked.ref} — released ${picked.qty} ${picked.productUnit}`,
+            })
+          }
+          sx={{
+            mt: 0.5,
+            alignSelf: "flex-start",
+            fontSize: 11.5,
+            fontWeight: 600,
+            color: t.warning.main,
+            border: "1px solid",
+            borderColor: t.warning.main,
+            borderRadius: "8px",
+            px: 1.25,
+            py: 0.625,
+            transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
+            "&:hover": { bgcolor: t.warning.main, color: "#fff" },
+          }}
+        >
+          Correct this release
+        </ButtonBase>
       )}
     </Box>
   );

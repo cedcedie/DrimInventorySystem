@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Box, ButtonBase, Typography } from "@mui/material";
+import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, RowActionButton } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
-import { useTheme } from "@mui/material/styles";
+import { useTheme, type Palette } from "@mui/material/styles";
+import { EntityModal } from "@/components/EntityModal";
 import { deleteJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { TechnicianModal, type TechnicianFormRow } from "@/components/modals/TechnicianModal";
@@ -43,7 +44,13 @@ export function TechniciansScreen({
   const canDelete = useCan("technicians", "canDelete");
   const canManage = canEdit || canDelete;
   void role;
-  const t = useTheme().palette;
+  const theme = useTheme();
+  const t = theme.palette;
+  // Same reasoning as StockScreen's Release detail panel — below `sm` a
+  // tap opens the profile in a modal instead of updating an inline panel
+  // that renders below the whole table.
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -95,7 +102,10 @@ export function TechniciansScreen({
               <TableRow
                 key={r.id}
                 columns={canManage ? COLS + " 128px" : COLS}
-                onClick={() => setPickedId(r.id)}
+                onClick={() => {
+                  setPickedId(r.id);
+                  if (isMobile) setMobileDetailOpen(true);
+                }}
                 selected={picked?.id === r.id}
               >
                 <TableCell label="Name" bold>{r.name}</TableCell>
@@ -154,10 +164,13 @@ export function TechniciansScreen({
           </TableShell>
         </Box>
 
+        {/* Desktop/tablet: inline side panel. Below `sm` this is replaced
+            by the modal opened on row-tap (see mobileDetailOpen). */}
         <Box
           sx={{
+            display: { xs: "none", sm: "block" },
             flex: "1 1 250px",
-            minWidth: { xs: "100%", sm: 250 },
+            minWidth: 250,
             bgcolor: t.surface,
             border: "1px solid",
             borderColor: t.line,
@@ -168,67 +181,26 @@ export function TechniciansScreen({
           <Box sx={{ px: 1.75, py: 1.25, borderBottom: "1px solid", borderColor: t.line }}>
             <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>Technician Profile</Typography>
           </Box>
-          {picked ? (
-            <Box sx={{ p: 1.75, display: "flex", flexDirection: "column", gap: 1.375 }}>
-              <ProfileField label="Name" value={picked.name} bold />
-              <ProfileField label="Employee Number" value={picked.empNo} mono />
-              <ProfileField label="Position" value={picked.position} />
-              <Box>
-                <Typography
-                  sx={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.6px",
-                    color: t.muted2,
-                    mb: 0.5,
-                  }}
-                >
-                  Recent Transactions
-                </Typography>
-                {picked.recentMrfs.length === 0 ? (
-                  <Typography sx={{ fontSize: 12.5, color: t.muted }}>No recent activity</Typography>
-                ) : (
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                    {picked.recentMrfs.map((mrf) => (
-                      <ButtonBase
-                        key={mrf.id}
-                        onClick={() => setDetailMrfId(mrf.id)}
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "flex-start",
-                          width: "100%",
-                          px: 1,
-                          py: 0.75,
-                          border: "1px solid",
-                          borderColor: t.line,
-                          borderRadius: "8px",
-                          textAlign: "left",
-                          transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}`,
-                          "&:hover": { bgcolor: t.line2 },
-                        }}
-                      >
-                        <Typography sx={{ fontSize: 12, fontWeight: 700, color: t.primary.main, fontFamily: "'IBM Plex Mono', monospace" }}>
-                          {mrf.refNo}
-                        </Typography>
-                        <Typography sx={{ fontSize: 12, color: t.text2 }}>
-                          {mrf.itemSummary} × {mrf.qty}
-                        </Typography>
-                        <Typography sx={{ fontSize: 10.5, color: t.muted2 }}>
-                          {formatDate(new Date(mrf.date))}
-                        </Typography>
-                      </ButtonBase>
-                    ))}
-                  </Box>
-                )}
-              </Box>
-            </Box>
-          ) : (
-            <Box sx={{ p: 1.75, fontSize: 12.5, color: t.muted }}>No technician selected.</Box>
-          )}
+          <TechnicianProfileBody picked={picked} onOpenMrf={setDetailMrfId} t={t} />
         </Box>
       </Box>
+
+      <EntityModal
+        open={isMobile && mobileDetailOpen}
+        onClose={() => setMobileDetailOpen(false)}
+        title={picked ? picked.name : "Technician Profile"}
+        width={420}
+      >
+        <TechnicianProfileBody
+          picked={picked}
+          onOpenMrf={(id) => {
+            setMobileDetailOpen(false);
+            setDetailMrfId(id);
+          }}
+          t={t}
+          padded
+        />
+      </EntityModal>
 
       {(canCreate || canEdit) && (
         <TechnicianModal
@@ -242,6 +214,82 @@ export function TechniciansScreen({
         open={Boolean(detailMrfId)}
         onClose={() => setDetailMrfId(null)}
       />
+    </Box>
+  );
+}
+
+function TechnicianProfileBody({
+  picked,
+  onOpenMrf,
+  t,
+  padded,
+}: {
+  picked: TechniciansData["rows"][number] | undefined;
+  onOpenMrf: (mrfId: string) => void;
+  t: Palette;
+  /** The modal body needs its own padding; the inline panel already gets
+   * it from the surrounding card. */
+  padded?: boolean;
+}) {
+  if (!picked) {
+    return <Box sx={{ p: 1.75, fontSize: 12.5, color: t.muted }}>No technician selected.</Box>;
+  }
+
+  return (
+    <Box sx={{ p: padded ? 2.25 : 1.75, display: "flex", flexDirection: "column", gap: 1.375 }}>
+      <ProfileField label="Name" value={picked.name} bold />
+      <ProfileField label="Employee Number" value={picked.empNo} mono />
+      <ProfileField label="Position" value={picked.position} />
+      <Box>
+        <Typography
+          sx={{
+            fontSize: 10,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.6px",
+            color: t.muted2,
+            mb: 0.5,
+          }}
+        >
+          Recent Transactions
+        </Typography>
+        {picked.recentMrfs.length === 0 ? (
+          <Typography sx={{ fontSize: 12.5, color: t.muted }}>No recent activity</Typography>
+        ) : (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+            {picked.recentMrfs.map((mrf) => (
+              <ButtonBase
+                key={mrf.id}
+                onClick={() => onOpenMrf(mrf.id)}
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  width: "100%",
+                  px: 1,
+                  py: 0.75,
+                  border: "1px solid",
+                  borderColor: t.line,
+                  borderRadius: "8px",
+                  textAlign: "left",
+                  transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}`,
+                  "&:hover": { bgcolor: t.line2 },
+                }}
+              >
+                <Typography sx={{ fontSize: 12, fontWeight: 700, color: t.primary.main, fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {mrf.refNo}
+                </Typography>
+                <Typography sx={{ fontSize: 12, color: t.text2 }}>
+                  {mrf.itemSummary} × {mrf.qty}
+                </Typography>
+                <Typography sx={{ fontSize: 10.5, color: t.muted2 }}>
+                  {formatDate(new Date(mrf.date))}
+                </Typography>
+              </ButtonBase>
+            ))}
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 }

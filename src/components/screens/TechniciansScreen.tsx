@@ -79,7 +79,7 @@ export function TechniciansScreen({
       />
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-        <Box sx={{ flex: "2 1 420px", minWidth: 420 }}>
+        <Box sx={{ flex: "2 1 420px", minWidth: { xs: "100%", sm: 420 } }}>
           <TableShell minWidth={canManage ? 680 : 560}>
             <TableHeaderRow
               columns={canManage ? COLS + " 128px" : COLS}
@@ -98,10 +98,10 @@ export function TechniciansScreen({
                 onClick={() => setPickedId(r.id)}
                 selected={picked?.id === r.id}
               >
-                <TableCell bold>{r.name}</TableCell>
-                <TableCell mono>{r.empNo}</TableCell>
-                <TableCell color={t.text2}>{r.position}</TableCell>
-                <TableCell color={t.muted} sx={{ whiteSpace: "normal" }}>
+                <TableCell label="Name" bold>{r.name}</TableCell>
+                <TableCell label="Employee No." mono>{r.empNo}</TableCell>
+                <TableCell label="Position" color={t.text2}>{r.position}</TableCell>
+                <TableCell label="Recent Transaction" color={t.muted} sx={{ whiteSpace: "normal" }}>
                   {r.recentMrfs.length > 0
                     ? r.recentMrfs.length === 1
                       ? `${r.recentMrfs[0].refNo} · ${r.recentMrfs[0].itemSummary} × ${r.recentMrfs[0].qty}`
@@ -157,7 +157,7 @@ export function TechniciansScreen({
         <Box
           sx={{
             flex: "1 1 250px",
-            minWidth: 250,
+            minWidth: { xs: "100%", sm: 250 },
             bgcolor: t.surface,
             border: "1px solid",
             borderColor: t.line,

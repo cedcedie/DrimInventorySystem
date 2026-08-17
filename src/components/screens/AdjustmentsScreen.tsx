@@ -40,23 +40,23 @@ export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustme
         />
         {data.rows.map((row) => (
           <TableRow key={row.id} columns={COLS}>
-            <TableCell mono color={t.primary.main}>
+            <TableCell label="Adj. #" mono color={t.primary.main}>
               {row.refNo}
             </TableCell>
-            <TableCell color={t.text2}>{formatDateTime(new Date(row.dt))}</TableCell>
-            <TableCell>
+            <TableCell label="Date" color={t.text2}>{formatDateTime(new Date(row.dt))}</TableCell>
+            <TableCell label="Product">
               {row.product}
               <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
                 {row.code}
               </Box>
             </TableCell>
-            <TableCell>{row.qtyBefore}</TableCell>
-            <TableCell bold>{row.qtyAfter}</TableCell>
-            <TableCell bold color={row.delta >= 0 ? t.success.main : t.warning.main}>
+            <TableCell label="Before">{row.qtyBefore}</TableCell>
+            <TableCell label="After" bold>{row.qtyAfter}</TableCell>
+            <TableCell label="Delta" bold color={row.delta >= 0 ? t.success.main : t.warning.main}>
               {row.delta >= 0 ? `+${row.delta}` : row.delta}
             </TableCell>
-            <TableCell color={t.text2}>{row.reason}</TableCell>
-            <TableCell color={t.text2}>{row.user}</TableCell>
+            <TableCell label="Reason" color={t.text2}>{row.reason}</TableCell>
+            <TableCell label="By" color={t.text2}>{row.user}</TableCell>
           </TableRow>
         ))}
         {data.rows.length === 0 && (

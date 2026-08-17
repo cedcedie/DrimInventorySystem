@@ -145,12 +145,12 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
                   />
                 </TableCell>
               )}
-              <TableCell bold>{r.name}</TableCell>
-              <TableCell color={t.text2}>{ROLE_LABELS[r.role]}</TableCell>
-              <TableCell color={t.muted} sx={{ whiteSpace: "normal" }}>
+              <TableCell label="Name" bold>{r.name}</TableCell>
+              <TableCell label="Role" color={t.text2}>{ROLE_LABELS[r.role]}</TableCell>
+              <TableCell label="Recent Activity" color={t.muted} sx={{ whiteSpace: "normal" }}>
                 {r.recentActivity}
               </TableCell>
-              <TableCell>
+              <TableCell label="Status">
                 <StatusChip label={r.status === "ACTIVE" ? "Active" : "Inactive"} />
               </TableCell>
               <TableCell>
@@ -217,9 +217,9 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
             <>
               {historyData?.rows.map((h, i) => (
                 <TableRow key={i} columns={HIST_COLS}>
-                  <TableCell color={t.text2}>{formatDateTime(new Date(h.dt))}</TableCell>
-                  <TableCell sx={{ whiteSpace: "normal" }}>{h.action}</TableCell>
-                  <TableCell mono>{h.ref}</TableCell>
+                  <TableCell label="Date & Time" color={t.text2}>{formatDateTime(new Date(h.dt))}</TableCell>
+                  <TableCell label="Action" sx={{ whiteSpace: "normal" }}>{h.action}</TableCell>
+                  <TableCell label="Reference" mono>{h.ref}</TableCell>
                 </TableRow>
               ))}
               {historyData?.rows.length === 0 && (

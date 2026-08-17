@@ -207,12 +207,12 @@ function OpenMrfsTab({
           />
           {flatRows.map((row) => (
             <TableRow key={row.id} columns={MRF_COLS} onClick={() => onOpenDetail(row.mrfId)}>
-              <TableCell mono color={t.primary.main}>
+              <TableCell label="Request #" mono color={t.primary.main}>
                 {row.refNo}
               </TableCell>
-              <TableCell color={t.text2}>{formatDate(new Date(row.createdAt))}</TableCell>
-              <TableCell>{row.technicianName}</TableCell>
-              <TableCell color={t.text2}>
+              <TableCell label="Filed" color={t.text2}>{formatDate(new Date(row.createdAt))}</TableCell>
+              <TableCell label="Technician">{row.technicianName}</TableCell>
+              <TableCell label="Project" color={t.text2}>
                 {row.project}
                 {row.externalRefNo && (
                   <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2 }}>
@@ -220,13 +220,13 @@ function OpenMrfsTab({
                   </Box>
                 )}
               </TableCell>
-              <TableCell>
+              <TableCell label="Item">
                 {row.productName}
                 <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
                   {row.productCode}
                 </Box>
               </TableCell>
-              <TableCell bold>
+              <TableCell label="Need" bold>
                 {row.qtyRemaining} {row.unit}
                 {row.qtyFulfilled > 0 && (
                   <Box component="span" sx={{ fontSize: 10, color: t.muted, fontWeight: 400 }}>
@@ -236,12 +236,13 @@ function OpenMrfsTab({
                 )}
               </TableCell>
               <TableCell
+                label="In stock"
                 bold
                 color={row.availableStock >= row.qtyRemaining ? t.success.main : t.warning.main}
               >
                 {row.availableStock}
               </TableCell>
-              <TableCell>
+              <TableCell label="Action">
                 {canStock ? (
                   <ButtonBase
                     onClick={(e) => {
@@ -338,13 +339,13 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
           />
           {data.rows.map((r) => (
             <TableRow key={r.id} columns={cols}>
-              <TableCell mono color={t.primary.main}>
+              <TableCell label="Receipt slip (SI)" mono color={t.primary.main}>
                 {r.ref}
               </TableCell>
-              <TableCell color={t.text2}>{formatDate(new Date(r.date))}</TableCell>
-              <TableCell>{r.supplier}</TableCell>
-              <TableCell>{r.item}</TableCell>
-              <TableCell bold>{r.qty}</TableCell>
+              <TableCell label="Date" color={t.text2}>{formatDate(new Date(r.date))}</TableCell>
+              <TableCell label="Supplier">{r.supplier}</TableCell>
+              <TableCell label="Item">{r.item}</TableCell>
+              <TableCell label="Quantity" bold>{r.qty}</TableCell>
               {canCorrect && (
                 <TableCell>
                   <RowActionButton
@@ -426,7 +427,7 @@ function StockOutTab({
 
   return (
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-      <Box sx={{ flex: "2.4 1 460px", minWidth: 460 }}>
+      <Box sx={{ flex: "2.4 1 460px", minWidth: { xs: "100%", sm: 460 } }}>
         {viewOnly && <ViewOnlyBanner text="View only — releasing Stock Out requires create permission" />}
         <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
           <Typography sx={{ fontSize: 12, color: t.muted }}>
@@ -470,15 +471,15 @@ function StockOutTab({
             />
             {data.rows.map((r, i) => (
               <TableRow key={r.id} columns={SO_COLS} onClick={() => setPickedIdx(i)} selected={picked?.id === r.id}>
-                <TableCell mono color={t.primary.main}>
+                <TableCell label="Release slip (SO)" mono color={t.primary.main}>
                   {r.ref}
                 </TableCell>
-                <TableCell color={t.text2}>{formatDate(new Date(r.date))}</TableCell>
-                <TableCell>{r.tech}</TableCell>
-                <TableCell>{r.item}</TableCell>
-                <TableCell bold>{r.qty}</TableCell>
-                <TableCell mono>{r.mrf}</TableCell>
-                <TableCell color={t.text2}>{r.project}</TableCell>
+                <TableCell label="Date" color={t.text2}>{formatDate(new Date(r.date))}</TableCell>
+                <TableCell label="Technician">{r.tech}</TableCell>
+                <TableCell label="Item">{r.item}</TableCell>
+                <TableCell label="Qty" bold>{r.qty}</TableCell>
+                <TableCell label="Request # (MRF)" mono>{r.mrf}</TableCell>
+                <TableCell label="Project" color={t.text2}>{r.project}</TableCell>
               </TableRow>
             ))}
             {data.rows.length === 0 && (
@@ -506,7 +507,7 @@ function StockOutTab({
       <Box
         sx={{
           flex: "1 1 250px",
-          minWidth: 250,
+          minWidth: { xs: "100%", sm: 250 },
           bgcolor: t.surface,
           border: "1px solid",
           borderColor: t.line,

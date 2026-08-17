@@ -54,15 +54,15 @@ export function SuppliersScreen({
           />
           {data.rows.map((r) => (
             <TableRow key={r.id} columns={COLS}>
-              <TableCell bold>{r.name}</TableCell>
-              <TableCell color={t.text2}>{r.contact}</TableCell>
-              <TableCell color={t.muted} sx={{ whiteSpace: "normal" }}>
+              <TableCell label="Supplier" bold>{r.name}</TableCell>
+              <TableCell label="Contact" color={t.text2}>{r.contact}</TableCell>
+              <TableCell label="Supplies" color={t.muted} sx={{ whiteSpace: "normal" }}>
                 {r.supplies}
               </TableCell>
-              <TableCell color={t.text2}>
+              <TableCell label="Last Delivery" color={t.text2}>
                 {r.lastDelivery ? formatDate(new Date(r.lastDelivery)) : "—"}
               </TableCell>
-              <TableCell mono>{r.deliveryCount}</TableCell>
+              <TableCell label="Deliveries" mono>{r.deliveryCount}</TableCell>
             </TableRow>
           ))}
           {data.rows.length === 0 && (

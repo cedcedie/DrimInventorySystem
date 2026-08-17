@@ -37,10 +37,10 @@ export function ProfileScreen({ initialData }: { initialData?: ProfileData }) {
   if (!data) {
     return (
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-        <Box sx={{ flex: "1 1 320px", minWidth: 320 }}>
+        <Box sx={{ flex: "1 1 320px", minWidth: { xs: "100%", sm: 320 } }}>
           <TableSkeleton label="Loading your account…" columns={1} rows={4} />
         </Box>
-        <Box sx={{ flex: "1 1 320px", minWidth: 320 }}>
+        <Box sx={{ flex: "1 1 320px", minWidth: { xs: "100%", sm: 320 } }}>
           <TableSkeleton label="Loading password form…" columns={1} rows={3} />
         </Box>
       </Box>
@@ -222,7 +222,7 @@ function Panel({
     <Box
       sx={{
         flex: "1 1 320px",
-        minWidth: 320,
+        minWidth: { xs: "100%", sm: 320 },
         bgcolor: t.surface,
         border: "1px solid",
         borderColor: t.line,

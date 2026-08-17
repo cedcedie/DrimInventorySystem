@@ -242,23 +242,23 @@ export function InventoryScreen({
                   )}
                 </Box>
               </TableCell>
-              <TableCell mono color={t.text2}>
+              <TableCell label="Code" mono color={t.text2}>
                 {r.code}
               </TableCell>
-              <TableCell bold sx={{ whiteSpace: "normal" }}>
+              <TableCell label="Product Name" bold sx={{ whiteSpace: "normal" }}>
                 {r.name}
               </TableCell>
-              <TableCell color={t.muted}>{r.category}</TableCell>
-              <TableCell bold sx={{ overflow: "visible" }}>
+              <TableCell label="Category" color={t.muted}>{r.category}</TableCell>
+              <TableCell label="Stocks" bold sx={{ overflow: "visible" }}>
                 {r.stocks}
                 <StockMeter stocks={r.stocks} minLevel={r.minLevel} />
               </TableCell>
-              <TableCell color={t.muted}>{r.unit}</TableCell>
-              <TableCell>
+              <TableCell label="Unit" color={t.muted}>{r.unit}</TableCell>
+              <TableCell label="Status">
                 <StatusChip label={r.status} />
               </TableCell>
               {showMinLevel && (
-                <TableCell sx={{ overflow: "visible" }}>
+                <TableCell label="Min" sx={{ overflow: "visible" }}>
                   <Box
                     component="input"
                     type="number"

@@ -23,10 +23,10 @@ export function SettingsScreen({ initialData }: { initialData?: SettingsData }) 
   if (!data) {
     return (
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-        <Box sx={{ flex: "1 1 320px", minWidth: 320 }}>
+        <Box sx={{ flex: "1 1 320px", minWidth: { xs: "100%", sm: 320 } }}>
           <TableSkeleton label="Loading company profile…" columns={1} rows={3} />
         </Box>
-        <Box sx={{ flex: "1 1 320px", minWidth: 320 }}>
+        <Box sx={{ flex: "1 1 320px", minWidth: { xs: "100%", sm: 320 } }}>
           <TableSkeleton label="Loading permission matrix…" columns={2} rows={4} />
         </Box>
       </Box>
@@ -40,7 +40,7 @@ export function SettingsScreen({ initialData }: { initialData?: SettingsData }) 
       <Box
         sx={{
           flex: "1 1 320px",
-          minWidth: 320,
+          minWidth: { xs: "100%", sm: 320 },
           bgcolor: t.surface,
           border: "1px solid",
           borderColor: t.line,
@@ -57,12 +57,12 @@ export function SettingsScreen({ initialData }: { initialData?: SettingsData }) 
               key={p.role}
               sx={{
                 display: "grid",
-                gridTemplateColumns: "150px minmax(0,1fr)",
+                gridTemplateColumns: { xs: "1fr", sm: "150px minmax(0,1fr)" },
                 borderBottom: "1px solid",
                 borderColor: t.line2,
                 px: 1.75,
                 py: 1.125,
-                gap: 1.25,
+                gap: { xs: 0.375, sm: 1.25 },
               }}
             >
               <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>{p.role}</Typography>
@@ -120,7 +120,7 @@ function CompanyProfilePanel({
     <Box
       sx={{
         flex: "1 1 320px",
-        minWidth: 320,
+        minWidth: { xs: "100%", sm: 320 },
         bgcolor: t.surface,
         border: "1px solid",
         borderColor: t.line,

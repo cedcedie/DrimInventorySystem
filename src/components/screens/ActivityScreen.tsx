@@ -43,11 +43,11 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
         />
         {data.rows.map((a) => (
           <TableRow key={a.id} columns={COLS} onClick={() => setSelected(a)}>
-            <TableCell color={t.text2}>{formatDateTime(new Date(a.dt))}</TableCell>
-            <TableCell bold>{a.user}</TableCell>
-            <TableCell color={t.muted}>{ROLE_LABELS[a.role]}</TableCell>
-            <TableCell sx={{ whiteSpace: "normal" }}>{a.action}</TableCell>
-            <TableCell mono color={t.primary.main}>
+            <TableCell label="Date & Time" color={t.text2}>{formatDateTime(new Date(a.dt))}</TableCell>
+            <TableCell label="User" bold>{a.user}</TableCell>
+            <TableCell label="Role" color={t.muted}>{ROLE_LABELS[a.role]}</TableCell>
+            <TableCell label="Action" sx={{ whiteSpace: "normal" }}>{a.action}</TableCell>
+            <TableCell label="Reference" mono color={t.primary.main}>
               {a.ref}
             </TableCell>
           </TableRow>

@@ -9,6 +9,15 @@ import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens, ACCENT, motion } from "@/theme/tokens";
 
+/** Below this breakpoint, tables stop being horizontally-scrollable grids and
+ * become stacked cards instead — every screen's table reads top-to-bottom
+ * with no swipe/sideways-scroll required on a phone. TableHeaderRow hides
+ * (each stacked cell carries its own label via TableCell's `label` prop) and
+ * TableRow/TableCell switch from CSS-grid columns to a labeled block layout.
+ * This is a single primitive change; no screen using these components needs
+ * to change its own code to pick it up. */
+const CARD_MODE_BP = "sm";
+
 export function TableShell({
   minWidth,
   dimmed,
@@ -32,12 +41,12 @@ export function TableShell({
         borderRadius: "12px",
         boxShadow: "0 1px 2px rgba(16,24,40,0.04)",
         overflow: "hidden",
-        overflowX: "auto",
+        overflowX: { xs: "hidden", [CARD_MODE_BP]: "auto" },
         opacity: dimmed ? 0.55 : 1,
         transition: `opacity ${motion.duration.color}ms ${motion.easing.standard}`,
       }}
     >
-      <Box sx={{ minWidth }}>{children}</Box>
+      <Box sx={{ minWidth: { xs: 0, [CARD_MODE_BP]: minWidth } }}>{children}</Box>
     </Box>
   );
 }
@@ -55,7 +64,7 @@ export function TableHeaderRow({
   return (
     <Box
       sx={{
-        display: "grid",
+        display: { xs: "none", [CARD_MODE_BP]: "grid" },
         gridTemplateColumns: columns,
         bgcolor: t.bg2,
         borderBottom: "1px solid",
@@ -110,11 +119,15 @@ export function TableRow({
           : undefined
       }
       sx={{
-        display: "grid",
+        display: { xs: "flex", [CARD_MODE_BP]: "grid" },
+        flexDirection: "column",
+        gap: { xs: 0.625, [CARD_MODE_BP]: 0 },
         gridTemplateColumns: columns,
+        px: { xs: 1.5, [CARD_MODE_BP]: 0 },
+        py: { xs: 1.25, [CARD_MODE_BP]: 0 },
         borderBottom: "1px solid",
         borderColor: t.line2,
-        alignItems: "center",
+        alignItems: { xs: "stretch", [CARD_MODE_BP]: "center" },
         cursor: onClick ? "pointer" : "default",
         bgcolor: selected ? t.rowSel : "transparent",
         transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}`,
@@ -134,33 +147,60 @@ export function TableRow({
 }
 
 export function TableCell({
+  label,
   mono,
   bold,
   color,
   children,
   sx,
 }: {
+  /** Shown as a small uppercase tag before the value in stacked/card mode
+   * (below CARD_MODE_BP). Omit for a cell that's self-explanatory without a
+   * label (e.g. a leading thumbnail or an actions column). */
+  label?: string;
   mono?: boolean;
   bold?: boolean;
   color?: string;
   children: React.ReactNode;
   sx?: object;
 }) {
+  const { mode } = useColorMode();
+  const t = mode === "dark" ? darkTokens : lightTokens;
+
   return (
     <Box
       sx={{
-        px: 1.75,
-        py: "var(--row-pad, 12px)",
+        display: { xs: label ? "flex" : "block", [CARD_MODE_BP]: "block" },
+        alignItems: { xs: "baseline", [CARD_MODE_BP]: "normal" },
+        gap: { xs: 0.75, [CARD_MODE_BP]: 0 },
+        px: { xs: 0, [CARD_MODE_BP]: 1.75 },
+        py: { xs: 0, [CARD_MODE_BP]: "var(--row-pad, 12px)" },
         fontSize: mono ? 12.5 : 13.5,
         fontWeight: bold ? 700 : 500,
         fontFamily: mono ? "'IBM Plex Mono', monospace" : undefined,
         color,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
+        overflow: { xs: "visible", [CARD_MODE_BP]: "hidden" },
+        textOverflow: { xs: "clip", [CARD_MODE_BP]: "ellipsis" },
+        whiteSpace: { xs: "normal", [CARD_MODE_BP]: "nowrap" },
         ...sx,
       }}
     >
+      {label && (
+        <Box
+          component="span"
+          sx={{
+            display: { xs: "inline-block", [CARD_MODE_BP]: "none" },
+            fontSize: 10,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+            color: t.muted2,
+            flexShrink: 0,
+          }}
+        >
+          {label}
+        </Box>
+      )}
       {children}
     </Box>
   );

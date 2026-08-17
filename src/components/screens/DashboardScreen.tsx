@@ -114,7 +114,7 @@ export function DashboardScreen({
           <Box
             sx={{
               flex: "1.6 1 360px",
-              minWidth: 300,
+              minWidth: { xs: "100%", sm: 300 },
               bgcolor: t.surface,
               border: "1px solid",
               borderColor: t.line,
@@ -138,7 +138,7 @@ export function DashboardScreen({
         <Box
           sx={{
             flex: isTech ? "1 1 100%" : "1 1 280px",
-            minWidth: 260,
+            minWidth: { xs: "100%", sm: 260 },
             bgcolor: t.surface,
             border: "1px solid",
             borderColor: t.line,
@@ -215,7 +215,7 @@ export function DashboardScreen({
 
       {!isTech && (
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-          <Box sx={{ flex: "2.2 1 420px", minWidth: 300 }}>
+          <Box sx={{ flex: "2.2 1 420px", minWidth: { xs: "100%", sm: 300 } }}>
             <TableShell minWidth={560}>
               <Box
                 sx={{
@@ -240,14 +240,14 @@ export function DashboardScreen({
               />
               {data.transactions.map((tx) => (
                 <TableRow key={tx.ref} columns={TX_COLS}>
-                  <TableCell color={t.text2}>{formatDateTime(new Date(tx.dt))}</TableCell>
-                  <TableCell mono>{tx.ref}</TableCell>
-                  <TableCell>
+                  <TableCell label="Date & Time" color={t.text2}>{formatDateTime(new Date(tx.dt))}</TableCell>
+                  <TableCell label="Ref. No" mono>{tx.ref}</TableCell>
+                  <TableCell label="Type">
                     <StatusChip label={tx.type} />
                   </TableCell>
-                  <TableCell sx={{ whiteSpace: "normal", fontSize: 12.5 }}>{tx.desc}</TableCell>
-                  <TableCell color={t.text2}>{tx.user}</TableCell>
-                  <TableCell mono color={t.primary.main}>
+                  <TableCell label="Description" sx={{ whiteSpace: "normal", fontSize: 12.5 }}>{tx.desc}</TableCell>
+                  <TableCell label="User" color={t.text2}>{tx.user}</TableCell>
+                  <TableCell label="MRF# / Slip#" mono color={t.primary.main}>
                     {tx.link}
                   </TableCell>
                 </TableRow>
@@ -258,7 +258,7 @@ export function DashboardScreen({
             </TableShell>
           </Box>
 
-          <Box sx={{ flex: "1 1 260px", minWidth: 240, display: "flex", flexDirection: "column", gap: 2 }}>
+          <Box sx={{ flex: "1 1 260px", minWidth: { xs: "100%", sm: 240 }, display: "flex", flexDirection: "column", gap: 2 }}>
             <AlertPanel
               title="Low Stock"
               dotColor={t.stock.low}

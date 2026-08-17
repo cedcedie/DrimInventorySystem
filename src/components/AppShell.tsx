@@ -119,7 +119,7 @@ export function AppShell({
         </Box>
         <Box
           sx={{
-            px: 3,
+            px: { xs: 1.5, sm: 2.5, md: 3 },
             py: 1.5,
             borderTop: "1px solid",
             borderColor: t.line,

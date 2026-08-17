@@ -58,17 +58,17 @@ export function PurchaseRequestsScreen({ initialData }: { initialData?: Purchase
           />
           {data.rows.map((r) => (
             <TableRow key={r.id} columns={COLS} onClick={() => setDetailId(r.id)}>
-              <TableCell mono color={t.primary.main}>
+              <TableCell label="Request #" mono color={t.primary.main}>
                 {r.refNo}
               </TableCell>
-              <TableCell color={t.text2}>{formatDate(new Date(r.createdAt))}</TableCell>
-              <TableCell color={t.text2}>{r.supplier ?? "Not specified"}</TableCell>
-              <TableCell>{r.byUser}</TableCell>
-              <TableCell bold>{r.itemCount}</TableCell>
-              <TableCell>
+              <TableCell label="Filed" color={t.text2}>{formatDate(new Date(r.createdAt))}</TableCell>
+              <TableCell label="Supplier" color={t.text2}>{r.supplier ?? "Not specified"}</TableCell>
+              <TableCell label="Requested by">{r.byUser}</TableCell>
+              <TableCell label="Items" bold>{r.itemCount}</TableCell>
+              <TableCell label="Status">
                 <StatusChip label={purchaseRequestStatusLabel(r.status)} />
               </TableCell>
-              <TableCell mono color={t.text2}>
+              <TableCell label="PO / Notes" mono color={t.text2}>
                 {r.purchaseOrderRefNo ?? "—"}
               </TableCell>
             </TableRow>

@@ -58,17 +58,17 @@ export function PurchaseOrdersScreen({ initialData }: { initialData?: PurchaseOr
           />
           {data.rows.map((r) => (
             <TableRow key={r.id} columns={COLS} onClick={() => setDetailId(r.id)}>
-              <TableCell mono color={t.primary.main}>
+              <TableCell label="Order #" mono color={t.primary.main}>
                 {r.refNo}
               </TableCell>
-              <TableCell color={t.text2}>{formatDate(new Date(r.createdAt))}</TableCell>
-              <TableCell>{r.supplier}</TableCell>
-              <TableCell>{r.itemCount}</TableCell>
-              <TableCell bold>{r.totalOrdered}</TableCell>
-              <TableCell color={r.totalReceived >= r.totalOrdered ? t.success.main : t.text2}>
+              <TableCell label="Date" color={t.text2}>{formatDate(new Date(r.createdAt))}</TableCell>
+              <TableCell label="Supplier">{r.supplier}</TableCell>
+              <TableCell label="Items">{r.itemCount}</TableCell>
+              <TableCell label="Ordered" bold>{r.totalOrdered}</TableCell>
+              <TableCell label="Received" color={r.totalReceived >= r.totalOrdered ? t.success.main : t.text2}>
                 {r.totalReceived}
               </TableCell>
-              <TableCell>
+              <TableCell label="Status">
                 <StatusChip label={purchaseOrderStatusLabel(r.status)} />
               </TableCell>
             </TableRow>

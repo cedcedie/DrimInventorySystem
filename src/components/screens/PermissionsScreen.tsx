@@ -271,9 +271,9 @@ export function PermissionsScreen() {
   };
 
   return (
-    <Box sx={{ px: 3, py: 2.5, display: "flex", flexDirection: "column", gap: 2 }}>
+    <Box sx={{ px: { xs: 1.5, sm: 2.5, md: 3 }, py: { xs: 1.75, sm: 2.5 }, display: "flex", flexDirection: "column", gap: 2 }}>
       {/* Mode switcher */}
-      <Box sx={{ display: "flex", gap: 1.5, maxWidth: 640 }}>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, maxWidth: 640 }}>
         {modeButton("role", "Role Permissions", "Defaults that apply to everyone with the role")}
         {modeButton("user", "User Permissions", "Per-user overrides that beat the role default")}
       </Box>

@@ -52,7 +52,7 @@ export function MrfScreen({
 
   return (
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-      <Box sx={{ flex: "1.8 1 420px", minWidth: 420 }}>
+      <Box sx={{ flex: "1.8 1 420px", minWidth: { xs: "100%", sm: 420 } }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
           <Typography sx={{ fontSize: 12, color: t.muted }}>
             Material Request Forms filed under your profile
@@ -90,11 +90,11 @@ export function MrfScreen({
                 selected={highlightRef === r.mrf}
                 onClick={() => setDetailMrfId(r.id)}
               >
-                <TableCell mono color={t.primary.main}>
+                <TableCell label="Request # (MRF)" mono color={t.primary.main}>
                   {r.mrf}
                 </TableCell>
-                <TableCell color={t.text2}>{formatDate(new Date(r.date))}</TableCell>
-                <TableCell>
+                <TableCell label="Date" color={t.text2}>{formatDate(new Date(r.date))}</TableCell>
+                <TableCell label="Item(s)">
                   {r.item}
                   {r.itemCount > 1 && (
                     <Box component="span" sx={{ ml: 0.5, fontSize: 10, color: t.muted, fontWeight: 600 }}>
@@ -102,7 +102,7 @@ export function MrfScreen({
                     </Box>
                   )}
                 </TableCell>
-                <TableCell bold>
+                <TableCell label="Requested (released)" bold>
                   {r.qtyFulfilled > 0 ? (
                     <Box component="span">
                       {r.qty} <Box component="span" sx={{ color: t.primary.main }}>({r.qtyFulfilled})</Box>
@@ -111,8 +111,8 @@ export function MrfScreen({
                     r.qty
                   )}
                 </TableCell>
-                <TableCell color={t.text2}>{r.project}</TableCell>
-                <TableCell>
+                <TableCell label="Project" color={t.text2}>{r.project}</TableCell>
+                <TableCell label="Status">
                   <StatusChip label={mrfStatusLabel(r.status, r.qtyFulfilled)} />
                 </TableCell>
               </TableRow>
@@ -129,7 +129,7 @@ export function MrfScreen({
       <Box
         sx={{
           flex: "1 1 250px",
-          minWidth: 250,
+          minWidth: { xs: "100%", sm: 250 },
           bgcolor: t.surface,
           border: "1px solid",
           borderColor: t.line,

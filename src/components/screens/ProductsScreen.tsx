@@ -214,15 +214,15 @@ export function ProductsScreen({
                     )}
                   </Box>
                 </TableCell>
-                <TableCell mono color={t.text2}>
+                <TableCell label="Code" mono color={t.text2}>
                   {r.code}
                 </TableCell>
-                <TableCell bold sx={{ whiteSpace: "normal" }}>
+                <TableCell label="Product Name" bold sx={{ whiteSpace: "normal" }}>
                   {r.name}
                 </TableCell>
-                <TableCell color={t.muted}>{r.category}</TableCell>
-                <TableCell color={t.muted}>{r.unit}</TableCell>
-                <TableCell color={t.muted}>{r.supplier}</TableCell>
+                <TableCell label="Category" color={t.muted}>{r.category}</TableCell>
+                <TableCell label="Unit" color={t.muted}>{r.unit}</TableCell>
+                <TableCell label="Supplier" color={t.muted}>{r.supplier}</TableCell>
                 {canManage && (
                   <TableCell>
                     <Box sx={{ display: "flex", gap: 0.75 }}>

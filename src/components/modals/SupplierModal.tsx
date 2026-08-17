@@ -47,7 +47,7 @@ export function SupplierModal({ open, onClose }: { open: boolean; onClose: () =>
   return (
     <EntityModal open={open} onClose={onClose} title="Add Supplier" width={560}>
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
           <FormField label="Supplier Name">
             <Box
               component="input"

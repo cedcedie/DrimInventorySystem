@@ -155,23 +155,25 @@ export function PurchaseRequestDetailModal({
                   <Box
                     key={item.id}
                     sx={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 100px",
+                      display: "flex",
+                      flexWrap: "wrap",
+                      alignItems: "center",
                       gap: 1,
                       px: 1.5,
                       py: 1.1,
-                      alignItems: "center",
                       borderBottom: i === data.items.length - 1 ? "none" : "1px solid",
                       borderColor: t.line2,
                     }}
                   >
-                    <Box>
-                      <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{item.productName}</Typography>
+                    <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
+                      <Typography sx={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item.productName}
+                      </Typography>
                       <Typography sx={{ fontSize: 11, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
                         {item.productCode}
                       </Typography>
                     </Box>
-                    <Typography sx={{ fontSize: 12, color: t.text2 }}>
+                    <Typography sx={{ fontSize: 12, color: t.text2, whiteSpace: "nowrap", ml: { xs: 0, sm: "auto" } }}>
                       {item.qtyRequested} {item.unit}
                     </Typography>
                   </Box>

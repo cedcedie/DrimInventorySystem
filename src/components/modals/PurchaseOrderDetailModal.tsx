@@ -88,27 +88,31 @@ export function PurchaseOrderDetailModal({
                   <Box
                     key={item.id}
                     sx={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 90px 90px 90px",
+                      display: "flex",
+                      flexWrap: "wrap",
+                      alignItems: "center",
                       gap: 1,
                       px: 1.5,
                       py: 1.1,
-                      alignItems: "center",
                       borderBottom: i === data.items.length - 1 ? "none" : "1px solid",
                       borderColor: t.line2,
                     }}
                   >
-                    <Box>
-                      <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{item.productName}</Typography>
+                    <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
+                      <Typography sx={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item.productName}
+                      </Typography>
                       <Typography sx={{ fontSize: 11, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
                         {item.productCode}
                       </Typography>
                     </Box>
-                    <Typography sx={{ fontSize: 12, color: t.text2 }}>Ordered {item.qtyOrdered}</Typography>
-                    <Typography sx={{ fontSize: 12, color: t.muted }}>Received {item.qtyReceived}</Typography>
-                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: item.qtyRemaining > 0 ? t.warn : t.success }}>
-                      {item.qtyRemaining > 0 ? `${item.qtyRemaining} left` : "Complete"}
-                    </Typography>
+                    <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1, ml: { xs: 0, sm: "auto" } }}>
+                      <Typography sx={{ fontSize: 12, color: t.text2, whiteSpace: "nowrap" }}>Ordered {item.qtyOrdered}</Typography>
+                      <Typography sx={{ fontSize: 12, color: t.muted, whiteSpace: "nowrap" }}>Received {item.qtyReceived}</Typography>
+                      <Typography sx={{ fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", color: item.qtyRemaining > 0 ? t.warn : t.success }}>
+                        {item.qtyRemaining > 0 ? `${item.qtyRemaining} left` : "Complete"}
+                      </Typography>
+                    </Box>
                   </Box>
                 ))}
               </Box>

@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Box, MenuItem, Select, Alert, ButtonBase } from "@mui/material";
-import { EntityModal, FormField, fieldInputSx } from "@/components/EntityModal";
+import { Box, MenuItem, Select, Alert } from "@mui/material";
+import { EntityModal, FormField, ModalFormActions, fieldInputSx } from "@/components/EntityModal";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, colors, borderRadius, shadows } from "@/theme/tokens";
+import { lightTokens, darkTokens } from "@/theme/tokens";
 import { postJson } from "@/lib/mutate";
 import { fetchJson } from "@/lib/api";
 import { useToast } from "@/components/Toast";
@@ -129,58 +129,18 @@ export function PurchaseOrderModal({ open, onClose }: { open: boolean; onClose: 
         </FormField>
 
         {error && (
-          <Alert severity="error" sx={{ mt: 1.5, borderRadius: borderRadius.md }}>
+          <Alert severity="error" sx={{ mt: 1.5 }}>
             {error}
           </Alert>
         )}
 
-        <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end", mt: 3 }}>
-          <ButtonBase
-            type="button"
-            onClick={() => {
-              if (handleClose()) onClose();
-            }}
-            sx={{
-              px: 2.5,
-              py: 1.25,
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: borderRadius.md,
-              border: `2px solid ${mode === "dark" ? colors.neutral[700] : colors.neutral[300]}`,
-              color: t.text,
-              transition: "all 150ms ease",
-              "&:hover": {
-                bgcolor: mode === "dark" ? colors.neutral[800] : colors.neutral[100],
-              },
-            }}
-          >
-            Cancel
-          </ButtonBase>
-          <ButtonBase
-            type="submit"
-            disabled={mutation.isPending || items.length === 0}
-            sx={{
-              px: 3,
-              py: 1.25,
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: borderRadius.md,
-              bgcolor: colors.brand.primary,
-              color: colors.neutral[0],
-              boxShadow: shadows.sm,
-              transition: "all 150ms ease",
-              "&:hover": {
-                bgcolor: colors.brand.primaryDark,
-                boxShadow: shadows.md,
-              },
-              "&.Mui-disabled": {
-                opacity: 0.5,
-              },
-            }}
-          >
-            {mutation.isPending ? "Creating…" : `Create Purchase Order (${items.length} items)`}
-          </ButtonBase>
-        </Box>
+        <ModalFormActions
+          onCancel={() => {
+            if (handleClose()) onClose();
+          }}
+          submitLabel={mutation.isPending ? "Creating…" : `Create Purchase Order (${items.length} items)`}
+          disabled={mutation.isPending || items.length === 0}
+        />
       </Box>
     </EntityModal>
   );

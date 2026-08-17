@@ -78,7 +78,7 @@ export function TechnicianModal({
       width={560}
     >
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
           <FormField label="Employee Number">
             <Box
               component="input"

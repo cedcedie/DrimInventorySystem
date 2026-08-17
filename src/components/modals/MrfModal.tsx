@@ -72,7 +72,7 @@ export function MrfModal({
         <Typography sx={{ fontSize: 12, color: t.muted, mb: 1.5 }}>
           Filed under <b>{technicianLabel}</b>. Warehouse fulfills it as a Stock Out.
         </Typography>
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
           <FormField label="Item">
             <Select
               value={productId}

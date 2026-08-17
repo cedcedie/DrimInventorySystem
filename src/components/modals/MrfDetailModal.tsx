@@ -198,66 +198,66 @@ export function MrfDetailModal({
                   <Box
                     key={item.id}
                     sx={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 80px 80px 80px auto",
+                      display: "flex",
+                      flexWrap: "wrap",
+                      alignItems: "center",
                       gap: 1,
                       px: 1.5,
                       py: 1.1,
-                      alignItems: "center",
                       borderBottom: i === data.items.length - 1 ? "none" : "1px solid",
                       borderColor: t.line2,
                     }}
                   >
-                    <Box>
-                      <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{item.productName}</Typography>
+                    <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
+                      <Typography sx={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item.productName}
+                      </Typography>
                       <Typography sx={{ fontSize: 11, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
                         {item.productCode}
                       </Typography>
                     </Box>
-                    <Typography sx={{ fontSize: 12, color: t.text2 }}>
-                      Need {item.qtyRemaining}
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: t.muted }}>
-                      Done {item.qtyFulfilled}
-                    </Typography>
-                    {onFulfill ? (
-                      <Typography
-                        sx={{
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: item.availableStock >= item.qtyRemaining ? t.success : t.warn,
-                        }}
-                      >
-                        Stock {item.availableStock}
+                    <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1, ml: { xs: 0, sm: "auto" } }}>
+                      <Typography sx={{ fontSize: 12, color: t.text2, whiteSpace: "nowrap" }}>
+                        Need {item.qtyRemaining}
                       </Typography>
-                    ) : (
-                      <span />
-                    )}
-                    {onFulfill && item.qtyRemaining > 0 && data.status !== "CANCELLED" ? (
-                      <ButtonBase
-                        onClick={() => {
-                          onClose();
-                          onFulfill(item.id);
-                        }}
-                        sx={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: ACCENT,
-                          px: 1,
-                          py: 0.5,
-                          border: "1px solid",
-                          borderColor: ACCENT,
-                          borderRadius: "8px",
-                          justifySelf: "end",
-                          transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
-                          "&:hover": { bgcolor: ACCENT, color: "#fff" },
-                        }}
-                      >
-                        Fulfill
-                      </ButtonBase>
-                    ) : (
-                      <span />
-                    )}
+                      <Typography sx={{ fontSize: 12, color: t.muted, whiteSpace: "nowrap" }}>
+                        Done {item.qtyFulfilled}
+                      </Typography>
+                      {onFulfill && (
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                            color: item.availableStock >= item.qtyRemaining ? t.success : t.warn,
+                          }}
+                        >
+                          Stock {item.availableStock}
+                        </Typography>
+                      )}
+                      {onFulfill && item.qtyRemaining > 0 && data.status !== "CANCELLED" && (
+                        <ButtonBase
+                          onClick={() => {
+                            onClose();
+                            onFulfill(item.id);
+                          }}
+                          sx={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: ACCENT,
+                            px: 1,
+                            py: 0.5,
+                            border: "1px solid",
+                            borderColor: ACCENT,
+                            borderRadius: "8px",
+                            transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
+                            "&:hover": { bgcolor: ACCENT, color: "#fff" },
+                          }}
+                        >
+                          Fulfill
+                        </ButtonBase>
+                      )}
+                    </Box>
                   </Box>
                 ))}
               </Box>

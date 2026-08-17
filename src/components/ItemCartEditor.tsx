@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Box, MenuItem, ListSubheader, Select, Typography, IconButton, Tooltip, ButtonBase } from "@mui/material";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Box, Typography, IconButton, Tooltip, ButtonBase } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 import { FormField, fieldInputSx } from "@/components/EntityModal";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, colors, borderRadius } from "@/theme/tokens";
-import { groupByCategory } from "@/lib/groupByCategory";
+import { lightTokens, darkTokens, ACCENT, ACCENT_HOVER, motion } from "@/theme/tokens";
 
 export interface CartProductOption {
   id: string;
@@ -23,12 +23,23 @@ export interface CartItem {
   qty: number;
 }
 
+const RESULT_CAP = 5;
+
 /**
  * Category-grouped product picker + running cart, shared by the multi-item
- * Stock In and MRF filing modals. Owns the "pick a product, enter a qty, Add"
- * interaction and the cart's add/remove/adjust-qty logic; the parent owns
- * `items` itself (and whatever it submits them as) so this stays a pure
- * editor with no knowledge of MRFs, batches, or any submit shape.
+ * Stock In, MRF, Purchase Order, and Purchase Request modals. Owns the "pick
+ * a product, enter a qty, Add" interaction and the cart's add/remove/adjust-
+ * qty logic; the parent owns `items` itself (and whatever it submits them
+ * as) so this stays a pure editor with no knowledge of MRFs, batches, or any
+ * submit shape.
+ *
+ * The product picker is a search-filtered list rather than a native <Select>
+ * with every product mounted — a real catalog can run into the hundreds, and
+ * a scrollable dropdown of hundreds of <MenuItem>s is both a mobile-usability
+ * problem (impossible to scan/tap) and a rendering-cost problem as the
+ * catalog grows. Typing narrows by name/code; the closed-search view groups
+ * by category and shows the first 5 per category so the list never dumps
+ * everything at once.
  */
 export function ItemCartEditor({
   products,
@@ -52,11 +63,59 @@ export function ItemCartEditor({
   const t = mode === "dark" ? darkTokens : lightTokens;
 
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [query, setQuery] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [itemQty, setItemQty] = useState("");
   const [error, setError] = useState("");
+  const pickerRef = useRef<HTMLDivElement>(null);
 
-  const groupedProducts = products ? groupByCategory(products) : [];
+  const selectedProduct = products?.find((p) => p.id === selectedProductId);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!pickerRef.current?.contains(e.target as Node)) setPickerOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  // Search hits (flat, capped) vs. the browse view (grouped by category,
+  // capped per group) — same RESULT_CAP idea, different shape depending on
+  // whether the user has typed anything yet.
+  const searchResults = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle || !products) return null;
+    return products
+      .filter((p) => p.name.toLowerCase().includes(needle) || p.code.toLowerCase().includes(needle))
+      .slice(0, RESULT_CAP);
+  }, [products, query]);
+
+  const browseGroups = useMemo(() => {
+    if (!products) return [];
+    const groups = new Map<string, CartProductOption[]>();
+    for (const p of products) {
+      const name = p.category?.name ?? "Uncategorized";
+      const bucket = groups.get(name);
+      if (bucket) bucket.push(p);
+      else groups.set(name, [p]);
+    }
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([categoryName, groupItems]) => ({
+        categoryName,
+        items: groupItems.slice(0, RESULT_CAP),
+        totalCount: groupItems.length,
+      }));
+  }, [products]);
+
   const totalItems = items.reduce((sum, item) => sum + item.qty, 0);
+
+  const pickProduct = (product: CartProductOption) => {
+    setSelectedProductId(product.id);
+    setQuery(`${product.code} — ${product.name}`);
+    setPickerOpen(false);
+    setError("");
+  };
 
   const handleAddItem = () => {
     if (!selectedProductId || !itemQty || Number(itemQty) <= 0) {
@@ -89,6 +148,7 @@ export function ItemCartEditor({
     }
 
     setSelectedProductId("");
+    setQuery("");
     setItemQty("");
     setError("");
   };
@@ -109,39 +169,101 @@ export function ItemCartEditor({
 
   return (
     <>
-      <Box
-        sx={{
-          mb: 3,
-          p: 2.5,
-          bgcolor: t.surface,
-          border: `2px solid ${mode === "dark" ? colors.neutral[700] : colors.neutral[200]}`,
-          borderRadius: borderRadius.lg,
-        }}
-      >
-        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 2, color: t.text }}>{addSectionLabel}</Typography>
-        <Box sx={{ display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 1.5, alignItems: "end" }}>
+      <Box sx={{ mb: 2.5 }}>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1.25, color: t.text }}>
+          {addSectionLabel}
+        </Typography>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "2fr 1fr auto" },
+            gap: 1.25,
+            alignItems: "end",
+          }}
+        >
           <FormField label="Select Item">
-            <Select
-              value={selectedProductId}
-              onChange={(e) => setSelectedProductId(e.target.value)}
-              size="small"
-              displayEmpty
-              sx={{ fontSize: 13, bgcolor: mode === "dark" ? colors.neutral[900] : colors.neutral[0] }}
-            >
-              <MenuItem value="" sx={{ fontSize: 13 }}>
-                Choose product…
-              </MenuItem>
-              {groupedProducts.flatMap((group) => [
-                <ListSubheader key={group.categoryName} sx={{ fontSize: 11.5, fontWeight: 700, lineHeight: "28px" }}>
-                  {group.categoryName}
-                </ListSubheader>,
-                ...group.items.map((p) => (
-                  <MenuItem key={p.id} value={p.id} sx={{ fontSize: 13 }}>
-                    {p.code} — {p.name}
-                  </MenuItem>
-                )),
-              ])}
-            </Select>
+            <Box ref={pickerRef} sx={{ position: "relative" }}>
+              <Box sx={{ position: "relative" }}>
+                <SearchIcon
+                  sx={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 16, color: t.muted2 }}
+                />
+                <Box
+                  component="input"
+                  value={query}
+                  onFocus={() => setPickerOpen(true)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setQuery(e.target.value);
+                    setSelectedProductId("");
+                    setPickerOpen(true);
+                  }}
+                  placeholder="Search by code or name…"
+                  sx={{ ...fieldInputSx(t), pl: 4 }}
+                />
+              </Box>
+
+              {pickerOpen && (
+                <Box
+                  className="scroll-hidden"
+                  sx={{
+                    position: "absolute",
+                    top: "calc(100% + 4px)",
+                    left: 0,
+                    right: 0,
+                    zIndex: 20,
+                    maxHeight: 280,
+                    overflowY: "auto",
+                    bgcolor: t.surface,
+                    border: "1px solid",
+                    borderColor: t.line,
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(16,24,40,0.10)",
+                  }}
+                >
+                  {!products ? (
+                    <Typography sx={{ fontSize: 12.5, color: t.muted, px: 1.5, py: 1.25 }}>
+                      Loading products…
+                    </Typography>
+                  ) : searchResults ? (
+                    searchResults.length === 0 ? (
+                      <Typography sx={{ fontSize: 12.5, color: t.muted, px: 1.5, py: 1.25 }}>
+                        No products match &ldquo;{query.trim()}&rdquo;.
+                      </Typography>
+                    ) : (
+                      searchResults.map((p) => (
+                        <ProductOption key={p.id} product={p} t={t} onClick={() => pickProduct(p)} />
+                      ))
+                    )
+                  ) : (
+                    browseGroups.map((group) => (
+                      <Box key={group.categoryName}>
+                        <Typography
+                          sx={{
+                            fontSize: 10.5,
+                            fontWeight: 700,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                            color: t.muted2,
+                            px: 1.5,
+                            pt: 1,
+                            pb: 0.5,
+                          }}
+                        >
+                          {group.categoryName}
+                        </Typography>
+                        {group.items.map((p) => (
+                          <ProductOption key={p.id} product={p} t={t} onClick={() => pickProduct(p)} />
+                        ))}
+                        {group.totalCount > RESULT_CAP && (
+                          <Typography sx={{ fontSize: 11, color: t.muted2, px: 1.5, pb: 0.75 }}>
+                            +{group.totalCount - RESULT_CAP} more — type to search
+                          </Typography>
+                        )}
+                      </Box>
+                    ))
+                  )}
+                </Box>
+              )}
+            </Box>
           </FormField>
           <FormField label="Quantity">
             <Box
@@ -151,151 +273,107 @@ export function ItemCartEditor({
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setItemQty(e.target.value)}
               placeholder="0"
               min="1"
-              sx={{
-                ...fieldInputSx(t),
-                bgcolor: mode === "dark" ? colors.neutral[900] : colors.neutral[0],
-              }}
+              sx={fieldInputSx(t)}
             />
           </FormField>
           <ButtonBase
             type="button"
             onClick={handleAddItem}
             sx={{
-              bgcolor: colors.brand.primary,
-              color: colors.neutral[0],
+              bgcolor: ACCENT,
+              color: "#fff",
               px: 2.5,
-              py: 1.25,
-              borderRadius: borderRadius.md,
+              py: 1,
+              height: 38,
+              borderRadius: "8px",
               fontSize: 13,
               fontWeight: 600,
               minWidth: 100,
-              transition: "all 150ms ease",
-              "&:hover": {
-                bgcolor: colors.brand.primaryDark,
-              },
+              transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
+              "&:hover": { bgcolor: ACCENT_HOVER },
+              "&:active": { transform: "scale(0.98)" },
             }}
           >
             + Add
           </ButtonBase>
         </Box>
+        {selectedProduct && (
+          <Typography sx={{ fontSize: 11.5, color: t.muted, mt: 0.75 }}>
+            Selected: {selectedProduct.code} — {selectedProduct.name} ({selectedProduct.unit})
+          </Typography>
+        )}
         {error && (
-          <Typography sx={{ fontSize: 12, color: colors.status.error, mt: 1 }}>{error}</Typography>
+          <Typography sx={{ fontSize: 12, color: t.danger, mt: 1 }}>{error}</Typography>
         )}
       </Box>
 
       {items.length > 0 && (
-        <Box
-          sx={{
-            mb: 3,
-            border: `2px solid ${mode === "dark" ? colors.neutral[700] : colors.neutral[200]}`,
-            borderRadius: borderRadius.lg,
-            overflow: "hidden",
-          }}
-        >
+        <Box sx={{ mb: 2.5 }}>
           <Box
             sx={{
-              bgcolor: mode === "dark" ? colors.neutral[800] : colors.neutral[100],
-              px: 2.5,
-              py: 1.5,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
+              mb: 1,
+              flexWrap: "wrap",
+              gap: 0.5,
             }}
           >
             <Typography sx={{ fontSize: 13, fontWeight: 700, color: t.text }}>
               {cartLabel} ({items.length})
             </Typography>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: colors.brand.primary }}>
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: ACCENT }}>
               Total: {totalItems} items
             </Typography>
           </Box>
-          <Box className="scroll-hidden" sx={{ maxHeight: 280, overflowY: "auto" }}>
+          <Box className="scroll-hidden" sx={{ maxHeight: 280, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0.75 }}>
             {items.map((item, index) => (
               <Box
                 key={index}
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: "auto 2fr 1fr auto",
-                  gap: 2,
+                  gridTemplateColumns: { xs: "1fr auto", sm: "1fr auto auto" },
+                  gap: { xs: 0.5, sm: 1.5 },
                   alignItems: "center",
-                  p: 2,
-                  borderBottom: index < items.length - 1 ? `1px solid ${t.line}` : "none",
+                  px: 1.5,
+                  py: 1,
+                  border: "1px solid",
+                  borderColor: t.line,
+                  borderRadius: "8px",
                   bgcolor: t.surface,
-                  transition: "background-color 150ms ease",
-                  "&:hover": {
-                    bgcolor: mode === "dark" ? colors.neutral[800] : colors.neutral[50],
-                  },
+                  transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}`,
+                  "&:hover": { bgcolor: t.hover },
                 }}
               >
-                <Typography
-                  sx={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    color: colors.neutral[400],
-                    minWidth: 32,
-                    textAlign: "center",
-                  }}
-                >
-                  {index + 1}
-                </Typography>
-                <Box>
-                  <Typography sx={{ fontSize: 14, fontWeight: 600, color: t.text, mb: 0.25 }}>
+                <Box sx={{ minWidth: 0, gridColumn: { xs: "1 / -1", sm: "auto" } }}>
+                  <Typography sx={{ fontSize: 13, fontWeight: 600, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {item.productName}
                   </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: 11.5,
-                      fontFamily: "monospace",
-                      color: colors.brand.primary,
-                      fontWeight: 600,
-                    }}
-                  >
+                  <Typography sx={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: ACCENT, fontWeight: 600 }}>
                     {item.productCode}
                   </Typography>
                 </Box>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, justifySelf: { xs: "start", sm: "center" } }}>
                   <IconButton
                     size="small"
                     aria-label={`Decrease quantity for ${item.productName}`}
                     onClick={() => handleUpdateQty(index, item.qty - 1)}
-                    sx={{
-                      bgcolor: mode === "dark" ? colors.neutral[700] : colors.neutral[200],
-                      width: 28,
-                      height: 28,
-                      "&:hover": {
-                        bgcolor: mode === "dark" ? colors.neutral[600] : colors.neutral[300],
-                      },
-                    }}
+                    sx={{ bgcolor: t.hover, width: 26, height: 26, "&:hover": { bgcolor: t.line2 } }}
                   >
-                    <Typography sx={{ fontSize: 16, fontWeight: 700 }} aria-hidden>
+                    <Typography sx={{ fontSize: 15, fontWeight: 700 }} aria-hidden>
                       −
                     </Typography>
                   </IconButton>
-                  <Typography
-                    sx={{
-                      fontSize: 15,
-                      fontWeight: 700,
-                      minWidth: 60,
-                      textAlign: "center",
-                      color: t.text,
-                    }}
-                  >
+                  <Typography sx={{ fontSize: 13, fontWeight: 700, minWidth: 54, textAlign: "center", color: t.text }}>
                     {item.qty} {item.unit}
                   </Typography>
                   <IconButton
                     size="small"
                     aria-label={`Increase quantity for ${item.productName}`}
                     onClick={() => handleUpdateQty(index, item.qty + 1)}
-                    sx={{
-                      bgcolor: mode === "dark" ? colors.neutral[700] : colors.neutral[200],
-                      width: 28,
-                      height: 28,
-                      "&:hover": {
-                        bgcolor: mode === "dark" ? colors.neutral[600] : colors.neutral[300],
-                      },
-                    }}
+                    sx={{ bgcolor: t.hover, width: 26, height: 26, "&:hover": { bgcolor: t.line2 } }}
                   >
-                    <Typography sx={{ fontSize: 16, fontWeight: 700 }} aria-hidden>
+                    <Typography sx={{ fontSize: 15, fontWeight: 700 }} aria-hidden>
                       +
                     </Typography>
                   </IconButton>
@@ -305,14 +383,9 @@ export function ItemCartEditor({
                     size="small"
                     aria-label={`Remove ${item.productName}`}
                     onClick={() => handleRemoveItem(index)}
-                    sx={{
-                      color: colors.status.error,
-                      "&:hover": {
-                        bgcolor: `${colors.status.error}15`,
-                      },
-                    }}
+                    sx={{ color: t.danger, justifySelf: "end", "&:hover": { bgcolor: t.hover } }}
                   >
-                    <Typography sx={{ fontSize: 18 }}>×</Typography>
+                    <Typography sx={{ fontSize: 17 }}>×</Typography>
                   </IconButton>
                 </Tooltip>
               </Box>
@@ -321,5 +394,39 @@ export function ItemCartEditor({
         </Box>
       )}
     </>
+  );
+}
+
+function ProductOption({
+  product,
+  t,
+  onClick,
+}: {
+  product: CartProductOption;
+  t: typeof lightTokens | typeof darkTokens;
+  onClick: () => void;
+}) {
+  return (
+    <ButtonBase
+      onClick={onClick}
+      sx={{
+        display: "flex",
+        width: "100%",
+        justifyContent: "flex-start",
+        px: 1.5,
+        py: 0.85,
+        fontSize: 12.5,
+        color: t.text,
+        transition: `background-color 120ms ease`,
+        "&:hover": { bgcolor: t.rowSel, color: ACCENT },
+      }}
+    >
+      <Box component="span" sx={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, mr: 1 }}>
+        {product.code}
+      </Box>
+      <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {product.name}
+      </Box>
+    </ButtonBase>
   );
 }

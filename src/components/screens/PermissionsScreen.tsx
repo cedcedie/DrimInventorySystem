@@ -426,37 +426,41 @@ function RoleMatrix({
         </Tabs>
       </Box>
 
-      <MatrixHeader grid={GRID_ROLE} />
+      <Box sx={{ overflowX: "auto" }}>
+        <Box sx={{ minWidth: 620 }}>
+          <MatrixHeader grid={GRID_ROLE} />
 
-      {MODULES.map((module, index) => {
-        const perms = rolePermissions.find((p) => p.module === module.id);
-        return (
-          <Box
-            key={module.id}
-            sx={{
-              display: "grid",
-              gridTemplateColumns: GRID_ROLE,
-              borderBottom: index < MODULES.length - 1 ? "1px solid" : "none",
-              borderColor: t.line,
-              alignItems: "center",
-              "&:hover": { bgcolor: t.hover },
-            }}
-          >
-            <Box sx={{ px: 2, py: 0.75, fontSize: 14, fontWeight: 600 }}>{module.label}</Box>
-            {PERMISSIONS.map((perm) => (
-              <Box key={perm.id} sx={{ display: "flex", justifyContent: "center" }}>
-                <Checkbox
-                  checked={(perms?.[perm.id] as boolean) ?? false}
-                  onChange={(e) => onToggle(activeRole, module.id, perm.id, e.target.checked)}
-                  disabled={pending}
-                  slotProps={{ input: { "aria-label": `${module.label} — ${perm.label}` } }}
-                  sx={{ color: t.muted3, "&.Mui-checked": { color: ACCENT } }}
-                />
+          {MODULES.map((module, index) => {
+            const perms = rolePermissions.find((p) => p.module === module.id);
+            return (
+              <Box
+                key={module.id}
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: GRID_ROLE,
+                  borderBottom: index < MODULES.length - 1 ? "1px solid" : "none",
+                  borderColor: t.line,
+                  alignItems: "center",
+                  "&:hover": { bgcolor: t.hover },
+                }}
+              >
+                <Box sx={{ px: 2, py: 0.75, fontSize: 14, fontWeight: 600 }}>{module.label}</Box>
+                {PERMISSIONS.map((perm) => (
+                  <Box key={perm.id} sx={{ display: "flex", justifyContent: "center" }}>
+                    <Checkbox
+                      checked={(perms?.[perm.id] as boolean) ?? false}
+                      onChange={(e) => onToggle(activeRole, module.id, perm.id, e.target.checked)}
+                      disabled={pending}
+                      slotProps={{ input: { "aria-label": `${module.label} — ${perm.label}` } }}
+                      sx={permCheckboxSx()}
+                    />
+                  </Box>
+                ))}
               </Box>
-            ))}
-          </Box>
-        );
-      })}
+            );
+          })}
+        </Box>
+      </Box>
     </Box>
   );
 }
@@ -524,72 +528,76 @@ function UserMatrix({
         )}
       </Box>
 
-      <MatrixHeader grid={GRID} withStatus />
+      <Box sx={{ overflowX: "auto" }}>
+        <Box sx={{ minWidth: 700 }}>
+          <MatrixHeader grid={GRID} withStatus />
 
-      {user &&
-        MODULES.map((module, index) => {
-          const override = user.permissions.find((p) => p.module === module.id);
-          const effective = override ?? roleDefaultFor(user.role, module.id);
-          const isCustom = Boolean(override);
+          {user &&
+            MODULES.map((module, index) => {
+              const override = user.permissions.find((p) => p.module === module.id);
+              const effective = override ?? roleDefaultFor(user.role, module.id);
+              const isCustom = Boolean(override);
 
-          return (
-            <Box
-              key={module.id}
-              sx={{
-                display: "grid",
-                gridTemplateColumns: GRID,
-                borderBottom: index < MODULES.length - 1 ? "1px solid" : "none",
-                borderColor: t.line,
-                alignItems: "center",
-                bgcolor: isCustom ? (t.mode === "dark" ? t.rowSel : ACCENT_SOFT) : "transparent",
-                "&:hover": { bgcolor: isCustom ? undefined : t.hover },
-              }}
-            >
-              <Box sx={{ px: 2, py: 0.75, fontSize: 14, fontWeight: 600 }}>{module.label}</Box>
-              {PERMISSIONS.map((perm) => (
-                <Box key={perm.id} sx={{ display: "flex", justifyContent: "center" }}>
-                  <Checkbox
-                    checked={effective[perm.id]}
-                    onChange={(e) => onToggle(user, module.id, perm.id, e.target.checked)}
-                    disabled={pending}
-                    slotProps={{
-                      input: { "aria-label": `${user.name}: ${module.label} — ${perm.label}` },
-                    }}
-                    sx={permCheckboxSx()}
-                  />
+              return (
+                <Box
+                  key={module.id}
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: GRID,
+                    borderBottom: index < MODULES.length - 1 ? "1px solid" : "none",
+                    borderColor: t.line,
+                    alignItems: "center",
+                    bgcolor: isCustom ? (t.mode === "dark" ? t.rowSel : ACCENT_SOFT) : "transparent",
+                    "&:hover": { bgcolor: isCustom ? undefined : t.hover },
+                  }}
+                >
+                  <Box sx={{ px: 2, py: 0.75, fontSize: 14, fontWeight: 600 }}>{module.label}</Box>
+                  {PERMISSIONS.map((perm) => (
+                    <Box key={perm.id} sx={{ display: "flex", justifyContent: "center" }}>
+                      <Checkbox
+                        checked={effective[perm.id]}
+                        onChange={(e) => onToggle(user, module.id, perm.id, e.target.checked)}
+                        disabled={pending}
+                        slotProps={{
+                          input: { "aria-label": `${user.name}: ${module.label} — ${perm.label}` },
+                        }}
+                        sx={permCheckboxSx()}
+                      />
+                    </Box>
+                  ))}
+                  <Box sx={{ px: 1, display: "flex", alignItems: "center", gap: 0.5 }}>
+                    {isCustom ? (
+                      <>
+                        <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: ACCENT }}>
+                          Custom
+                        </Typography>
+                        <ButtonBase
+                          title="Reset to role default"
+                          aria-label={`Reset ${module.label} to role default`}
+                          onClick={() => onReset(user, module.id)}
+                          disabled={pending}
+                          sx={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: "6px",
+                            border: "1px solid",
+                            borderColor: t.line,
+                            color: t.muted,
+                            "&:hover": { borderColor: ACCENT, color: ACCENT },
+                          }}
+                        >
+                          <RestartAltIcon sx={{ fontSize: 15 }} />
+                        </ButtonBase>
+                      </>
+                    ) : (
+                      <Typography sx={{ fontSize: 11.5, color: t.muted2 }}>Role default</Typography>
+                    )}
+                  </Box>
                 </Box>
-              ))}
-              <Box sx={{ px: 1, display: "flex", alignItems: "center", gap: 0.5 }}>
-                {isCustom ? (
-                  <>
-                    <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: ACCENT }}>
-                      Custom
-                    </Typography>
-                    <ButtonBase
-                      title="Reset to role default"
-                      aria-label={`Reset ${module.label} to role default`}
-                      onClick={() => onReset(user, module.id)}
-                      disabled={pending}
-                      sx={{
-                        width: 26,
-                        height: 26,
-                        borderRadius: "6px",
-                        border: "1px solid",
-                        borderColor: t.line,
-                        color: t.muted,
-                        "&:hover": { borderColor: ACCENT, color: ACCENT },
-                      }}
-                    >
-                      <RestartAltIcon sx={{ fontSize: 15 }} />
-                    </ButtonBase>
-                  </>
-                ) : (
-                  <Typography sx={{ fontSize: 11.5, color: t.muted2 }}>Role default</Typography>
-                )}
-              </Box>
-            </Box>
-          );
-        })}
+              );
+            })}
+        </Box>
+      </Box>
     </Box>
   );
 }

@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Box, Typography, Alert, ButtonBase } from "@mui/material";
-import { EntityModal, FormField, fieldInputSx } from "@/components/EntityModal";
+import { Box, Typography, Alert } from "@mui/material";
+import { EntityModal, FormField, ModalFormActions, fieldInputSx } from "@/components/EntityModal";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, colors, borderRadius, shadows } from "@/theme/tokens";
+import { lightTokens, darkTokens } from "@/theme/tokens";
 import { postJson } from "@/lib/mutate";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
@@ -139,26 +139,10 @@ export function MultiItemMrfModal({
     >
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
         {/* Header info */}
-        <Box
-          sx={{
-            mb: 3,
-            p: 2,
-            bgcolor: mode === "dark" ? colors.neutral[800] : colors.blue[50],
-            border: `1px solid ${mode === "dark" ? colors.neutral[700] : colors.blue[100]}`,
-            borderRadius: borderRadius.md,
-          }}
-        >
-          <Typography
-            sx={{
-              fontSize: 13,
-              color: mode === "dark" ? colors.neutral[300] : colors.blue[900],
-              lineHeight: 1.6,
-            }}
-          >
-            Filed under <strong>{technicianLabel}</strong>. Add multiple items to this request. Warehouse will
-            fulfill each item separately.
-          </Typography>
-        </Box>
+        <Typography sx={{ fontSize: 12.5, color: t.muted, mb: 2, lineHeight: 1.6 }}>
+          Filed under <strong>{technicianLabel}</strong>. Add multiple items to this request — warehouse
+          will fulfill each item separately.
+        </Typography>
 
         <ItemCartEditor
           products={products}
@@ -170,17 +154,14 @@ export function MultiItemMrfModal({
         />
 
         {/* MRF details */}
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, mb: 2 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, mb: 2 }}>
           <FormField label="Project Name">
             <Box
               component="input"
               value={project}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setProject(e.target.value)}
               placeholder="e.g. Northgate Cold Storage"
-              sx={{
-                ...fieldInputSx(t),
-                bgcolor: mode === "dark" ? colors.neutral[900] : colors.neutral[0],
-              }}
+              sx={fieldInputSx(t)}
             />
           </FormField>
           <FormField label="External Ref. No. (Optional)">
@@ -189,10 +170,7 @@ export function MultiItemMrfModal({
               value={externalRefNo}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExternalRefNo(e.target.value)}
               placeholder="e.g. PO-2024-001"
-              sx={{
-                ...fieldInputSx(t),
-                bgcolor: mode === "dark" ? colors.neutral[900] : colors.neutral[0],
-              }}
+              sx={fieldInputSx(t)}
             />
           </FormField>
         </Box>
@@ -206,7 +184,6 @@ export function MultiItemMrfModal({
             rows={3}
             sx={{
               ...fieldInputSx(t),
-              bgcolor: mode === "dark" ? colors.neutral[900] : colors.neutral[0],
               fontFamily: "inherit",
               resize: "vertical",
             }}
@@ -214,59 +191,18 @@ export function MultiItemMrfModal({
         </FormField>
 
         {error && (
-          <Alert severity="error" sx={{ mt: 2, borderRadius: borderRadius.md }}>
+          <Alert severity="error" sx={{ mt: 2 }}>
             {error}
           </Alert>
         )}
 
-        {/* Actions */}
-        <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end", mt: 3 }}>
-          <ButtonBase
-            type="button"
-            onClick={() => {
-              if (handleClose()) onClose();
-            }}
-            sx={{
-              px: 2.5,
-              py: 1.25,
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: borderRadius.md,
-              border: `2px solid ${mode === "dark" ? colors.neutral[700] : colors.neutral[300]}`,
-              color: t.text,
-              transition: "all 150ms ease",
-              "&:hover": {
-                bgcolor: mode === "dark" ? colors.neutral[800] : colors.neutral[100],
-              },
-            }}
-          >
-            Cancel
-          </ButtonBase>
-          <ButtonBase
-            type="submit"
-            disabled={mutation.isPending || items.length === 0}
-            sx={{
-              px: 3,
-              py: 1.25,
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: borderRadius.md,
-              bgcolor: colors.brand.primary,
-              color: colors.neutral[0],
-              boxShadow: shadows.sm,
-              transition: "all 150ms ease",
-              "&:hover": {
-                bgcolor: colors.brand.primaryDark,
-                boxShadow: shadows.md,
-              },
-              "&.Mui-disabled": {
-                opacity: 0.5,
-              },
-            }}
-          >
-            {mutation.isPending ? "Filing MRF…" : `File MRF (${items.length} items)`}
-          </ButtonBase>
-        </Box>
+        <ModalFormActions
+          onCancel={() => {
+            if (handleClose()) onClose();
+          }}
+          submitLabel={mutation.isPending ? "Filing MRF…" : `File MRF (${items.length} items)`}
+          disabled={mutation.isPending || items.length === 0}
+        />
       </Box>
     </EntityModal>
   );

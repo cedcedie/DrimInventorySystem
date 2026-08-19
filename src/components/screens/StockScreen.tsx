@@ -30,7 +30,7 @@ import { ACCENT_HOVER, motion } from "@/theme/tokens";
 
 const SI_COLS = "110px 106px minmax(0,1.1fr) minmax(0,1.1fr) 76px 40px";
 const SO_COLS = "92px 96px minmax(0,1fr) minmax(0,1.1fr) 48px 84px minmax(0,1fr)";
-const MRF_COLS = "100px 96px minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) 72px 72px 72px 88px";
+const MRF_COLS = "100px 96px minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) 72px 72px 88px";
 
 export function StockScreen({ role, initialTab }: { role: Role; initialTab?: string }) {
   return (
@@ -86,12 +86,7 @@ function StockScreenInner({ role, initialTab }: { role: Role; initialTab?: strin
       </Box>
 
       {tab === "requests" ? (
-        <OpenMrfsTab
-          canStock={canStock}
-          viewOnly={viewOnly}
-          onFulfill={openFulfill}
-          onOpenDetail={setDetailMrfId}
-        />
+        <OpenMrfsTab canStock={canStock} viewOnly={viewOnly} onOpenDetail={setDetailMrfId} />
       ) : tab === "in" ? (
         <StockInTab canStock={canStock} viewOnly={viewOnly} />
       ) : (
@@ -146,12 +141,14 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
 function OpenMrfsTab({
   canStock,
   viewOnly,
-  onFulfill,
   onOpenDetail,
 }: {
   canStock: boolean;
   viewOnly: boolean;
-  onFulfill: (mrfItemId: string) => void;
+  /** Row click and the row-level "Fulfill" action both open the MRF detail
+   * modal — that's where each line item gets its own Fulfill button (see
+   * MrfDetailModal's onFulfill), so per-item fulfillment isn't duplicated
+   * as a separate action on the collapsed one-row-per-MRF table. */
   onOpenDetail: (mrfId: string) => void;
 }) {
   const t = useTheme().palette;
@@ -161,19 +158,38 @@ function OpenMrfsTab({
     ...liveHot,
   });
 
-  const flatRows =
-    data?.mrfs.flatMap((mrf) =>
-      mrf.items.map((item) => ({
+  // One row per MRF, not per line item — an MRF with several open items used
+  // to repeat its ref/date/technician/project on every row (e.g. 3 rows all
+  // reading "MRF-0125"), which read as duplicate entries rather than one
+  // request. "Item" summarizes the first line with a "+N more" badge, "Need"
+  // sums remaining qty across items, and "In stock" flags short-on-stock as
+  // a whole; the row's Fulfill action opens the MRF detail modal, where each
+  // item gets its own Fulfill button (per-item fulfillment still happens
+  // there, just not duplicated as a table row here).
+  const mrfRows =
+    data?.mrfs.map((mrf) => {
+      const totalRemaining = mrf.items.reduce((sum, item) => sum + item.qtyRemaining, 0);
+      const anyShort = mrf.items.some((item) => item.availableStock < item.qtyRemaining);
+      const worstStock = mrf.items.reduce(
+        (min, item) => Math.min(min, item.availableStock),
+        Infinity
+      );
+      return {
         mrfId: mrf.id,
-        ...item,
         refNo: mrf.refNo,
         project: mrf.project,
         externalRefNo: mrf.externalRefNo,
         technicianName: mrf.technicianName,
         status: mrf.status,
         createdAt: mrf.createdAt,
-      }))
-    ) ?? [];
+        firstItem: mrf.items[0],
+        extraItemCount: mrf.items.length - 1,
+        totalRemaining,
+        unit: mrf.items[0]?.unit ?? "",
+        anyShort,
+        worstStock: Number.isFinite(worstStock) ? worstStock : 0,
+      };
+    }) ?? [];
 
   return (
     <Box>
@@ -206,8 +222,8 @@ function OpenMrfsTab({
               "Action",
             ]}
           />
-          {flatRows.map((row) => (
-            <TableRow key={row.id} columns={MRF_COLS} onClick={() => onOpenDetail(row.mrfId)}>
+          {mrfRows.map((row) => (
+            <TableRow key={row.mrfId} columns={MRF_COLS} onClick={() => onOpenDetail(row.mrfId)}>
               <TableCell label="Request #" mono color={t.primary.main}>
                 {row.refNo}
               </TableCell>
@@ -222,33 +238,28 @@ function OpenMrfsTab({
                 )}
               </TableCell>
               <TableCell label="Item">
-                {row.productName}
+                {row.firstItem?.productName}
+                {row.extraItemCount > 0 && (
+                  <Box component="span" sx={{ ml: 0.5, fontSize: 10, color: t.muted, fontWeight: 600 }}>
+                    (+{row.extraItemCount} more)
+                  </Box>
+                )}
                 <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {row.productCode}
+                  {row.firstItem?.productCode}
                 </Box>
               </TableCell>
               <TableCell label="Need" bold>
-                {row.qtyRemaining} {row.unit}
-                {row.qtyFulfilled > 0 && (
-                  <Box component="span" sx={{ fontSize: 10, color: t.muted, fontWeight: 400 }}>
-                    {" "}
-                    ({row.qtyFulfilled} done)
-                  </Box>
-                )}
+                {row.totalRemaining} {row.unit}
               </TableCell>
-              <TableCell
-                label="In stock"
-                bold
-                color={row.availableStock >= row.qtyRemaining ? t.success.main : t.warning.main}
-              >
-                {row.availableStock}
+              <TableCell label="In stock" bold color={row.anyShort ? t.warning.main : t.success.main}>
+                {row.worstStock}
               </TableCell>
               <TableCell label="Action">
                 {canStock ? (
                   <ButtonBase
                     onClick={(e) => {
                       e.stopPropagation();
-                      onFulfill(row.id);
+                      onOpenDetail(row.mrfId);
                     }}
                     sx={{
                       fontSize: 11,
@@ -271,7 +282,7 @@ function OpenMrfsTab({
               </TableCell>
             </TableRow>
           ))}
-          {flatRows.length === 0 && (
+          {mrfRows.length === 0 && (
             <EmptyState message="No open material requests — all caught up." />
           )}
         </TableShell>

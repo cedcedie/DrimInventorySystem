@@ -8,8 +8,7 @@ const COMPANY_DEFAULTS = {
   currency: "PHP — Philippine Peso (₱)",
 };
 
-/** The company profile is a single pinned row. Reads fall back to the seed
- * defaults so a database that hasn't been seeded still renders sensibly. */
+/** Single pinned row; falls back to seed defaults if unseeded. */
 export async function getCompanySettings() {
   const row = await prisma.companySettings.findUnique({ where: { id: "singleton" } });
   return {

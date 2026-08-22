@@ -19,8 +19,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  // Guard against an Owner locking everyone out of the Users module by
-  // demoting or deactivating the last active Owner.
+  // Prevent demoting/deactivating the last active Owner — would lock everyone out.
   const losingOwnerAccess = target.role === "OWNER" && (role !== "OWNER" || status !== "ACTIVE");
   if (losingOwnerAccess) {
     const otherActiveOwners = await prisma.user.count({

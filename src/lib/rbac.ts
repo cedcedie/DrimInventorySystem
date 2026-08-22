@@ -1,12 +1,7 @@
 import type { Role } from "@/generated/prisma";
 
-// README "RBAC (exact matrix from prototype)"
-// "activity" is on every role's list — it's the shared activity log
-// everyone can see, filtered server-side by role (see getActivityData /
-// ActivityLog.sensitive): Owner/Admin see every row including account/
-// permission/company-config changes, every other role sees the same
-// operational events (stock, MRF, purchase orders, catalog) with sensitive
-// rows excluded. One page, one route, filtered by who's asking.
+// "activity" is on every role's list — the shared activity log, filtered server-side by role
+// (see getActivityData / ActivityLog.sensitive).
 export const MODULE_ACCESS: Record<Role, string[]> = {
   OWNER: [
     "dashboard",

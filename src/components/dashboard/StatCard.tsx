@@ -6,10 +6,6 @@ import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens, lightChips, darkChips, motion } from "@/theme/tokens";
 import type { ChipTone } from "@/components/StatusChip";
 
-/**
- * Dashboard KPI card: white surface, 34px tinted icon chip (tone bg + tone
- * text), label 13/700 muted, value 28px mono 600, optional 12px muted-2 sub.
- */
 export function StatCard({
   label,
   value,
@@ -21,11 +17,10 @@ export function StatCard({
   label: string;
   value: string | number;
   sub?: string;
-  /** Status tone driving the icon chip's soft tint — reuses the same
-   * success/warn/danger/info/neutral scale as StatusChip. */
+  /** Drives the icon chip's soft tint — same scale as StatusChip. */
   tone?: ChipTone;
   icon?: ReactNode;
-  /** Position in the KPI row — staggers the entrance animation 50ms each. */
+  /** Position in the KPI row — staggers entrance animation 50ms each. */
   index?: number;
 }) {
   const { mode } = useColorMode();

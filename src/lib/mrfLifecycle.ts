@@ -52,10 +52,7 @@ export function isProductRequestable(archivedAt: Date | string | null | undefine
   return archivedAt == null;
 }
 
-/**
- * Stock module view is matrix-only — technicians never inherit stock reads
- * (apiAuth hard-blocks TECHNICIAN on stock even if matrix grants canView).
- */
+/** Technicians never inherit stock reads even if the matrix grants canView (apiAuth hard-blocks it). */
 export function canViewStockModule(stockCanView: boolean, roleIsTechnician: boolean): boolean {
   if (roleIsTechnician) return false;
   return stockCanView;

@@ -52,8 +52,7 @@ export function StockOutModal({
 
   const selectedMrfItem = options?.pendingMrfItems.find((m) => m.id === mrfItemId);
 
-  // Deliberately no auto-fill to the full remaining qty here — a warehouse worker
-  // hitting Enter without editing the field should not release everything at once.
+  // No auto-fill to full remaining qty — prevents releasing everything via a stray Enter.
   const qtyNum = Number(qty);
   const maxQty = selectedMrfItem
     ? Math.min(selectedMrfItem.qtyRemaining, selectedMrfItem.availableStock)
@@ -82,11 +81,8 @@ export function StockOutModal({
       onClose();
     },
     onError: (e: Error) => {
-      // A same-item race (another warehouse worker fulfilled this line moments
-      // ago) surfaces here as a rejected transaction — the numbers on screen are
-      // now stale. Refetch immediately so the visible remaining/stock counts
-      // reflect what actually happened, instead of leaving the old numbers up
-      // with no explanation for why the submit was rejected.
+      // A same-item race (another worker fulfilled this line first) rejects the
+      // transaction with stale numbers on screen — refetch to show current state.
       queryClient.invalidateQueries({ queryKey: queryKeys.stockOptions });
       queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
       setError(`${e.message} — numbers below have been refreshed to reflect the current state.`);

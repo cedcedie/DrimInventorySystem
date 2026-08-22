@@ -34,9 +34,7 @@ export function AdjustStockModal({
 }: {
   product: AdjustableProduct | null;
   onClose: () => void;
-  /** Pre-fills the note and defaults the reason to Correction — used when
-   * opened from "Correct this" on a specific SI/SO slip, so the audit trail
-   * references which slip prompted the fix. */
+  /** Pre-fills note and defaults reason to Correction, when opened from a specific SI/SO slip. */
   initialNote?: string;
 }) {
   const { mode } = useColorMode();

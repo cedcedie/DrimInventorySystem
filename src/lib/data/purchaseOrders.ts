@@ -117,9 +117,7 @@ export async function getPurchaseOrderDetail(id: string) {
 
 export type PurchaseOrderDetail = NonNullable<Awaited<ReturnType<typeof getPurchaseOrderDetail>>>;
 
-/** Open (SENT / PARTIALLY_RECEIVED) POs for a supplier, for the "link this
- * delivery to a PO" picker in Stock In — narrowed to one supplier since a
- * delivery only ever arrives from the supplier already selected there. */
+/** Open POs for a supplier, for the "link this delivery to a PO" picker in Stock In. */
 export async function getOpenPurchaseOrdersForSupplier(supplierId: string) {
   const pos = await prisma.purchaseOrder.findMany({
     where: {

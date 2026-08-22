@@ -10,19 +10,13 @@ const { auth } = NextAuth(authConfig);
 
 const PUBLIC_PATHS = ["/login"];
 
-// Segments any signed-in user may reach (own account / shared utilities).
-// "notifications" belongs here, not in the role-gated static map below — a
-// user's own notification inbox (GET/PATCH /api/notifications) is inherently
-// self-service like /me and /profile, scoped server-side to session.user.id
-// in the route handler itself. It was never added to rbac.ts's MODULE_ACCESS
-// either, so with no entry in EITHER list it fell through to the "static
-// module, check the role map" branch and got a blanket 403 for every role,
-// including Owner — the notification bell was fetching nothing for anyone.
+// Segments any signed-in user may reach (own account / shared utilities). "notifications"
+// belongs here, not the role-gated static map — it's self-service, scoped server-side to
+// session.user.id in the route handler.
 const SELF_SERVICE_SEGMENTS = new Set(["profile", "me", "search", "blobs", "notifications"]);
 
-// Configurable modules are gated by the Owner-managed matrix (DB). Edge
-// middleware can't read that cheaply, so for those we only require a session
-// and let layout + API enforce view/create/edit/delete/export.
+// Configurable modules are gated by the Owner-managed matrix (DB); edge middleware can't
+// read that cheaply, so we only require a session and let layout + API enforce it.
 const CONFIGURABLE = new Set<string>(PERMISSION_MODULES);
 
 // API paths whose first segment doesn't match the owning nav module.
@@ -67,12 +61,10 @@ export default auth((req) => {
     return passWithPath(req, pathname);
   }
 
-  // Configurable modules: session is enough here; layout/API enforce the matrix.
   if (CONFIGURABLE.has(moduleSegment)) {
     return passWithPath(req, pathname);
   }
 
-  // Static modules (settings, activity, permissions, …): role map still applies.
   if (moduleSegment && !canAccess(session.user.role as Role, moduleSegment)) {
     if (isApiRoute) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

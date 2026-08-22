@@ -40,8 +40,7 @@ export async function POST(req: Request) {
     });
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    // Guard against an Owner overriding their own account's "users" access
-    // to false — that would 403 them out of the one screen that could undo it.
+    // Prevent an Owner from revoking their own "users" view access — would lock them out.
     if (
       user.role === "OWNER" &&
       userId === auth.session.user.id &&

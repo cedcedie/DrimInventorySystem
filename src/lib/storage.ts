@@ -1,13 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { uploadToR2, getSignedR2Url } from "@/lib/r2";
 
-/** Where uploaded bytes live. Two methods, because that's all any caller
- * needs: hand over bytes, get back an opaque reference; hand back the
- * reference, get a URL a browser can fetch.
- *
- * Callers never learn whether the bytes are in Postgres or R2, nor anything
- * about buckets, object keys, presigning, or expiry — swapping adapters is a
- * config change, not a code change. */
+/** Callers never learn whether bytes live in Postgres or R2 — swapping adapters is
+ * a config change, not a code change. */
 export interface BlobStore {
   put(bytes: Buffer, contentType: string, extension: string): Promise<string>;
   url(ref: string): Promise<string>;
@@ -24,15 +19,13 @@ function r2IsConfigured(): boolean {
   return R2_VARS.every((v) => !!process.env[v]);
 }
 
-/** Bytes in Postgres, served back through /api/blobs/[key]. Adequate for a
- * single-warehouse catalog; Neon's free tier is 0.5GB total, so this is the
- * thing to move off first if the catalog grows. */
+/** Bytes in Postgres, served through /api/blobs/[key]; Neon's free tier is 0.5GB total,
+ * so this is the first thing to move off if the catalog grows. */
 const postgresBlobStore: BlobStore = {
   async put(bytes, contentType, extension) {
     const key = `products/${crypto.randomUUID()}.${extension}`;
     await prisma.storedBlob.create({
-      // Prisma's Bytes maps to Uint8Array; a Buffer is one, but TS wants the
-      // narrower ArrayBuffer-backed form spelled out.
+      // Buffer is a Uint8Array, but TS wants the narrower form spelled out.
       data: { key, contentType, size: bytes.length, bytes: new Uint8Array(bytes) },
     });
     return key;
@@ -42,8 +35,7 @@ const postgresBlobStore: BlobStore = {
   },
 };
 
-/** Bytes in Cloudflare R2. Activates automatically once the R2_* vars are
- * set — no code change required. */
+/** Activates automatically once the R2_* vars are set — no code change required. */
 const r2BlobStore: BlobStore = {
   async put(bytes, contentType, extension) {
     const key = `products/${crypto.randomUUID()}.${extension}`;
@@ -61,8 +53,7 @@ export function getBlobStore(): BlobStore {
   return r2IsConfigured() ? r2BlobStore : postgresBlobStore;
 }
 
-/** True when bytes are being served out of Postgres — used to keep next/image
- * pointed at a same-origin route rather than a remote host. */
+/** Used to keep next/image pointed at a same-origin route rather than a remote host. */
 export function blobStoreIsLocal(): boolean {
   return !r2IsConfigured();
 }

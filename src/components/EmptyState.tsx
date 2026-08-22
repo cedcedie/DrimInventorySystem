@@ -5,7 +5,6 @@ import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens, ACCENT, ACCENT_SOFT, motion } from "@/theme/tokens";
 
-/** Consistent empty state for tables / panels. */
 export function EmptyState({
   message,
   actionLabel,

@@ -76,7 +76,7 @@ export const SCREEN_SUBTITLES: Record<string, string> = {
   profile: "Your display name and password",
 };
 
-// Stock & MRFs renders as Material Requests (MRF) for technicians per README RBAC note.
+// Stock & MRFs renders as Material Requests (MRF) for technicians.
 export function screenTitleForRole(segment: string, role: Role): string {
   if (segment === "stock" && role === "TECHNICIAN") return "Material Requests (MRF)";
   return SCREEN_TITLES[segment] ?? segment;

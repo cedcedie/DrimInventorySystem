@@ -51,7 +51,6 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
     select: (data) => data.purchaseOrders,
   });
 
-  // Supplier changed — any previously chosen PO belonged to the old supplier.
   useEffect(() => {
     setPurchaseOrderId("");
   }, [supplierId]);

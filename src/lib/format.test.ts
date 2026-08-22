@@ -7,7 +7,6 @@ describe("peso", () => {
   });
 
   it("groups thousands", () => {
-    // 42500 -> ₱42,500.00 — the separator matters on report totals.
     expect(peso(42500)).toBe("₱42,500.00");
   });
 
@@ -26,8 +25,7 @@ describe("peso", () => {
 
 describe("formatDateTime", () => {
   it("renders month, day, and a 24-hour time", () => {
-    // 2026-07-20T14:30:00 local — asserted on parts rather than one exact
-    // string, since ICU spacing between date and time varies by Node build.
+    // Asserted on parts, not one exact string — ICU spacing varies by Node build.
     const formatted = formatDateTime(new Date(2026, 6, 20, 14, 30));
     expect(formatted).toContain("Jul");
     expect(formatted).toContain("20");

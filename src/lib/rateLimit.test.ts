@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { checkRateLimit, getClientIp } from "./rateLimit";
 
-// Buckets live in a module-level Map that persists across tests, so every
-// test uses its own key rather than trying to reset shared state.
+// Buckets live in a module-level Map that persists across tests, so each test uses its own key.
 let keySeq = 0;
 const freshKey = () => `test-key-${keySeq++}`;
 

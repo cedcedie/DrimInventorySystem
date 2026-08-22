@@ -14,8 +14,6 @@ import {
 import { useTheme } from "@mui/material/styles";
 import { ACCENT } from "@/theme/tokens";
 
-// Received (Stock In) = success green, released (Stock Out) = brand orange,
-// per the README's Dashboard chart spec.
 const RECEIVED_COLOR = "#12805C";
 const RELEASED_COLOR = ACCENT;
 

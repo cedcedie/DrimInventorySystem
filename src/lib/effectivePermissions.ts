@@ -64,8 +64,7 @@ async function loadEffectivePermissions(userId: string, role: Role) {
   return result;
 }
 
-/** Per-user effective map. Cached briefly; busted via the "permissions" tag.
- * Owner is included — saved role/user matrix rows override built-in defaults. */
+/** Per-user effective map; saved role/user matrix rows override built-in defaults, even for Owner. */
 export const getEffectivePermissions = cache(async (userId: string, role: Role) => {
   return loadEffectivePermissions(userId, role);
 });

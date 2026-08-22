@@ -2,10 +2,7 @@
 
 import { useEffect } from "react";
 
-/** Only fires if the ROOT layout itself throws (theme/providers/fonts) — this
- * replaces <html>/<body> entirely, so it must not depend on ThemeRegistry,
- * MUI, or any provider that could itself be the thing that broke. Plain
- * inline styles only. */
+/** Fires only if the root layout itself throws — replaces <html>/<body>, so no ThemeRegistry/MUI/providers, plain inline styles only. */
 export default function GlobalError({
   error,
   reset,

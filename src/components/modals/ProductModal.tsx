@@ -55,9 +55,8 @@ export function ProductModal({
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // One object URL per selected file, revoked on change/unmount — calling
-  // URL.createObjectURL directly in JSX would mint a new (leaked) blob URL
-  // on every render instead of once per file selection.
+  // One object URL per selected file, revoked on change/unmount — avoids minting a
+  // new (leaked) blob URL on every render.
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!imageFile) {
@@ -109,8 +108,7 @@ export function ProductModal({
       };
 
       if (isEdit) {
-        // No `stocks` on edit — the count only moves via Stock In/Out or a
-        // recorded adjustment, so the server rejects it here.
+        // No `stocks` on edit — count only moves via Stock In/Out or a recorded adjustment.
         return patchJson(`/api/products/${product!.id}`, payload);
       }
       return postJson("/api/products", { ...payload, stocks: Number(stocks) });

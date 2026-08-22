@@ -15,12 +15,11 @@ type NotifyInput = {
   body: string;
   href: string;
   refNo?: string;
-  /** Set only for manually-composed notifications — who sent it. Undefined
-   * for every automatic, event-triggered notification. */
+  /** Set only for manually-composed notifications. */
   senderUserId?: string;
 };
 
-/** Fan-out helpers — durable in Neon so every Vercel instance / user sees the same inbox. */
+/** Durable in Neon so every Vercel instance / user sees the same inbox. */
 export async function createNotifications(inputs: NotifyInput[]) {
   if (inputs.length === 0) return;
   await prisma.notification.createMany({
@@ -36,8 +35,7 @@ export async function createNotifications(inputs: NotifyInput[]) {
   });
 }
 
-/** Manually-composed notification, sent by an Owner/Admin to one or more
- * specific users or role-groups (resolved to userIds by the caller). */
+/** Sent by an Owner/Admin to specific users or role-groups (resolved to userIds by the caller). */
 export async function sendManualNotification(opts: {
   recipientUserIds: string[];
   senderUserId: string;
@@ -46,7 +44,7 @@ export async function sendManualNotification(opts: {
 }) {
   await createNotifications(
     opts.recipientUserIds
-      .filter((id) => id !== opts.senderUserId) // sending to yourself is a no-op
+      .filter((id) => id !== opts.senderUserId)
       .map((userId) => ({
         userId,
         type: "manual" as const,
@@ -90,11 +88,8 @@ export async function notifyWarehouseMrfFiled(opts: {
   );
 }
 
-/** Fires once at the moment a product's stock crosses at-or-below its
- * minLevel (including hitting 0) — not on every dashboard load, which would
- * otherwise be the only signal (see getWarehouseDashboard). Re-fires only if
- * stock recovers above minLevel and drops again, since callers only invoke
- * this when their own before/after check detects a fresh crossing. */
+/** Fires once when stock crosses at-or-below minLevel; re-fires only if it recovers and drops again
+ * (caller does the before/after crossing check). */
 export async function notifyLowStock(opts: {
   productId: string;
   productName: string;

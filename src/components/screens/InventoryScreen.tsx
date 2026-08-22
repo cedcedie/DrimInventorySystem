@@ -61,8 +61,7 @@ export function InventoryScreen({
         `/api/inventory?q=${encodeURIComponent(q)}&category=${encodeURIComponent(category)}&page=${page}`
       ),
     initialData: isDefaultView ? initialData : undefined,
-    // Keep showing the previous rows while a new filter/page loads instead of
-    // flashing back to a skeleton — filter clicks should feel instant.
+    // avoids flashing to skeleton on filter/page change
     placeholderData: keepPreviousData,
     ...liveCool,
   });

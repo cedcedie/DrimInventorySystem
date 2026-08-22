@@ -98,14 +98,11 @@ export function SideNav({
   badges: Record<string, string>;
   /** Effective-permission segments from the server; falls back to the static role map. */
   accessSegments?: string[];
-  /** Controls the temporary Drawer below the `md` breakpoint. */
   mobileOpen?: boolean;
   onMobileClose?: () => void;
-  /** Desktop-rail collapse state — owned by AppShell so ChromeBar/main canvas
-   * can react to the same value (width affects their offsets too). */
+  /** Owned by AppShell so ChromeBar/main canvas react to the same collapse width. */
   collapsed?: boolean;
-  /** False until the persisted collapse preference has been read from
-   * localStorage — avoids a layout flash/transition on first paint. */
+  /** False until the persisted preference loads from localStorage — avoids a layout flash. */
   hydrated?: boolean;
   onToggleCollapsed?: () => void;
 }) {
@@ -132,8 +129,7 @@ export function SideNav({
     return access.includes(segment);
   };
 
-  // Collapse only applies to the fixed desktop rail — the mobile Drawer is
-  // always full-width regardless of this state.
+  // Collapse only applies to the desktop rail — mobile Drawer is always full-width.
   const effectiveCollapsed = !isMobile && collapsed && hydrated;
 
   const navContent = (
@@ -212,7 +208,6 @@ export function SideNav({
                         outline: `2px solid ${ACCENT}`,
                         outlineOffset: "-2px",
                       },
-                      // Active-item indicator — 3px rounded bar at the sidebar's left edge.
                       "&::before": active
                         ? {
                             content: '""',
@@ -267,7 +262,6 @@ export function SideNav({
         })}
       </Box>
 
-      {/* Collapse toggle */}
       {!isMobile && (
         <Box sx={{ px: effectiveCollapsed ? 1 : 1.5, py: 1, borderTop: "1px solid", borderColor: t.line }}>
           <ButtonBase
@@ -294,7 +288,6 @@ export function SideNav({
         </Box>
       )}
 
-      {/* Logout pinned at bottom, matching the reference layout */}
       <Box sx={{ px: effectiveCollapsed ? 1 : 1.5, py: 1.5, borderTop: "1px solid", borderColor: t.line }}>
         <ButtonBase
           onClick={() => signOut({ callbackUrl: "/login" })}

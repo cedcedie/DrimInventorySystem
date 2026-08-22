@@ -5,7 +5,7 @@ export function parseStockTab(value?: string | null): StockTab {
   return "requests";
 }
 
-/** Global search result types allowed for a role (techs never see SI/SO slips). */
+/** Techs never see SI/SO slips. */
 export function searchIncludesWarehouseSlips(roleIsTechnician: boolean): boolean {
   return !roleIsTechnician;
 }

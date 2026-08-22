@@ -145,10 +145,7 @@ function OpenMrfsTab({
 }: {
   canStock: boolean;
   viewOnly: boolean;
-  /** Row click and the row-level "Fulfill" action both open the MRF detail
-   * modal — that's where each line item gets its own Fulfill button (see
-   * MrfDetailModal's onFulfill), so per-item fulfillment isn't duplicated
-   * as a separate action on the collapsed one-row-per-MRF table. */
+  /** Opens the MRF detail modal, where each line item gets its own Fulfill button. */
   onOpenDetail: (mrfId: string) => void;
 }) {
   const t = useTheme().palette;
@@ -158,14 +155,7 @@ function OpenMrfsTab({
     ...liveHot,
   });
 
-  // One row per MRF, not per line item — an MRF with several open items used
-  // to repeat its ref/date/technician/project on every row (e.g. 3 rows all
-  // reading "MRF-0125"), which read as duplicate entries rather than one
-  // request. "Item" summarizes the first line with a "+N more" badge, "Need"
-  // sums remaining qty across items, and "In stock" flags short-on-stock as
-  // a whole; the row's Fulfill action opens the MRF detail modal, where each
-  // item gets its own Fulfill button (per-item fulfillment still happens
-  // there, just not duplicated as a table row here).
+  // One row per MRF, not per line item, so multi-item MRFs don't repeat as duplicate-looking rows.
   const mrfRows =
     data?.mrfs.map((mrf) => {
       const totalRemaining = mrf.items.reduce((sum, item) => sum + item.qtyRemaining, 0);
@@ -428,11 +418,7 @@ function StockOutTab({
   const canCorrect = useCan("inventory", "canEdit");
   const theme = useTheme();
   const t = theme.palette;
-  // Below this width the inline "Release detail" side panel would render
-  // beneath the whole table instead of next to it — tapping a row would
-  // silently update a panel the user has to scroll past the table to see.
-  // Below that width a tap opens the same detail in a modal instead, so
-  // it's front-and-center regardless of which row was picked.
+  // Below `sm` the side panel would render below the table instead of beside it, so use a modal instead.
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
@@ -447,11 +433,7 @@ function StockOutTab({
 
   return (
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-      {/* minWidth matches TableShell's own minWidth={720} below — a smaller
-          floor here let the table get squeezed by its sibling detail panel
-          below its real content width, clipping the table's right edge
-          (e.g. a trailing action button) instead of the intended
-          horizontal scroll. See TechniciansScreen for the same fix. */}
+      {/* minWidth must match TableShell's minWidth={720} below, else the sibling panel squeezes the table and clips it instead of scrolling */}
       <Box sx={{ flex: "2.4 1 460px", minWidth: { xs: "100%", sm: 720 } }}>
         {viewOnly && <ViewOnlyBanner text="View only — releasing Stock Out requires create permission" />}
         <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
@@ -537,10 +519,7 @@ function StockOutTab({
         )}
       </Box>
 
-      {/* Desktop/tablet: inline side panel. Below `sm` this is replaced by
-          the modal opened on row-tap (see mobileDetailOpen) so the detail
-          is never rendered below content the user would have to scroll
-          past to reach. */}
+      {/* Desktop/tablet inline side panel; below `sm` a modal replaces it (see mobileDetailOpen) */}
       <Box
         sx={{
           display: { xs: "none", sm: "block" },
@@ -599,8 +578,7 @@ function ReleaseDetailBody({
   canCorrect: boolean;
   onCorrect: (c: { product: AdjustableProduct; note: string }) => void;
   t: Palette;
-  /** The modal body needs its own padding; the inline panel already gets it
-   * from the surrounding card. */
+  /** Modal body needs its own padding; the inline panel gets it from the surrounding card. */
   padded?: boolean;
 }) {
   if (!picked) {

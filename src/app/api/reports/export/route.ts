@@ -38,7 +38,6 @@ export async function POST(req: Request) {
   const preparedBy = auth.session.user.name ?? auth.session.user.username ?? "Unknown";
   const period = `${from.toLocaleDateString("en-PH")} – ${to.toLocaleDateString("en-PH")}`;
 
-  // Generate report in requested format
   const reportBytes = format === "excel"
     ? await generateExcelReport({
         type,
@@ -69,9 +68,7 @@ export async function POST(req: Request) {
     : "application/pdf";
 
   try {
-    // The PDF is a view over the database, not data in its own right — it can be
-    // regenerated at any time. Streaming it straight to the browser avoids a
-    // storage round-trip, expiring signed URLs, and orphaned files in a bucket.
+    // Regenerable from the DB, so stream straight to the browser instead of persisting to storage.
     await prisma.activityLog.create({
       data: {
         userId: auth.session.user.id,
@@ -88,9 +85,7 @@ export async function POST(req: Request) {
         "Content-Type": contentType,
         "Content-Disposition": `attachment; filename="${refNo}.${fileExtension}"`,
         "Content-Length": String(reportBytes.length),
-        // Report content reflects the data at generation time — never cache it.
         "Cache-Control": "no-store",
-        // Surfaces the ref number and row count to the client without a second request.
         "X-Report-Ref": refNo,
         "X-Report-Rows": String(rows.length),
       },

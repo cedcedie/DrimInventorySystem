@@ -1,7 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 
-// Edge-safe config shared by proxy.ts (no Prisma/bcrypt imports here — those
-// are Node-only and break proxy.ts registration if pulled in transitively).
+// Edge-safe config shared by proxy.ts — no Prisma/bcrypt imports (Node-only, breaks proxy.ts).
 export const authConfig = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },

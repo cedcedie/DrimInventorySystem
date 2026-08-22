@@ -77,9 +77,7 @@ const PERMISSIONS = [
 const GRID = "minmax(150px, 200px) repeat(5, 1fr) 110px";
 const GRID_ROLE = "minmax(150px, 200px) repeat(5, 1fr)";
 
-// Permissions-matrix checkbox per the README spec: 18px box, radius 4,
-// 1.5px #98A2B3 border; checked = solid orange fill + white check mark;
-// hover border orange.
+// Checkbox style per README spec: 18px box, radius 4, #98A2B3 border, orange when checked.
 function permCheckboxSx() {
   return {
     p: 0,
@@ -273,7 +271,6 @@ export function PermissionsScreen() {
 
   return (
     <Box sx={{ px: { xs: 1.5, sm: 2.5, md: 3 }, py: { xs: 1.75, sm: 2.5 }, display: "flex", flexDirection: "column", gap: 2 }}>
-      {/* Mode switcher */}
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, maxWidth: 640 }}>
         {modeButton("role", "Role Permissions", "Defaults that apply to everyone with the role")}
         {modeButton("user", "User Permissions", "Per-user overrides that beat the role default")}
@@ -391,11 +388,7 @@ function RoleMatrix({
 }) {
   const t = useTheme().palette;
   const theme = useTheme();
-  // Below `sm` the matrix's 6 columns can't fit without either shrinking
-  // checkboxes past a usable tap size or forcing horizontal scroll while
-  // trying to toggle something — bad for a read-only table, worse for a
-  // form. Mobile gets a per-module expandable card instead: tap a module
-  // to reveal its 5 permission rows as full-width, large-tap-target rows.
+  // Below `sm` the 6-column matrix can't fit without unusably small checkboxes; use expandable cards instead.
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const activeRole = selectedRole || data.roles[0]?.id;
   const rolePermissions = data.permissions.filter((p) => p.roleId === activeRole);
@@ -502,9 +495,7 @@ function RoleMatrix({
   );
 }
 
-/** Tap-to-expand module row for the mobile permissions layout — replaces a
- * matrix column with a full-width card so each permission gets a real tap
- * target instead of an 18px box reached by scrolling sideways. */
+/** Tap-to-expand module row for the mobile permissions layout. */
 function PermissionModuleCard({
   moduleLabel,
   summary,
@@ -563,8 +554,7 @@ function PermissionModuleCard({
   );
 }
 
-/** Full-width permission row for the mobile card — the whole row toggles
- * the checkbox, giving a much larger tap target than the 18px box alone. */
+/** Full-width permission row for the mobile card; the whole row toggles the checkbox. */
 function PermissionToggleRow({
   icon: Icon,
   label,
@@ -647,7 +637,6 @@ function UserMatrix({
         overflow: "hidden",
       }}
     >
-      {/* User picker */}
       <Box
         sx={{
           px: 2,

@@ -46,7 +46,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     session: ({ session, token }) => {
       if (token.error === "Inactive") {
-        // Strip user so middleware / layout treat the session as logged out.
+        // Strip user so middleware/layout treat this as logged out.
         return { ...session, user: undefined as unknown as typeof session.user };
       }
       if (session.user) {
@@ -70,8 +70,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        // NextAuth v5 beta's Credentials authorize() here only receives
-        // `credentials` (no `req`), so we key per-account rather than per-IP.
+        // NextAuth v5 beta's authorize() has no `req` here, so key per-account not per-IP.
         const rl = checkRateLimit(`login:${username}`, { limit: 5, windowMs: 60_000 });
         if (!rl.allowed) {
           throw new Error("Too many login attempts. Try again in a minute.");

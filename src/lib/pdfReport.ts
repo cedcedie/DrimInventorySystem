@@ -2,10 +2,8 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf
 import { readFile } from "fs/promises";
 import path from "path";
 
-// DRIM IMS PDF letterhead — mirrors `design_handoff_ui_refresh/PDF Report
-// Template.dc.html`. Colors below are the same hex values as
-// src/theme/tokens.ts's light palette (pdf-lib can't import the TS module,
-// so they're restated as rgb() literals — keep in sync by hand).
+// Colors mirror src/theme/tokens.ts's light palette; pdf-lib can't import the TS module,
+// so they're restated as rgb() literals — keep in sync by hand.
 const PAGE_WIDTH = 612;
 const PAGE_HEIGHT = 792;
 const MARGIN = 40;
@@ -79,17 +77,13 @@ export async function generateReportPdf(params: {
   let page = newPage();
   let y = drawLetterhead(page, { font, boldFont, dMark, companyName, company, reportType, refNo: params.refNo });
 
-  // Title + summary — bounded to the page's content width so a long
-  // caller-supplied title (e.g. an MRF summary line concatenating project/
-  // technician/status) can't run past the right margin off the printable
-  // page instead of wrapping or truncating.
+  // Bounded to content width so a long caller-supplied title can't run past the margin.
   const contentWidth = PAGE_WIDTH - MARGIN * 2;
   page.drawText(truncateToWidth(title, boldFont, 23, contentWidth), { x: MARGIN, y, size: 23, font: boldFont, color: INK });
   y -= 20;
   page.drawText(truncateToWidth(summary, font, 10, contentWidth), { x: MARGIN, y, size: 10, font, color: MUTED });
   y -= 16;
 
-  // Meta strip: GENERATED / PERIOD / PREPARED BY / WAREHOUSE, between hairlines.
   y -= 6;
   page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 0.75, color: HAIRLINE });
   y -= 14;
@@ -103,10 +97,7 @@ export async function generateReportPdf(params: {
   metaCols.forEach(([label, value], i) => {
     const x = MARGIN + i * metaColWidth;
     page.drawText(label, { x, y, size: 8.5, font: boldFont, color: MUTED2 });
-    // Leave a real gutter (not just 6pt) between meta columns — with up to
-    // 4 columns on a 532pt content width, each is only ~133pt, and a value
-    // like a full warehouse address needs room to actually be legible after
-    // truncation rather than being cut to 3-4 words.
+    // Wider gutter than 6pt — up to 4 columns on 532pt leaves little room for values like a full address.
     page.drawText(truncateToWidth(value, boldFont, 9.5, metaColWidth - 14), {
       x,
       y: y - 12,
@@ -119,7 +110,6 @@ export async function generateReportPdf(params: {
   page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 0.75, color: HAIRLINE });
   y -= 18;
 
-  // KPI row, hairline column separators.
   if (kpis && kpis.length > 0) {
     const kpiColWidth = (PAGE_WIDTH - MARGIN * 2) / kpis.length;
     kpis.forEach((kpi, i) => {
@@ -189,8 +179,7 @@ export async function generateReportPdf(params: {
         y -= ROW_HEIGHT;
       }
       row.forEach((cell, i) => {
-        // Reserve a small gutter so adjacent columns never touch even at
-        // the truncation boundary.
+        // Small gutter so adjacent columns never touch even at the truncation boundary.
         const available = colWidth - 6;
         page.drawText(truncateToWidth(cell, font, 10.5, available), {
           x: MARGIN + i * colWidth,
@@ -220,10 +209,9 @@ export async function generateReportPdf(params: {
       y -= ROW_HEIGHT;
     }
 
-    y -= 10; // gap before next section
+    y -= 10;
   }
 
-  // Footnote + signature rules on the last page.
   if (y < CONTENT_BOTTOM + 70) {
     page = newPage();
     y = PAGE_HEIGHT - MARGIN;
@@ -241,8 +229,7 @@ export async function generateReportPdf(params: {
     page.drawText(label, { x, y: y - 12, size: 8.5, font, color: MUTED });
   });
 
-  // Repeating footer + letterhead rule on every page (letterhead only repeats
-  // past page 1; the footer stamp repeats on all pages).
+  // Letterhead repeats past page 1; the footer repeats on all pages.
   pages.forEach((p, i) => {
     if (i > 0) {
       drawLetterhead(p, { font, boldFont, dMark, companyName, company, reportType, refNo: params.refNo });
@@ -290,12 +277,9 @@ function drawLetterhead(
 
   const textX = dMark ? MARGIN + markSize + 10 : MARGIN;
 
-  // Reserve the right side's actual width first (report type + ref no, each
-  // right-aligned against the margin) so the left side's company name/
-  // address — which can be arbitrary user-entered text — never grows into
-  // it. Both sides used to be measured independently against the page edge
-  // only, so a long company name and the right-aligned report type/ref
-  // could visually collide in the middle with no gutter between them.
+  // Measure the right side (report type + ref no) first so the left side's arbitrary
+  // company name/address can't grow into it — previously both were measured independently
+  // and could collide in the middle.
   const typeWidth = boldFont.widthOfTextAtSize(reportType, 9);
   const refWidth = refNo ? boldFont.widthOfTextAtSize(refNo, 9) : 0;
   const rightSideWidth = Math.max(typeWidth, refWidth);
@@ -319,7 +303,6 @@ function drawLetterhead(
     });
   }
 
-  // Right-aligned report type + mono ref no.
   page.drawText(reportType, {
     x: PAGE_WIDTH - MARGIN - typeWidth,
     y: y - 10,
@@ -358,17 +341,14 @@ function drawFooter(page: PDFPage, font: PDFFont, generatedAt: Date, pageNum: nu
   page.drawText(pageLabel, { x: PAGE_WIDTH - MARGIN - pageLabelWidth, y, size: 8, font, color: MUTED2 });
 }
 
-/** Truncates `value` with an ellipsis so it never exceeds `maxWidth` at the
- * given font/size — the actual fix for text overrunning its column. Binary
- * search on visible character count rather than a fixed cap, so it scales
- * correctly whether the column is 500pt wide (2-column meta strip) or 70pt
- * (a 7-column table's last field). */
+/** Binary search on visible character count so it scales from a 500pt meta strip
+ * column down to a 70pt table field. */
 function truncateToWidth(value: string, font: PDFFont, size: number, maxWidth: number): string {
   if (font.widthOfTextAtSize(value, size) <= maxWidth) return value;
 
   const ellipsis = "…";
   const ellipsisWidth = font.widthOfTextAtSize(ellipsis, size);
-  if (ellipsisWidth > maxWidth) return ""; // pathologically narrow column
+  if (ellipsisWidth > maxWidth) return "";
 
   let lo = 0;
   let hi = value.length;

@@ -67,11 +67,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Product is already archived" }, { status: 409 });
   }
 
-  // Archiving blocks new MRF requests and new Stock In receipts for this product
-  // (see isProductRequestable / stock-in validation) — if an MRF still has an open
-  // line for it, archiving now would leave that request permanently unfulfillable
-  // with no way for warehouse to restock it. Surface the open MRFs so whoever's
-  // archiving can close/redirect them first instead of hitting a silent dead end.
+  // Archiving blocks new MRF requests and Stock In receipts (see isProductRequestable) —
+  // an open MRF line would become permanently unfulfillable, so surface it first.
   const openItems = await prisma.mrfItem.findMany({
     where: {
       productId: id,

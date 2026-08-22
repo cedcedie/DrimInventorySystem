@@ -1,7 +1,6 @@
 import { unstable_cacheTag as cacheTag, unstable_cacheLife as cacheLife } from "next/cache";
 
-/** Shared TTL presets for `"use cache"` data functions.
- * Tuned so concurrent users share cache hits, while still refreshing before
+/** Shared TTL presets for `"use cache"` data functions, tuned to refresh before
  * the matching client poll tier (hot ~10s / warm ~20s / cool ~45s). */
 export const CACHE_SECONDS = {
   /** Sidebar badges, form options, open MRF queue */

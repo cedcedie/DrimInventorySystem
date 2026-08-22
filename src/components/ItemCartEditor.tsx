@@ -27,19 +27,14 @@ const RESULT_CAP = 5;
 
 /**
  * Category-grouped product picker + running cart, shared by the multi-item
- * Stock In, MRF, Purchase Order, and Purchase Request modals. Owns the "pick
- * a product, enter a qty, Add" interaction and the cart's add/remove/adjust-
- * qty logic; the parent owns `items` itself (and whatever it submits them
- * as) so this stays a pure editor with no knowledge of MRFs, batches, or any
- * submit shape.
+ * Stock In, MRF, Purchase Order, and Purchase Request modals. The parent owns
+ * `items` and its submit shape; this stays a pure editor with no knowledge of
+ * MRFs, batches, etc.
  *
- * The product picker is a search-filtered list rather than a native <Select>
- * with every product mounted — a real catalog can run into the hundreds, and
- * a scrollable dropdown of hundreds of <MenuItem>s is both a mobile-usability
- * problem (impossible to scan/tap) and a rendering-cost problem as the
- * catalog grows. Typing narrows by name/code; the closed-search view groups
- * by category and shows the first 5 per category so the list never dumps
- * everything at once.
+ * Search-filtered list rather than a native <Select> with every product
+ * mounted — catalogs can run into the hundreds, which breaks mobile scanning
+ * and rendering cost. Typing narrows by name/code; closed view groups by
+ * category, capped at 5 per group.
  */
 export function ItemCartEditor({
   products,
@@ -52,11 +47,11 @@ export function ItemCartEditor({
   products: CartProductOption[] | undefined;
   items: CartItem[];
   onItemsChange: (next: CartItem[]) => void;
-  /** Heading over the "pick a product + qty" section, e.g. "Add Items to Request". */
+  /** Heading over the "pick a product + qty" section. */
   addSectionLabel: string;
-  /** Heading over the cart list, e.g. "Items in this Request". */
+  /** Heading over the cart list. */
   cartLabel: string;
-  /** Shown via onError when Add is clicked with nothing selected. */
+  /** Shown when Add is clicked with nothing selected. */
   emptyProductError: string;
 }) {
   const { mode } = useColorMode();
@@ -79,9 +74,7 @@ export function ItemCartEditor({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  // Search hits (flat, capped) vs. the browse view (grouped by category,
-  // capped per group) — same RESULT_CAP idea, different shape depending on
-  // whether the user has typed anything yet.
+  // Flat capped search hits, or grouped-by-category browse view when query is empty.
   const searchResults = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle || !products) return null;

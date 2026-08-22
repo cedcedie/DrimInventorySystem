@@ -11,10 +11,8 @@ export type FulfillLineResult = {
   technicianId: string;
   productName: string;
   qty: number;
-  /** Set when this fulfillment dropped the product from above minLevel to at
-   * or below it (or to 0) — caller fires the low-stock notification outside
-   * the transaction so a notification failure never rolls back a real
-   * stock-out. Undefined when no threshold was crossed. */
+  /** Set when this fulfillment dropped stock to at-or-below minLevel; caller fires the
+   * low-stock notification outside the transaction so it can't roll back a real stock-out. */
   lowStockCrossed?: { productId: string; productName: string; stocks: number; minLevel: number };
 };
 
@@ -47,7 +45,7 @@ export async function fulfillMrfItemInTx(
   }
 
   const product = mrfItem.product;
-  // Re-read stocks for concurrent safety within the transaction
+  // Re-read for concurrent safety within the transaction.
   const freshProduct = await tx.product.findUnique({ where: { id: product.id } });
   if (!freshProduct) throw new Error("Product not found");
   if (quantity > freshProduct.stocks) {

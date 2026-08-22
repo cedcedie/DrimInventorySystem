@@ -17,8 +17,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return NextResponse.json(pr);
 }
 
-/** Withdraw a still-PENDING request — the requester themself, or an
- * Owner/Admin on anyone's behalf (same authority that can decide it). */
+/** Withdraw a still-PENDING request — requester themself, or Owner/Admin on anyone's behalf. */
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireModuleAccess("purchaseRequests", "canCreate");
   if ("error" in auth) return auth.error;

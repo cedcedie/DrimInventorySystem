@@ -37,7 +37,6 @@ export function EditUserModal({
   const [status, setStatus] = useState<UserStatus>("ACTIVE");
   const [error, setError] = useState("");
 
-  // Re-seed the form whenever a different user is opened.
   useEffect(() => {
     if (user) {
       setName(user.name);

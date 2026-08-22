@@ -18,11 +18,8 @@ export interface ActivityFeedRow {
   ref: string;
 }
 
-/** Compact preview of the shared Activity Log, every logged-in user sees
- * this regardless of role. Account/permission/company-config changes are
- * excluded server-side (ActivityLog.sensitive) for non-Owner/Admin viewers;
- * "View all" links to the full /activity page, which applies the same
- * per-role filtering (Owner/Admin see the unfiltered log there). */
+/** Compact preview of the shared Activity Log. Sensitive entries (account/permission/
+ * company-config changes) are excluded server-side for non-Owner/Admin viewers. */
 export function ActivityFeedWidget({ rows }: { rows: ActivityFeedRow[] }) {
   const t = useTheme().palette;
 

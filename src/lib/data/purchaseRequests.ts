@@ -95,9 +95,7 @@ export async function getPurchaseRequestDetail(id: string) {
 
 export type PurchaseRequestDetail = NonNullable<Awaited<ReturnType<typeof getPurchaseRequestDetail>>>;
 
-/** Pending PRs awaiting an Owner/Admin decision, for the Dashboard widget /
- * approval queue — narrow projection, no pagination since this is a small
- * "needs attention" list rather than a browsable table. */
+/** Pending PRs awaiting an Owner/Admin decision, for the Dashboard approval queue. */
 export async function getPendingPurchaseRequestsCount() {
   return prisma.purchaseRequest.count({ where: { status: "PENDING" } });
 }

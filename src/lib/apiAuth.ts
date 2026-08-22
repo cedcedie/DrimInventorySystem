@@ -5,14 +5,10 @@ import { canAccess } from "@/lib/rbac";
 import { getEffectivePermissions } from "@/lib/effectivePermissions";
 import { isConfigurableModule, type PermissionAction } from "@/lib/permissionDefaults";
 
-/** Guards an API route. Configurable modules (products, stock, users, …) are
- * checked against the Owner-managed permission matrix (user override → role
- * config → default); segments outside the matrix (settings, activity, …) fall
- * back to the static role map. Pass `action` to additionally require
- * create/edit/delete/export rights for mutations.
- *
- * Technicians must use `mrf` (not `stock`) for their own request APIs. Stock
- * routes stay warehouse-scoped — do not bridge tech `mrf.canView` into stock. */
+/** Guards an API route. Configurable modules check the Owner-managed permission
+ * matrix (user override → role config → default); others fall back to the static
+ * role map. Technicians must use `mrf`, not `stock` — do not bridge tech
+ * `mrf.canView` into stock, which stays warehouse-scoped. */
 export async function requireModuleAccess(moduleSegment: string, action?: PermissionAction) {
   const session = await auth();
   if (!session?.user) {
@@ -21,8 +17,7 @@ export async function requireModuleAccess(moduleSegment: string, action?: Permis
   const role = session.user.role as Role;
 
   if (isConfigurableModule(moduleSegment)) {
-    // Technicians never use warehouse stock APIs — matrix stock.canView must not
-    // reopen SI/SO/open-queue. They reach products via /api/stock/options dual-gate.
+    // Technicians never use warehouse stock APIs, even if stock.canView is set.
     if (moduleSegment === "stock" && role === "TECHNICIAN") {
       return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) } as const;
     }

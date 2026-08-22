@@ -6,8 +6,7 @@ export async function getTechnicianForUser(userId: string) {
   return prisma.technician.findUnique({ where: { userId } });
 }
 
-/** Full single-MRF detail (header, items, fulfillment history) — shared by the detail
- * API route and the PDF export route so both render from the same query. */
+/** Shared by the detail API route and the PDF export route so both render from the same query. */
 export async function getMrfDetailForApi(id: string) {
   const mrf = await prisma.mrf.findUnique({
     where: { id },
@@ -131,7 +130,7 @@ async function loadMrfsForTechnician(technicianId: string) {
   };
 }
 
-/** Open requests queue for warehouse — pending/partial MRFs with remaining line items. */
+/** Pending/partial MRFs with remaining line items, for the warehouse queue. */
 async function loadOpenMrfsQueue() {
   "use cache";
   tagAndLife("mrf", CACHE_SECONDS.short);

@@ -35,10 +35,8 @@ export function ChromeBar({
   userName: string;
   role: Role;
   activeSegment: string;
-  /** Opens the mobile nav drawer; the button is hidden at `md` and up. */
   onMenuClick?: () => void;
-  /** Current desktop sidebar width (collapses 252→76) — keeps the bar's left
-   * offset in sync so it never overlaps or gaps against the rail. */
+  /** Desktop sidebar width (collapses 252→76) — keeps bar's left offset in sync with the rail. */
   railWidth?: number;
 }) {
   const { mode, toggleMode } = useColorMode();
@@ -132,7 +130,6 @@ export function ChromeBar({
 
         <NotificationBell buttonSx={iconButtonSx} />
 
-        {/* Profile */}
         <Box
           component={Link}
           href="/profile"

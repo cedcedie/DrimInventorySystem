@@ -31,12 +31,9 @@ export function isUniqueRefNoError(error: unknown): boolean {
   );
 }
 
-/** True for a Postgres Serializable-isolation write-conflict abort (Prisma P2034).
- * This is the failure mode that actually fires when two requests race inside
- * `nextRefNo`'s read-then-insert under Serializable isolation — the unique
- * constraint on `refNo` is a backstop that rarely trips because the DB aborts
- * the losing transaction first. Both need to be retried, or a race under real
- * concurrent load surfaces as a raw, unretried error to the second user. */
+/** Postgres Serializable-isolation write-conflict abort (Prisma P2034) — the failure mode that
+ * actually fires when two requests race inside `nextRefNo`; the unique constraint on `refNo`
+ * is just a backstop. Both need to be retried. */
 export function isSerializationConflictError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
 }
@@ -59,10 +56,8 @@ export async function withRefNoRetry<T>(fn: () => Promise<T>, maxAttempts = 3): 
   throw lastError;
 }
 
-/** Generates the next sequential ref number for a given prefix by reading the
- * highest existing numeric suffix and incrementing. Must be called inside the
- * same $transaction that inserts the row using the returned ref. */
-/** Next ref from ActivityLog rows (e.g. RPT-001). */
+/** Next ref from ActivityLog rows (e.g. RPT-001). Must be called inside the same
+ * $transaction that inserts the row using the returned ref. */
 export async function nextActivityRefNo(
   tx: Tx,
   prefix: string,

@@ -3,8 +3,8 @@ import type { MrfStatus } from "@/generated/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 import { getActivityWidgetData } from "@/lib/data/activity";
 
-/** When `technicianId` is set (technician dashboard), only that tech's open MRFs
- * are returned — no warehouse SI/SO feeds, stock KPIs, or global activity. */
+/** When `technicianId` is set, returns only that tech's open MRFs — no warehouse
+ * SI/SO feeds, stock KPIs, or global activity. */
 export async function getDashboardData(technicianId?: string) {
   "use cache";
   tagAndLife("dashboard", CACHE_SECONDS.dashboard);

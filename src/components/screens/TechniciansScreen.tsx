@@ -46,9 +46,7 @@ export function TechniciansScreen({
   void role;
   const theme = useTheme();
   const t = theme.palette;
-  // Same reasoning as StockScreen's Release detail panel — below `sm` a
-  // tap opens the profile in a modal instead of updating an inline panel
-  // that renders below the whole table.
+  // Same as StockScreen's Release detail panel: below `sm` a tap opens a modal instead of an inline panel.
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -86,16 +84,7 @@ export function TechniciansScreen({
       />
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-        {/* minWidth here must be >= TableShell's own minWidth below — the
-            table's true rendered width (Actions column included) is 680px
-            when canManage, but this wrapper's floor was fixed at 420px
-            regardless. At viewport widths where the flex row has just
-            enough room to sit the table below 680px but above 420px, the
-            wrapper was letting the table's own `overflow-x:auto` never
-            trigger while its trailing content (the Actions column's delete
-            button) still got visually clipped by the card's `overflow:
-            hidden`. Matching the two removes the gap where that could
-            happen. */}
+        {/* minWidth must be >= TableShell's own minWidth, else the table's overflow-x never triggers and the Actions column clips */}
         <Box sx={{ flex: "2 1 420px", minWidth: { xs: "100%", sm: canManage ? 680 : 560 } }}>
           <TableShell minWidth={canManage ? 680 : 560}>
             <TableHeaderRow
@@ -174,8 +163,7 @@ export function TechniciansScreen({
           </TableShell>
         </Box>
 
-        {/* Desktop/tablet: inline side panel. Below `sm` this is replaced
-            by the modal opened on row-tap (see mobileDetailOpen). */}
+        {/* Desktop/tablet inline side panel; below `sm` a modal replaces it (see mobileDetailOpen) */}
         <Box
           sx={{
             display: { xs: "none", sm: "block" },
@@ -237,8 +225,7 @@ function TechnicianProfileBody({
   picked: TechniciansData["rows"][number] | undefined;
   onOpenMrf: (mrfId: string) => void;
   t: Palette;
-  /** The modal body needs its own padding; the inline panel already gets
-   * it from the surrounding card. */
+  /** Modal body needs its own padding; the inline panel gets it from the surrounding card. */
   padded?: boolean;
 }) {
   if (!picked) {

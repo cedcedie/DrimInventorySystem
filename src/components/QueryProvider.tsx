@@ -5,11 +5,9 @@ import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@ta
 import { SessionProvider, signOut } from "next-auth/react";
 import { ApiError } from "@/lib/api";
 
-/** A 401 from a background-polled query or a mutation means the session died
- * server-side (expired, deactivated, role changed) — without this, polling
- * queries just fail silently forever and the screen quietly stops updating
- * with no explanation. Force back to login instead. Guarded so a burst of
- * simultaneously-failing polls only triggers one redirect. */
+/** A 401 means the session died server-side; without this, polling queries fail
+ * silently forever. Force back to login. Guarded so a burst of failing polls
+ * only triggers one redirect. */
 function useSessionExpiryHandler() {
   const handled = useRef(false);
   return (error: unknown) => {
@@ -30,15 +28,14 @@ export function QueryProvider({ children }: { children: ReactNode }) {
         mutationCache: new MutationCache({ onError: onSessionExpiry }),
         defaultOptions: {
           queries: {
-            // Default: snappy nav without hammering Neon. Screens opt into
-            // liveHot / liveWarm / liveCool polling for multi-user sync.
+            // Screens opt into liveHot / liveWarm / liveCool polling for multi-user sync.
             staleTime: 15_000,
             gcTime: 5 * 60_000,
             refetchOnWindowFocus: true,
             refetchOnReconnect: true,
           },
           mutations: {
-            // Don't retry writes — inventory mutations aren't idempotent.
+            // Inventory mutations aren't idempotent.
             retry: 0,
           },
         },

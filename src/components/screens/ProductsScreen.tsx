@@ -123,7 +123,6 @@ export function ProductsScreen({
         }
       />
 
-      {/* Filter strip */}
       <Box
         sx={{
           display: "flex",

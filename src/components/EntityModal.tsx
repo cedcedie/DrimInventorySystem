@@ -20,9 +20,7 @@ export function EntityModal({
   title: string;
   width: ModalWidth;
   children: React.ReactNode;
-  /** When provided, gates every close attempt (X button, Escape, backdrop
-   * click) — return true to allow the close, false to block it (e.g. show
-   * your own "discard unsaved changes?" prompt instead). */
+  /** Gates every close attempt — return true to allow, false to block (e.g. unsaved-changes prompt). */
   confirmClose?: () => boolean;
 }) {
   const { mode } = useColorMode();
@@ -50,10 +48,7 @@ export function EntityModal({
           sx: {
             width,
             maxWidth: "92vw",
-            // Caps the dialog against the viewport instead of letting long
-            // content (a big item cart, extra fields, a validation alert)
-            // push it taller than the screen with nowhere for the extra
-            // height to go — the body below scrolls internally instead.
+            // Caps against viewport so long content scrolls internally instead of overflowing.
             maxHeight: "88vh",
             display: "flex",
             flexDirection: "column",

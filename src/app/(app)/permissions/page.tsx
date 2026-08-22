@@ -10,8 +10,7 @@ export const metadata = {
 export default async function PermissionsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
-  
-  // Only owners can access permission management
+
   if (session.user.role !== "OWNER") {
     redirect("/dashboard");
   }

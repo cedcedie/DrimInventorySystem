@@ -34,16 +34,14 @@ export function MultiItemMrfModal({
     select: (data) => data.products,
   });
 
-  // Form state
   const [items, setItems] = useState<CartItem[]>([]);
   const [project, setProject] = useState("");
   const [externalRefNo, setExternalRefNo] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
 
-  // Draft persistence — a technician filing this from a job site can lose signal or
-  // background the tab mid-fill; without this, the whole request (items typed one at a
-  // time) would be silently destroyed. Restored on open, cleared on successful submit.
+  // A technician filing from a job site can lose signal mid-fill; persist a draft so
+  // it isn't silently lost. Restored on open, cleared on successful submit.
   type Draft = { items: CartItem[]; project: string; externalRefNo: string; description: string };
   const draft = useFormDraft<Draft>(
     "drim-mrf-draft",
@@ -138,7 +136,6 @@ export function MultiItemMrfModal({
       width={660}
     >
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
-        {/* Header info */}
         <Typography sx={{ fontSize: 12.5, color: t.muted, mb: 2, lineHeight: 1.6 }}>
           Filed under <strong>{technicianLabel}</strong>. Add multiple items to this request — warehouse
           will fulfill each item separately.
@@ -153,7 +150,6 @@ export function MultiItemMrfModal({
           emptyProductError="Select an item and enter a positive quantity."
         />
 
-        {/* MRF details */}
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, mb: 2 }}>
           <FormField label="Project Name">
             <Box

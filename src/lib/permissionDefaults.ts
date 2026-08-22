@@ -1,6 +1,5 @@
-/** Shared source of truth for the configurable permission system.
- * Role defaults apply to everyone with the role; a user-specific override
- * (Permission row) entirely replaces the role default for that module. */
+/** Role defaults apply to everyone with the role; a user-specific override entirely
+ * replaces the role default for that module. */
 
 export const PERMISSION_MODULES = [
   "dashboard",

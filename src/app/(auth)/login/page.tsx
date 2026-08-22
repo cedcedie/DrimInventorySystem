@@ -88,7 +88,6 @@ function LoginPageInner() {
       setError("Invalid username or password.");
       return;
     }
-    // Warm dashboard (RSC + API) while the button still shows loading, then land.
     await warmPostLogin(router, queryClient);
     router.refresh();
     router.push("/dashboard");
@@ -96,7 +95,6 @@ function LoginPageInner() {
 
   return (
     <Box sx={{ minHeight: "100vh", display: "flex" }}>
-      {/* Left brand panel — fixed dark so logo/motto never break with theme */}
       <Box
         sx={{
           display: { xs: "none", md: "flex" },
@@ -116,7 +114,6 @@ function LoginPageInner() {
           `,
         }}
       >
-        {/* Soft "warehouse bay" light bars */}
         <Box
           sx={{
             position: "absolute",
@@ -195,7 +192,6 @@ function LoginPageInner() {
         />
       </Box>
 
-      {/* Right login panel */}
       <Box
         sx={{
           width: { xs: "100%", md: "50%" },

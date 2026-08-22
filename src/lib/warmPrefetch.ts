@@ -29,14 +29,11 @@ export async function warmPostLogin(router: AppRouterInstance, queryClient: Quer
       queryFn: () => fetchJson<DashboardData>("/api/dashboard"),
     });
   } catch {
-    // Navigation still proceeds — dashboard page can load its own data.
+    // Navigation still proceeds; dashboard page can load its own data.
   }
 }
 
-/**
- * Once the authenticated shell is up, idle-prefetch likely screens the user
- * can access. Deferred so the first navigation isn't competing with warm-up.
- */
+/** Deferred so the first navigation isn't competing with warm-up. */
 export function warmShellRoutes(
   router: AppRouterInstance,
   queryClient: QueryClient,

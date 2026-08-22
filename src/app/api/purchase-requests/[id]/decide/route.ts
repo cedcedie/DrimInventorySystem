@@ -7,13 +7,9 @@ import { parseBody } from "@/lib/validate";
 import { purchaseRequestDecideSchema } from "@/lib/schemas";
 import { notifyRequesterPrDecided } from "@/lib/notifications";
 
-/** Approve or reject a PENDING Purchase Request. Approval creates the
- * PurchaseOrder in the same transaction as the status change, so a request
- * is never left APPROVED without a linked PO (or vice versa) — the two
- * facts are one atomic write, not a create-then-link sequence that could
- * fail halfway. Owner/Admin only: raising a request (purchaseRequests.
- * canCreate) and deciding one are treated as separate authority, not two
- * ends of the same permission. */
+/** Approve or reject a PENDING Purchase Request. Approval creates the PurchaseOrder in the
+ * same transaction as the status change, so a request is never left APPROVED without a
+ * linked PO. Owner/Admin only — deciding is separate authority from raising a request. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireModuleAccess("purchaseRequests");
   if ("error" in auth) return auth.error;
@@ -62,7 +58,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             return { pr: updated, po: null as { id: string; refNo: string } | null };
           }
 
-          // Approve: needs a supplier either already on the PR or supplied now.
+          // Needs a supplier either already on the PR or supplied now.
           const supplierId = decision.supplierId ?? pr.supplierId;
           if (!supplierId) {
             throw new Error("A supplier is required to approve this request");

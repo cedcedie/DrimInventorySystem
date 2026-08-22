@@ -8,10 +8,6 @@ import AddIcon from "@mui/icons-material/Add";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens, ACCENT, ACCENT_HOVER, motion } from "@/theme/tokens";
 
-/**
- * Shared list-page chrome: title + breadcrumb on the left,
- * optional PDF/Excel + primary Add on the right (DreamsPOS pattern).
- */
 export function PageChrome({
   title,
   breadcrumb,

@@ -1,4 +1,4 @@
-/** Any product-like item with a category name attached, for grouping in pickers. */
+/** Any product-like item with a category name attached. */
 interface CategorizedItem {
   category: { name: string } | null;
 }
@@ -8,11 +8,7 @@ export interface CategoryGroup<T> {
   items: T[];
 }
 
-/**
- * Groups a flat product list into category buckets for grouped `<Select>` rendering.
- * Category groups are sorted alphabetically; items within a group keep their incoming
- * order (callers already sort products by name before this runs).
- */
+/** Groups sorted alphabetically; items keep incoming order (callers pre-sort by name). */
 export function groupByCategory<T extends CategorizedItem>(items: T[]): CategoryGroup<T>[] {
   const groups = new Map<string, T[]>();
 

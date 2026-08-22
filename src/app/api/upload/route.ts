@@ -26,8 +26,7 @@ export async function POST(req: Request) {
   const extension = file.type.split("/")[1];
 
   try {
-    // Postgres or R2 depending on whether the R2_* vars are set — this route
-    // doesn't know or care which.
+    // Backing store (Postgres vs R2) is decided by getBlobStore(), not here.
     const imageKey = await getBlobStore().put(buffer, file.type, extension);
     return NextResponse.json({ imageKey });
   } catch (e) {

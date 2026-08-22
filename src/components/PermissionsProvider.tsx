@@ -43,7 +43,7 @@ function permissionsEqual(a: PermissionsMap, b: PermissionsMap): boolean {
 
 type PermissionsContextValue = {
   permissions: PermissionsMap;
-  /** Patch one module in-place (used after saving the current user's role/overrides). */
+  /** Patch one module in-place after saving role/overrides. */
   patchModule: (module: string, set: PermissionSet | null) => void;
   replaceAll: (next: PermissionsMap) => void;
 };
@@ -60,8 +60,7 @@ export function PermissionsProvider({
   children,
 }: {
   permissions: PermissionsMap;
-  /** Current role as computed server-side — used only to detect a role
-   * change out from under an open tab; not read for permission checks. */
+  /** Server-computed role — used only to detect a role change under an open tab. */
   role?: string;
   children: ReactNode;
 }) {
@@ -72,11 +71,9 @@ export function PermissionsProvider({
     setLive((prev) => (permissionsEqual(prev, permissions) ? prev : permissions));
   }, [permissions]);
 
-  // Poll our own effective permissions so a change an Owner makes (role
-  // defaults or a per-user override) reaches this tab within ~45s without
-  // the affected user having to navigate or reload — server-side enforcement
-  // is already immediate on every API call; this closes the client-UI gap
-  // (buttons/nav staying stale) that server enforcement alone doesn't cover.
+  // Polls effective permissions so an Owner's role/override change reaches this tab
+  // (~45s) without reload — closes the client-UI staleness gap; server enforcement
+  // is already immediate.
   const { data: polled } = useQuery({
     queryKey: queryKeys.myPermissions,
     queryFn: () => fetchJson<{ role: string; permissions: PermissionsMap }>("/api/me/permissions"),
@@ -86,11 +83,8 @@ export function PermissionsProvider({
   useEffect(() => {
     if (!polled) return;
     setLive((prev) => (permissionsEqual(prev, polled.permissions) ? prev : polled.permissions));
-    // A role change (not just a permission edit) also changes which nav
-    // segments this user may see — that's computed server-side in the (app)
-    // layout, so a client-side permission sync alone can't catch it. Force a
-    // server re-render to recompute accessSegments / redirect off a page the
-    // new role can no longer reach, instead of leaving stale nav items up.
+    // A role change also changes visible nav segments (computed server-side);
+    // force a re-render to recompute accessSegments / redirect off a now-forbidden page.
     if (role && polled.role !== role) {
       router.refresh();
     }
@@ -120,8 +114,7 @@ export function PermissionsProvider({
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;
 }
 
-/** True when the current user may perform `action` on `module`.
- * Falls back to false when the module has no entry (unconfigurable / unknown). */
+/** True when the current user may perform `action` on `module`; false if unconfigured. */
 export function useCan(module: string, action: keyof PermissionSet = "canView"): boolean {
   const { permissions } = useContext(PermissionsContext);
   return permissions[module]?.[action] ?? false;

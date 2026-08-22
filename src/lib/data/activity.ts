@@ -9,12 +9,9 @@ function isPrivileged(role: Role) {
   return role === "OWNER" || role === "ADMIN";
 }
 
-/** Everyone can see the activity log — Owner/Admin see every row including
- * account/permission/company-config changes; every other role sees the same
- * operational events (stock, MRF, purchase orders, catalog) with sensitive
- * rows excluded. One table, one page, filtered by who's asking — replaces
- * what used to be two parallel surfaces (an Owner/Admin-only log and a
- * separate "activity feed" for everyone else) reading the same data. */
+/** One table, one page, filtered by who's asking — Owner/Admin see every row
+ * (including sensitive account/permission/config changes); everyone else sees
+ * operational events only. */
 async function fetchActivityData(page: number, includeSensitive: boolean, take = PAGE_SIZE) {
   const where = includeSensitive ? {} : { sensitive: false };
 
@@ -59,15 +56,11 @@ export async function getActivityData(params: { page?: number; role: Role }) {
 async function loadActivityWidget() {
   "use cache";
   tagAndLife("activity", CACHE_SECONDS.dashboard);
-  // Always the filtered (operational-only) view, regardless of viewer role —
-  // this is a compact "pulse" preview, not the audit surface; Owner/Admin
-  // who want the unfiltered picture (including sensitive rows) already have
-  // the full /activity page for that.
+  // Always filtered/non-sensitive, regardless of viewer role — this is a preview, not the audit surface.
   return fetchActivityData(1, false, WIDGET_SIZE);
 }
 
-/** Compact last-10 rows for the Dashboard widget — always the filtered
- * (non-sensitive) view, for every role. */
+/** Compact last-10 rows for the Dashboard widget, non-sensitive view for every role. */
 export async function getActivityWidgetData() {
   return loadActivityWidget();
 }

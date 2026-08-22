@@ -134,7 +134,6 @@ export function DashboardScreen({
           </Box>
         )}
 
-        {/* Pending MRFs */}
         <Box
           sx={{
             flex: isTech ? "1 1 100%" : "1 1 280px",

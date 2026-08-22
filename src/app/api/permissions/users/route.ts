@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 
-/** Lists every account with its role and any user-specific permission overrides.
- * The client combines these with role permissions to show effective access. */
+/** Lists accounts with role and any user-specific permission overrides. */
 export async function GET() {
   const auth = await requireModuleAccess("users");
   if ("error" in auth) return auth.error;

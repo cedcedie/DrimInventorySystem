@@ -2,15 +2,10 @@
 
 import { useEffect, useRef } from "react";
 
-/**
- * Persists a form's in-progress state to localStorage so a dropped connection,
- * backgrounded tab, or accidental close doesn't destroy work in progress —
- * most relevant for technicians filing MRFs from job sites on unreliable
- * signal. Call `load()` once when the modal opens to restore a draft, and
- * `clear()` on successful submit. Writes are debounced and skipped while the
- * value is at its initial/empty shape so opening the modal doesn't itself
- * create a draft.
- */
+/** Persists in-progress form state to localStorage (dropped connection, backgrounded tab, etc.) —
+ * most relevant for technicians filing MRFs on unreliable signal. Call `load()` on modal open,
+ * `clear()` on successful submit. Debounced; skipped while empty so opening the modal doesn't
+ * itself create a draft. */
 export function useFormDraft<T>(key: string, value: T, isEmpty: (v: T) => boolean) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -24,8 +19,7 @@ export function useFormDraft<T>(key: string, value: T, isEmpty: (v: T) => boolea
           localStorage.setItem(key, JSON.stringify(value));
         }
       } catch {
-        // localStorage unavailable (private browsing, quota) — draft persistence
-        // is a nice-to-have, never block the form over it.
+        // localStorage unavailable — draft persistence is a nice-to-have, never block the form.
       }
     }, 400);
     return () => {

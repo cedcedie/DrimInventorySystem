@@ -10,13 +10,9 @@ import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens, ACCENT, motion } from "@/theme/tokens";
 
-/** Below this breakpoint, tables stop being horizontally-scrollable grids and
- * become stacked cards instead — every screen's table reads top-to-bottom
- * with no swipe/sideways-scroll required on a phone. TableHeaderRow hides
- * (each stacked cell carries its own label via TableCell's `label` prop) and
- * TableRow/TableCell switch from CSS-grid columns to a labeled block layout.
- * This is a single primitive change; no screen using these components needs
- * to change its own code to pick it up. */
+/** Below this breakpoint, tables become stacked cards instead of horizontally-
+ * scrollable grids (no swipe needed on phone); TableHeaderRow hides and
+ * TableRow/TableCell switch to a labeled block layout via TableCell's `label`. */
 const CARD_MODE_BP = "sm";
 
 export function TableShell({
@@ -25,8 +21,7 @@ export function TableShell({
   children,
 }: {
   minWidth?: number | string;
-  /** True while a background refetch (filter/page change) is in flight —
-   * keeps existing rows visible but subtly dims them instead of showing a skeleton. */
+  /** True during a background refetch — dims existing rows instead of showing a skeleton. */
   dimmed?: boolean;
   children: React.ReactNode;
 }) {
@@ -147,19 +142,10 @@ export function TableRow({
   );
 }
 
-/** True once the ref'd element's rendered text is actually wider than its
- * box (i.e. the ellipsis is doing something) — measured eagerly on mount/
- * value change and kept live via ResizeObserver, rather than deferred to
- * hover time. Deferring to hover has a real timing bug: MuiTooltip decides
- * whether to open off the `title` prop's value at the moment its own
- * enterDelay timer fires, so a measurement taken inside a hover handler on
- * the tooltip's own child arrives one render too late for that same hover
- * — the tooltip that should have opened silently doesn't, and no new
- * mouseenter fires to retry since the cursor hasn't moved. Measuring on
- * mount/resize instead means `truncated` is already correct by the time
- * any hover starts. ResizeObserver also keeps it correct across sidebar
- * collapse/expand and window resizes, which change column widths without
- * an unmount. */
+/** True once the ref'd element's text is wider than its box. Measured eagerly on
+ * mount/change + ResizeObserver rather than on hover: MuiTooltip reads `title` when
+ * its enterDelay timer fires, so measuring inside the hover handler itself arrives
+ * one render too late and the tooltip silently never opens. */
 function useTruncationCheck(value: unknown): [boolean, React.RefObject<HTMLSpanElement | null>] {
   const ref = useRef<HTMLSpanElement>(null);
   const [truncated, setTruncated] = useState(false);
@@ -170,10 +156,7 @@ function useTruncationCheck(value: unknown): [boolean, React.RefObject<HTMLSpanE
       setTruncated(false);
       return;
     }
-    // A few px of tolerance — sub-pixel font rounding can put scrollWidth
-    // 1-2px over clientWidth on text that isn't actually showing an
-    // ellipsis, which would otherwise arm a tooltip for content the user
-    // can already read in full.
+    // Tolerance for sub-pixel font rounding, which can falsely flag non-truncated text.
     const measure = () => setTruncated(el.scrollWidth > el.clientWidth + 4);
     measure();
     if (typeof ResizeObserver === "undefined") return;
@@ -193,9 +176,7 @@ export function TableCell({
   children,
   sx,
 }: {
-  /** Shown as a small uppercase tag before the value in stacked/card mode
-   * (below CARD_MODE_BP). Omit for a cell that's self-explanatory without a
-   * label (e.g. a leading thumbnail or an actions column). */
+  /** Uppercase tag shown before the value in stacked/card mode. Omit for self-explanatory cells. */
   label?: string;
   mono?: boolean;
   bold?: boolean;
@@ -205,14 +186,8 @@ export function TableCell({
 }) {
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
-  // Desktop cells ellipsis-truncate long values with no other way to read
-  // the full text short of opening the row. Rather than tooltip every cell
-  // (noisy, and wrong for non-text children like a StatusChip), this only
-  // arms a tooltip when both (a) the cell's own content is a plain string —
-  // the only case where echoing it back verbatim as tooltip text is
-  // correct — and (b) the browser confirms the text is actually clipped
-  // (scrollWidth > clientWidth) at hover time, so short values that happen
-  // to fit never show a redundant tooltip.
+  // Only tooltip plain-string cells that are actually clipped — avoids noise on
+  // non-text children (e.g. StatusChip) and on values that already fit.
   const isPlainText = typeof children === "string" || typeof children === "number";
   const [truncated, valueRef] = useTruncationCheck(isPlainText ? children : undefined);
 
@@ -276,7 +251,6 @@ export function TableCell({
   );
 }
 
-/** DreamsPOS-style bordered square icon button for row actions (edit / delete). */
 export function RowActionButton({
   kind,
   label,
@@ -284,7 +258,7 @@ export function RowActionButton({
   disabled,
 }: {
   kind: "edit" | "delete" | "adjust";
-  /** Accessible label, e.g. "Edit Copper Tube". Shown as tooltip via title. */
+  /** Accessible label, e.g. "Edit Copper Tube". Also shown as title tooltip. */
   label: string;
   onClick: (e: React.MouseEvent) => void;
   disabled?: boolean;

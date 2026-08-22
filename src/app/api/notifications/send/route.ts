@@ -7,11 +7,8 @@ import { sendManualNotification } from "@/lib/notifications";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import type { Role } from "@/generated/prisma";
 
-/** Owner/Admin send a manual notification to hand-picked users and/or whole
- * roles. Not gated via the configurable permission matrix — this mirrors
- * the same static Owner+Admin gate the /api/permissions routes use, since a
- * "message anyone" capability is inherently an admin-tier action, not
- * something that should be independently grantable per role/user. */
+/** Owner/Admin only, statically gated (not via the permission matrix) since
+ * "message anyone" is inherently admin-tier, not something to grant per role/user. */
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) {

@@ -4,8 +4,7 @@ import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 const PAGE_SIZE = 15;
 
 async function fetchStockInData(page: number) {
-  // Paginate on batches (one SI-#### slip), then flatten to one row per item —
-  // the Stock In table still shows one row per product, sharing the batch's refNo/date.
+  // Paginate on batches, then flatten to one row per item (table shows one row per product).
   const [total, batches] = await Promise.all([
     prisma.stockInBatch.count(),
     prisma.stockInBatch.findMany({
@@ -185,7 +184,7 @@ export async function getStockFormOptions() {
 
 export type StockFormOptions = Awaited<ReturnType<typeof getStockFormOptions>>;
 
-/** Products only — for technicians filing MRFs (no warehouse queue / SI options). */
+/** For technicians filing MRFs — no warehouse queue / SI options. */
 async function loadMrfFilingProducts(): Promise<StockFormOptions> {
   "use cache";
   tagAndLife(["products", "mrf"], CACHE_SECONDS.short);

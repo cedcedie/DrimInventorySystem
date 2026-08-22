@@ -170,7 +170,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       where: { id: updated.technicianId },
       select: { userId: true },
     });
-    // Only notify the tech when warehouse (or someone else) closes their request
+    // Only notify when someone else closed it
     if (tech?.userId && tech.userId !== session.user.id) {
       await notifyTechMrfUpdate({
         technicianUserId: tech.userId,

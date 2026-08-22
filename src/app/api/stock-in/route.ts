@@ -59,9 +59,7 @@ export async function POST(req: Request) {
             }
             poRefNo = po.refNo;
 
-            // Apply received qty toward each matching PO line, capped at what
-            // was actually ordered — extra/unexpected qty on a delivery still
-            // updates stock (below) but isn't attributed to the PO beyond it.
+            // Cap applied qty at what was ordered; extra delivered qty still updates stock below.
             for (const item of items) {
               const poItem = po.items.find((i) => i.productId === item.productId);
               if (!poItem) continue;

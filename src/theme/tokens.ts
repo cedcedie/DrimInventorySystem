@@ -1,8 +1,4 @@
-// DRIM IMS — Design Tokens (single source of truth)
-// Consolidated from tokens.ts + designTokens.ts + modernTokens.ts per the
-// 2026-08 UI refresh handoff. Brand: DRIM logo orange #FF6B2C.
-// Orange is a FILL color only (buttons, active-nav pill, focus ring,
-// indicators) — never orange text on white; accent text uses primaryText.
+// Orange (#FF6B2C) is a FILL color only — never text on white; use ACCENT_TEXT for accent text.
 
 export const ACCENT = "#FF6B2C";
 export const ACCENT_HOVER = "#E55A1F";
@@ -13,10 +9,7 @@ export const ACCENT_TEXT = "#D14E16";
 export const ACCENT_TEXT_DARK = "#FF9B6B";
 export const NAVY = "#092C4C";
 
-// Solid KPI card colors (dashboard summary row) — tone-mapped per the
-// README's Dashboard section (Pending MRFs=warn, Out of Stock=danger,
-// Low Stock=info, Products Tracked=success); kept as a flat palette too
-// for any direct color needs.
+// KPI card tone mapping: Pending MRFs=warn, Out of Stock=danger, Low Stock=info, Products Tracked=success.
 export const KPI_COLORS = {
   orange: ACCENT,
   navy: NAVY,
@@ -73,9 +66,7 @@ export const darkTokens = {
   success: "#57C99B",
 };
 
-// Status chips — soft tinted badges. [border, bg, text] kept for StatusChip's
-// existing 3-tuple usage; border == bg for these (no separate chip border,
-// per the README's flat soft-pill treatment) except where noted.
+// [border, bg, text] tuple for StatusChip; border == bg (flat soft-pill, no separate border).
 export const lightChips = {
   success: ["#E8F6F0", "#E8F6F0", "#12805C"],
   danger: ["#FEEDEB", "#FEEDEB", "#B42318"],
@@ -94,12 +85,8 @@ export const darkChips = {
   neutral: ["#232B35", "#232B35", "#B4BECA"],
 } as const;
 
-// ---------------------------------------------------------------------------
-// Merged from designTokens.ts — spacing/radius/colors/shadows used by the
-// item-cart family (ItemCartEditor, StockInModal, PurchaseOrderModal,
-// MultiItemMrfModal). Only the fields those components actually read are
-// kept populated with real values; the rest of the old neutral/blue/status
-// scales are preserved as-is since they're still referenced by index.
+// Only fields actually read by the item-cart family (ItemCartEditor, StockInModal,
+// PurchaseOrderModal, MultiItemMrfModal) are populated with real values.
 
 export const borderRadius = {
   sm: 6,
@@ -150,8 +137,6 @@ export const colors = {
     warning: "#B54708",
     error: "#B42318",
   },
-  // Stock-status domain palette — healthy/low/out/pending/partial states for
-  // product inventory levels, used by the MUI palette's `stock` extension.
   stock: {
     healthy: { main: "#12805C" },
     low: { main: "#B54708" },
@@ -161,8 +146,7 @@ export const colors = {
   },
 } as const;
 
-// Typography — Nunito for UI text, IBM Plex Mono for ref numbers, SKUs,
-// quantities, KPI values, badges (see README "Type" section).
+// Nunito for UI text; IBM Plex Mono for ref numbers, SKUs, quantities, KPI values, badges.
 export const typography = {
   display: {
     family: "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -178,7 +162,6 @@ export const typography = {
   },
 } as const;
 
-// Micro-animation standard (see README "Micro-animation standard").
 export const motion = {
   easing: {
     standard: "cubic-bezier(0.2, 0, 0, 1)",

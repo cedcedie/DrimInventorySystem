@@ -43,7 +43,6 @@ export async function POST(req: Request) {
 
   const { items, project, externalRefNo, description } = parsed.data;
 
-  // Verify all products exist and are not archived
   const productIds = items.map((item) => item.productId);
   const products = await prisma.product.findMany({
     where: { id: { in: productIds } },
@@ -100,14 +99,9 @@ export async function POST(req: Request) {
 
           return ref;
         },
-        // Same guard as every other ref-number-generating route (stock-in,
-        // stock-out, purchase-orders, purchase-requests, stock-adjustments)
-        // — nextRefNo's read-max-then-insert pattern is a real race under
-        // ReadCommitted (Prisma's default) when two requests file an MRF at
-        // the same moment; Serializable + withRefNoRetry's outer retry is
-        // what actually prevents two technicians colliding on the same
-        // MRF-#### ref instead of relying on the unique-constraint 409 as
-        // the only backstop. This route was the one write path missing it.
+        // Serializable + withRefNoRetry, like other ref-number routes: nextRefNo's
+        // read-max-then-insert races under ReadCommitted when two requests file
+        // at once. This route was the one write path missing the guard.
         { isolationLevel: "Serializable", maxWait: 10000, timeout: 15000 }
       )
     );

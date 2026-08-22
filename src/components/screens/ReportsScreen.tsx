@@ -56,9 +56,7 @@ export function ReportsScreen({
   const [error, setError] = useState("");
 
   const exportMutation = useMutation({
-    // The route streams the PDF back as bytes rather than storing it and
-    // returning a link, so this reads a blob and saves it via a temporary
-    // object URL instead of parsing JSON.
+    // Route streams the file as bytes (not stored/linked), so read as blob and save via object URL.
     mutationFn: async () => {
       const res = await fetch("/api/reports/export", {
         method: "POST",

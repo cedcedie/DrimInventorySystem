@@ -23,9 +23,7 @@ interface UserOption {
 export function SendNotificationModal({
   open,
   onClose,
-  /** Pre-checked individual recipients — used by the Users screen's "Notify"
-   * row action / multi-select bar so the compose modal opens already scoped
-   * to whoever was picked there, while still allowing more to be added. */
+  /** Pre-checked recipients, from the Users screen's "Notify" action — more can still be added. */
   initialUserIds,
 }: {
   open: boolean;

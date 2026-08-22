@@ -41,18 +41,16 @@ export function AppShell({
   useEffect(() => {
     if (!segments.length) return;
     warmShellRoutes(router, queryClient, segments);
-    // Only on first shell mount / when access set changes — not every navigation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: warm once per access list
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- warm once per access list, not every nav
   }, [segments.join("|")]);
 
-  // Persisted across sessions — read once on mount so SSR/first paint stays
-  // uncollapsed (avoids a layout flash) and then snaps to the saved state.
+  // Read once on mount so SSR/first paint stays uncollapsed (avoids layout flash).
   useEffect(() => {
     try {
       const saved = localStorage.getItem(COLLAPSE_STORAGE_KEY);
       if (saved === "1") setCollapsed(true);
     } catch {
-      // localStorage unavailable — default to expanded, non-fatal.
+      // non-fatal
     }
     setHydrated(true);
   }, []);

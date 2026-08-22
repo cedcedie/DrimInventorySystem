@@ -62,7 +62,6 @@ export function MrfDetailModal({
   mrfId: string | null;
   open: boolean;
   onClose: () => void;
-  /** Warehouse: jump to fulfill a specific line item */
   onFulfill?: (mrfItemId: string) => void;
 }) {
   const { mode } = useColorMode();

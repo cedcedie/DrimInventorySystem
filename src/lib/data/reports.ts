@@ -15,12 +15,11 @@ const REPORT_ROW_CAP = 5000;
 const capNote = (count: number) => (count === REPORT_ROW_CAP ? " (showing first 5000 rows)" : "");
 
 export interface ReportOptions {
-  /** Include unit price / valuation columns (Owner & Admin only). */
+  /** Owner & Admin only. */
   includePricing?: boolean;
 }
 
-/** Pulls the raw data + a flat table of rows for a given report type and date
- * range, used both for the on-screen preview and the exported PDF. */
+/** Used both for the on-screen preview and the exported PDF. */
 export async function buildReportData(
   type: ReportType,
   from: Date,
@@ -166,8 +165,7 @@ export async function buildReportData(
   }
 
   if (type === "Stock Reconciliation") {
-    // On-hand vs sum of movements: opening isn't tracked historically, so we
-    // show SI − SO + ADJ deltas in range vs current on-hand for audit spotting.
+    // Opening balance isn't tracked historically, so this shows SI−SO+ADJ deltas vs current on-hand.
     const products = await prisma.product.findMany({
       where: { archivedAt: null },
       include: { category: true },

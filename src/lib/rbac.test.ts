@@ -1,9 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { canAccess, MODULE_ACCESS } from "./rbac";
 
-// The expected values here come from the permission matrix in the project
-// brief, not from re-reading MODULE_ACCESS — otherwise the test would just
-// restate whatever the code happens to say and could never disagree with it.
+// Expected values come from the permission matrix in the project brief, not by re-reading
+// MODULE_ACCESS — otherwise the test could never disagree with the code.
 describe("canAccess", () => {
   it("gives Owner every module", () => {
     for (const segment of [
@@ -53,9 +52,6 @@ describe("canAccess", () => {
   });
 
   it("gives every role the shared activity log, filtered server-side by role", () => {
-    // Everyone can view /activity — getActivityData excludes sensitive rows
-    // (account/permission/settings changes) for non-Owner/Admin viewers,
-    // rather than hiding the page itself from anyone.
     expect(canAccess("OWNER", "activity")).toBe(true);
     expect(canAccess("ADMIN", "activity")).toBe(true);
     expect(canAccess("WAREHOUSE_STAFF", "activity")).toBe(true);

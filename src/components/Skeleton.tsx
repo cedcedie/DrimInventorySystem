@@ -4,8 +4,6 @@ import { Box, Skeleton, Typography } from "@mui/material";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens } from "@/theme/tokens";
 
-/** Table-shaped skeleton with a status line, so a slow fetch reads as
- * "loading this specific thing" rather than a generic spinner. */
 export function TableSkeleton({
   label,
   columns = 6,

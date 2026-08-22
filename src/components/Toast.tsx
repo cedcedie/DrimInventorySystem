@@ -17,9 +17,7 @@ export function useToast() {
 }
 
 const AUTO_DISMISS_MS: Record<ToastSeverity, number> = {
-  // Errors stay up longer and don't auto-dismiss quite as eagerly — a
-  // rejected mutation is more consequential than a confirmation, and on a
-  // small phone screen a 2.6s window is easy to miss entirely.
+  // Errors stay up longer — more consequential than a confirmation.
   success: 2600,
   error: 6000,
 };
@@ -65,9 +63,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             display: "flex",
             alignItems: "flex-start",
             gap: 1,
-            // The toast sits on a fixed dark surface in both modes, so this
-            // uses the light-mode success/danger values directly rather than
-            // the theme token, which would wash out against #1f2a35 in dark mode.
+            // Fixed dark surface in both modes, so uses light-mode tokens directly (dark tokens would wash out).
             borderLeft: `3px solid ${severity === "error" ? lightTokens.danger : lightTokens.success}`,
             boxShadow: "0 8px 30px rgba(0,0,0,0.3)",
             zIndex: 1400,

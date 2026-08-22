@@ -57,7 +57,7 @@ async function fetchInventoryData(q: string, category: string, page: number) {
   };
 }
 
-/** Default inventory view (no filters) — cached. Filtered views hit the DB. */
+/** Default inventory view (no filters) is cached; filtered views hit the DB. */
 async function loadDefaultInventory() {
   "use cache";
   tagAndLife("inventory", CACHE_SECONDS.list);

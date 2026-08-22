@@ -17,10 +17,7 @@ const validProduct = {
 };
 
 describe("productUpdateSchema", () => {
-  // This is the integrity guard from the stock-adjustment work: an edit must
-  // never be able to move the on-hand count, because that path writes no
-  // record of the delta or a reason. If someone re-adds `stocks` to this
-  // schema, this test is what catches it.
+  // Catches a re-added `stocks` field — an edit must never move the on-hand count silently.
   it("strips stocks from an edit payload so the count can't be silently overwritten", () => {
     const result = productUpdateSchema.parse({ ...validProduct, stocks: 99999 });
     expect(result).not.toHaveProperty("stocks");
@@ -40,8 +37,7 @@ describe("productUpdateSchema", () => {
 });
 
 describe("productCreateSchema", () => {
-  // Creating a product sets an opening balance, which is legitimate — the
-  // asymmetry with the update schema is deliberate, so it's pinned here.
+  // Asymmetry with the update schema is deliberate.
   it("accepts stocks as an opening balance on create", () => {
     const result = productCreateSchema.parse({ ...validProduct, stocks: 320 });
     expect(result.stocks).toBe(320);
@@ -126,8 +122,7 @@ describe("stockAdjustmentSchema", () => {
 });
 
 describe("userUpdateSchema", () => {
-  // Username is the identity key that ActivityLog refNos and the technician
-  // link resolve against, so an Owner editing an account must not change it.
+  // Username is the identity key ActivityLog refNos and technician links resolve against.
   it("ignores username even when one is supplied", () => {
     const result = userUpdateSchema.parse({
       name: "M. Santos",

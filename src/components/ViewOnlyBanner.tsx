@@ -5,11 +5,8 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens } from "@/theme/tokens";
 
-/** Explains why an action isn't available, rather than just omitting the
- * button — a plain missing button reads as "is this broken?" more often
- * than it reads as "I lack permission," especially on a shared device used
- * by several roles in a hurry. Deliberately more visible than a caption:
- * full-width, icon-led, distinct tone from ordinary muted text. */
+/** Explains why an action is unavailable rather than silently omitting the button
+ * (a missing button reads as broken more often than as a permission issue). */
 export function ViewOnlyBanner({ text }: { text: string }) {
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;

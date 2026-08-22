@@ -38,9 +38,8 @@ const productBase = {
 
 export const productCreateSchema = z.object(productBase);
 
-// `stocks` is deliberately absent: on an existing product the count may only
-// move through Stock In, Stock Out, or a recorded StockAdjustment. Allowing it
-// here would let an edit silently overwrite the count with no audit of the delta.
+// `stocks` deliberately absent: it may only move through Stock In/Out or a StockAdjustment,
+// never a silent edit.
 export const productUpdateSchema = z.object({
   code: productBase.code,
   name: productBase.name,
@@ -87,8 +86,7 @@ export const passwordChangeSchema = z
     path: ["newPassword"],
   });
 
-// Owner-only edit of another account. Username stays immutable — it's the
-// identity key that ActivityLog refNos and technician links resolve against.
+// Username stays immutable — it's the identity key ActivityLog and technician links resolve against.
 export const userUpdateSchema = z.object({
   name: name("Name"),
   role: z.enum(["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"], {
@@ -108,8 +106,7 @@ export const stockInSchema = z.object({
   items: z
     .array(z.object({ productId: id, qty: positiveQty }))
     .min(1, "At least one item is required"),
-  // Optional — this delivery can be received against an open PO, applying
-  // qty toward each line item's qtyReceived, or stand alone as before.
+  // Optional — a delivery can be received against an open PO or stand alone.
   purchaseOrderId: id.optional(),
 });
 
@@ -126,8 +123,7 @@ export const purchaseOrderStatusSchema = z.object({
 });
 
 export const purchaseRequestCreateSchema = z.object({
-  // Optional — a requester may not know the supplier yet; required at
-  // decision time instead (see purchaseRequestDecideSchema).
+  // Optional — a requester may not know the supplier yet; required at decision time.
   supplierId: id.optional(),
   items: z
     .array(z.object({ productId: id, qty: positiveQty }))
@@ -138,8 +134,7 @@ export const purchaseRequestCreateSchema = z.object({
 export const purchaseRequestDecideSchema = z.discriminatedUnion("decision", [
   z.object({
     decision: z.literal("approve"),
-    // Required when the PR didn't specify one; if the PR already has a
-    // supplier this can be omitted to keep it, or passed to override it.
+    // Required if the PR didn't specify one; omit to keep an existing one, or pass to override it.
     supplierId: id.optional(),
     note: z.string().trim().max(500, "Note is too long").optional(),
   }),
@@ -168,8 +163,7 @@ export const stockOutBulkSchema = z.object({
 
 export const stockAdjustmentSchema = z.object({
   productId: id,
-  // The corrected on-hand count, not a delta — the operator types what they
-  // physically counted, and the server derives the delta from current stock.
+  // Corrected on-hand count, not a delta — the server derives the delta from current stock.
   qtyAfter: nonNegativeNumber,
   reason: z.enum(["MISCOUNT", "DAMAGED", "LOST", "FOUND", "RETURN", "CORRECTION"], {
     message: "Select a reason for the adjustment",
@@ -193,8 +187,7 @@ export const reportExportSchema = z.object({
 export const manualNotificationSchema = z.object({
   title: name("Title", 120),
   body: z.string().trim().min(1, "Message is required").max(1000, "Message is too long"),
-  // Individually-picked users and/or whole roles — resolved and merged
-  // server-side into a deduplicated recipient list.
+  // Individually-picked users and/or whole roles, merged server-side into a deduplicated list.
   userIds: z.array(id).default([]),
   roles: z.array(z.enum(["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"])).default([]),
 });

@@ -62,43 +62,54 @@ export async function POST(req: Request) {
 
   try {
     const refNo = await withRefNoRetry(() =>
-      prisma.$transaction(async (tx) => {
-        const ref = await nextRefNo(tx, "mrf", "MRF");
-        const mrf = await tx.mrf.create({
-          data: {
-            refNo: ref,
-            technicianId: technician.id,
-            project,
-            externalRefNo: externalRefNo || null,
-            description: description || null,
-            status: "PENDING",
-            items: {
-              create: items.map((item) => ({
-                productId: item.productId,
-                qtyRequested: item.qty,
-                qtyFulfilled: 0,
-              })),
+      prisma.$transaction(
+        async (tx) => {
+          const ref = await nextRefNo(tx, "mrf", "MRF");
+          const mrf = await tx.mrf.create({
+            data: {
+              refNo: ref,
+              technicianId: technician.id,
+              project,
+              externalRefNo: externalRefNo || null,
+              description: description || null,
+              status: "PENDING",
+              items: {
+                create: items.map((item) => ({
+                  productId: item.productId,
+                  qtyRequested: item.qty,
+                  qtyFulfilled: 0,
+                })),
+              },
             },
-          },
-          include: { items: true },
-        });
+            include: { items: true },
+          });
 
-        const totalQty = mrf.items.reduce((sum, item) => sum + item.qtyRequested, 0);
-        const itemsSummary =
-          mrf.items.length === 1
-            ? `${products[0]?.name ?? "1 item"} (${totalQty})`
-            : `${mrf.items.length} items (${totalQty} total qty)`;
+          const totalQty = mrf.items.reduce((sum, item) => sum + item.qtyRequested, 0);
+          const itemsSummary =
+            mrf.items.length === 1
+              ? `${products[0]?.name ?? "1 item"} (${totalQty})`
+              : `${mrf.items.length} items (${totalQty} total qty)`;
 
-        await tx.activityLog.create({
-          data: {
-            userId: auth.session.user.id,
-            action: `Filed MRF for ${itemsSummary}`,
-            refNo: ref,
-          },
-        });
+          await tx.activityLog.create({
+            data: {
+              userId: auth.session.user.id,
+              action: `Filed MRF for ${itemsSummary}`,
+              refNo: ref,
+            },
+          });
 
-        return ref;
-      })
+          return ref;
+        },
+        // Same guard as every other ref-number-generating route (stock-in,
+        // stock-out, purchase-orders, purchase-requests, stock-adjustments)
+        // — nextRefNo's read-max-then-insert pattern is a real race under
+        // ReadCommitted (Prisma's default) when two requests file an MRF at
+        // the same moment; Serializable + withRefNoRetry's outer retry is
+        // what actually prevents two technicians colliding on the same
+        // MRF-#### ref instead of relying on the unique-constraint 409 as
+        // the only backstop. This route was the one write path missing it.
+        { isolationLevel: "Serializable", maxWait: 10000, timeout: 15000 }
+      )
     );
 
     revalidateAfterMutation(["mrf"], [`mrf-tech-${technician.id}`]);

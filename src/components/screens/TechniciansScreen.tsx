@@ -86,7 +86,17 @@ export function TechniciansScreen({
       />
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-        <Box sx={{ flex: "2 1 420px", minWidth: { xs: "100%", sm: 420 } }}>
+        {/* minWidth here must be >= TableShell's own minWidth below — the
+            table's true rendered width (Actions column included) is 680px
+            when canManage, but this wrapper's floor was fixed at 420px
+            regardless. At viewport widths where the flex row has just
+            enough room to sit the table below 680px but above 420px, the
+            wrapper was letting the table's own `overflow-x:auto` never
+            trigger while its trailing content (the Actions column's delete
+            button) still got visually clipped by the card's `overflow:
+            hidden`. Matching the two removes the gap where that could
+            happen. */}
+        <Box sx={{ flex: "2 1 420px", minWidth: { xs: "100%", sm: canManage ? 680 : 560 } }}>
           <TableShell minWidth={canManage ? 680 : 560}>
             <TableHeaderRow
               columns={canManage ? COLS + " 128px" : COLS}

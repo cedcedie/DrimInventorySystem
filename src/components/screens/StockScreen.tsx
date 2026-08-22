@@ -447,7 +447,12 @@ function StockOutTab({
 
   return (
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-      <Box sx={{ flex: "2.4 1 460px", minWidth: { xs: "100%", sm: 460 } }}>
+      {/* minWidth matches TableShell's own minWidth={720} below — a smaller
+          floor here let the table get squeezed by its sibling detail panel
+          below its real content width, clipping the table's right edge
+          (e.g. a trailing action button) instead of the intended
+          horizontal scroll. See TechniciansScreen for the same fix. */}
+      <Box sx={{ flex: "2.4 1 460px", minWidth: { xs: "100%", sm: 720 } }}>
         {viewOnly && <ViewOnlyBanner text="View only — releasing Stock Out requires create permission" />}
         <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
           <Typography sx={{ fontSize: 12, color: t.muted }}>

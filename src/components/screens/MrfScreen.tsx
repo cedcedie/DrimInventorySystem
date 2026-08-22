@@ -52,7 +52,10 @@ export function MrfScreen({
 
   return (
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-      <Box sx={{ flex: "1.8 1 420px", minWidth: { xs: "100%", sm: 420 } }}>
+      {/* minWidth matches TableShell's own minWidth={660} below — see
+          TechniciansScreen for why a smaller floor here caused the table's
+          right edge (the Status chip column) to clip instead of scroll. */}
+      <Box sx={{ flex: "1.8 1 420px", minWidth: { xs: "100%", sm: 660 } }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
           <Typography sx={{ fontSize: 12, color: t.muted }}>
             Material Request Forms filed under your profile

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Box, MenuItem, Select, Alert } from "@mui/material";
+import { Box, ButtonBase, MenuItem, Select, Typography, Alert } from "@mui/material";
+import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
 import { EntityModal, ModalFormActions, FormField, fieldInputSx } from "@/components/EntityModal";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens } from "@/theme/tokens";
+import { lightTokens, darkTokens, ACCENT, motion } from "@/theme/tokens";
 import { queryKeys } from "@/lib/queryKeys";
 import { postJson, patchJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
@@ -52,6 +53,21 @@ export function ProductModal({
   const [supplierId, setSupplierId] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // One object URL per selected file, revoked on change/unmount — calling
+  // URL.createObjectURL directly in JSX would mint a new (leaked) blob URL
+  // on every render instead of once per file selection.
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(imageFile);
+    setImagePreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
 
   useEffect(() => {
     if (open) {
@@ -220,15 +236,59 @@ export function ProductModal({
             </Select>
           </FormField>
           <FormField label="Product Image" span2>
-            <Box
-              component="input"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setImageFile(e.target.files?.[0] ?? null)
-              }
-              sx={{ fontSize: 12.5 }}
-            />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flexWrap: "wrap" }}>
+              {(imageFile || product?.imageKey) && (
+                <Box
+                  component="img"
+                  src={imagePreviewUrl ?? `/api/blobs/${product?.imageKey}`}
+                  alt=""
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: "8px",
+                    border: "1px solid",
+                    borderColor: t.border,
+                    objectFit: "cover",
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              <ButtonBase
+                onClick={() => fileInputRef.current?.click()}
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                  border: "1px solid",
+                  borderColor: t.border,
+                  borderRadius: "8px",
+                  px: 1.5,
+                  py: 0.875,
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  color: t.text,
+                  bgcolor: t.surface,
+                  transition: `border-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
+                  "&:hover": { borderColor: ACCENT, color: ACCENT },
+                }}
+              >
+                <UploadFileOutlinedIcon sx={{ fontSize: 16 }} />
+                {imageFile || product?.imageKey ? "Change image" : "Upload image"}
+              </ButtonBase>
+              <Typography sx={{ fontSize: 12, color: t.muted2, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {imageFile ? imageFile.name : product?.imageKey ? "Current image" : "No file chosen"}
+              </Typography>
+              <Box
+                component="input"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setImageFile(e.target.files?.[0] ?? null)
+                }
+                sx={{ display: "none" }}
+              />
+            </Box>
           </FormField>
         </Box>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { Box, ButtonBase, Typography } from "@mui/material";
+import { useRef, useState, useEffect } from "react";
+import { Box, ButtonBase, Tooltip, Typography } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
@@ -146,6 +147,44 @@ export function TableRow({
   );
 }
 
+/** True once the ref'd element's rendered text is actually wider than its
+ * box (i.e. the ellipsis is doing something) — measured eagerly on mount/
+ * value change and kept live via ResizeObserver, rather than deferred to
+ * hover time. Deferring to hover has a real timing bug: MuiTooltip decides
+ * whether to open off the `title` prop's value at the moment its own
+ * enterDelay timer fires, so a measurement taken inside a hover handler on
+ * the tooltip's own child arrives one render too late for that same hover
+ * — the tooltip that should have opened silently doesn't, and no new
+ * mouseenter fires to retry since the cursor hasn't moved. Measuring on
+ * mount/resize instead means `truncated` is already correct by the time
+ * any hover starts. ResizeObserver also keeps it correct across sidebar
+ * collapse/expand and window resizes, which change column widths without
+ * an unmount. */
+function useTruncationCheck(value: unknown): [boolean, React.RefObject<HTMLSpanElement | null>] {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [truncated, setTruncated] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      setTruncated(false);
+      return;
+    }
+    // A few px of tolerance — sub-pixel font rounding can put scrollWidth
+    // 1-2px over clientWidth on text that isn't actually showing an
+    // ellipsis, which would otherwise arm a tooltip for content the user
+    // can already read in full.
+    const measure = () => setTruncated(el.scrollWidth > el.clientWidth + 4);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [value]);
+
+  return [truncated, ref];
+}
+
 export function TableCell({
   label,
   mono,
@@ -166,6 +205,31 @@ export function TableCell({
 }) {
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
+  // Desktop cells ellipsis-truncate long values with no other way to read
+  // the full text short of opening the row. Rather than tooltip every cell
+  // (noisy, and wrong for non-text children like a StatusChip), this only
+  // arms a tooltip when both (a) the cell's own content is a plain string —
+  // the only case where echoing it back verbatim as tooltip text is
+  // correct — and (b) the browser confirms the text is actually clipped
+  // (scrollWidth > clientWidth) at hover time, so short values that happen
+  // to fit never show a redundant tooltip.
+  const isPlainText = typeof children === "string" || typeof children === "number";
+  const [truncated, valueRef] = useTruncationCheck(isPlainText ? children : undefined);
+
+  const plainTextValue = (
+    <Box
+      component="span"
+      ref={valueRef}
+      sx={{
+        display: { xs: "inline", [CARD_MODE_BP]: "block" },
+        overflow: "inherit",
+        textOverflow: "inherit",
+        whiteSpace: "inherit",
+      }}
+    >
+      {children}
+    </Box>
+  );
 
   return (
     <Box
@@ -201,7 +265,13 @@ export function TableCell({
           {label}
         </Box>
       )}
-      {children}
+      {isPlainText ? (
+        <Tooltip title={truncated ? String(children) : ""} arrow placement="top">
+          {plainTextValue}
+        </Tooltip>
+      ) : (
+        children
+      )}
     </Box>
   );
 }

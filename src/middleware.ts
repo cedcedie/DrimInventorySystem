@@ -11,7 +11,14 @@ const { auth } = NextAuth(authConfig);
 const PUBLIC_PATHS = ["/login"];
 
 // Segments any signed-in user may reach (own account / shared utilities).
-const SELF_SERVICE_SEGMENTS = new Set(["profile", "me", "search", "blobs"]);
+// "notifications" belongs here, not in the role-gated static map below — a
+// user's own notification inbox (GET/PATCH /api/notifications) is inherently
+// self-service like /me and /profile, scoped server-side to session.user.id
+// in the route handler itself. It was never added to rbac.ts's MODULE_ACCESS
+// either, so with no entry in EITHER list it fell through to the "static
+// module, check the role map" branch and got a blanket 403 for every role,
+// including Owner — the notification bell was fetching nothing for anyone.
+const SELF_SERVICE_SEGMENTS = new Set(["profile", "me", "search", "blobs", "notifications"]);
 
 // Configurable modules are gated by the Owner-managed matrix (DB). Edge
 // middleware can't read that cheaply, so for those we only require a session

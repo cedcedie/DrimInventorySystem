@@ -88,8 +88,14 @@ export async function generateReportPdf(params: {
   const contentWidth = PAGE_WIDTH - MARGIN * 2;
   page.drawText(truncateToWidth(title, boldFont, 23, contentWidth), { x: MARGIN, y, size: 23, font: boldFont, color: INK });
   y -= 20;
-  page.drawText(truncateToWidth(summary, font, 10, contentWidth), { x: MARGIN, y, size: 10, font, color: MUTED });
-  y -= 16;
+  // Wraps rather than truncates — the summary is often a caveat about what
+  // the report does/doesn't cover, not something safe to cut mid-sentence.
+  const summaryLines = wrapText(summary, font, 10, contentWidth);
+  for (const line of summaryLines) {
+    page.drawText(line, { x: MARGIN, y, size: 10, font, color: MUTED });
+    y -= 13;
+  }
+  y -= 3;
 
   y -= 6;
   page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 0.75, color: HAIRLINE });
@@ -121,7 +127,7 @@ export async function generateReportPdf(params: {
 
   if (company?.warehouseLocation) {
     page.drawText("WAREHOUSE", { x: MARGIN, y, size: 8.5, font: boldFont, color: MUTED2 });
-    page.drawText(company.warehouseLocation, {
+    page.drawText(toWinAnsiSafe(company.warehouseLocation), {
       x: MARGIN,
       y: y - 12,
       size: 9.5,
@@ -191,10 +197,15 @@ export async function generateReportPdf(params: {
 
     const drawHeaderRow = (yPos: number) => {
       section.headers.forEach((h, i) => {
-        page.drawText(truncateToWidth(h.toUpperCase(), boldFont, 8.5, colWidths[i] - 6), {
+        // Shrinks like body cells rather than hard-truncating — a header like
+        // "NET MOVEMENT" or "REQUESTED" is short enough to usually fit as-is,
+        // but the tightest numeric columns (sized for a 4-digit number, not
+        // their own label) need a little headroom the same way body text does.
+        const fittedHeader = fitTextToWidth(h.toUpperCase(), boldFont, 8.5, colWidths[i] - 6, 6.5);
+        page.drawText(fittedHeader.text, {
           x: colX[i],
           y: yPos,
-          size: 8.5,
+          size: fittedHeader.size,
           font: boldFont,
           color: MUTED,
         });
@@ -330,8 +341,10 @@ function drawLetterhead(
   // Measure the right side (report type + ref no) first so the left side's arbitrary
   // company name/address can't grow into it — previously both were measured independently
   // and could collide in the middle.
-  const typeWidth = boldFont.widthOfTextAtSize(reportType, 9);
-  const refWidth = refNo ? boldFont.widthOfTextAtSize(refNo, 9) : 0;
+  const safeReportType = toWinAnsiSafe(reportType);
+  const safeRefNo = refNo ? toWinAnsiSafe(refNo) : undefined;
+  const typeWidth = boldFont.widthOfTextAtSize(safeReportType, 9);
+  const refWidth = safeRefNo ? boldFont.widthOfTextAtSize(safeRefNo, 9) : 0;
   const rightSideWidth = Math.max(typeWidth, refWidth);
   const rightSideGutter = 16;
   const leftSideAvailable = PAGE_WIDTH - MARGIN - textX - rightSideWidth - rightSideGutter;
@@ -355,15 +368,15 @@ function drawLetterhead(
     });
   }
 
-  page.drawText(reportType, {
+  page.drawText(safeReportType, {
     x: PAGE_WIDTH - MARGIN - typeWidth,
     y: y - 10,
     size: 9,
     font: boldFont,
     color: MUTED,
   });
-  if (refNo) {
-    page.drawText(refNo, {
+  if (safeRefNo) {
+    page.drawText(safeRefNo, {
       x: PAGE_WIDTH - MARGIN - refWidth,
       y: y - 22,
       size: 9,
@@ -393,9 +406,59 @@ function drawFooter(page: PDFPage, font: PDFFont, generatedAt: Date, pageNum: nu
   page.drawText(pageLabel, { x: PAGE_WIDTH - MARGIN - pageLabelWidth, y, size: 8, font, color: MUTED2 });
 }
 
+// pdf-lib's standard fonts use WinAnsi encoding, which can't render every
+// Unicode character a caller might type into a report title/summary/label —
+// the true minus sign (U+2212) is the one that's actually bitten us (a
+// hyphen "-" looks identical and works fine). Rather than hope every string
+// a report ever produces stays within WinAnsi, map the couple of common
+// look-alikes and drop anything else outside Latin-1 — better a dropped
+// character than a 500 on the whole export.
+const WINANSI_SAFE_REPLACEMENTS: Record<string, string> = {
+  "−": "-", // − minus sign → hyphen
+  "‘": "'", // ' left single quote
+  "’": "'", // ' right single quote
+  "“": '"', // " left double quote
+  "”": '"', // " right double quote
+};
+function toWinAnsiSafe(value: string): string {
+  let out = "";
+  for (const ch of value) {
+    if (ch in WINANSI_SAFE_REPLACEMENTS) {
+      out += WINANSI_SAFE_REPLACEMENTS[ch];
+    } else if (ch.codePointAt(0)! <= 0xff) {
+      out += ch;
+    }
+    // else: drop — outside WinAnsi's range and not one of the known look-alikes.
+  }
+  return out;
+}
+
+/** Greedy word-wrap into as many lines as needed to fit maxWidth — used for
+ * the summary line, which can be a full explanatory sentence (a report's own
+ * caveat about what it does/doesn't cover) that must stay intact rather than
+ * being cut to "…" partway through. */
+function wrapText(rawValue: string, font: PDFFont, size: number, maxWidth: number): string[] {
+  const value = toWinAnsiSafe(rawValue);
+  const words = value.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (font.widthOfTextAtSize(candidate, size) <= maxWidth || !current) {
+      current = candidate;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
 /** Binary search on visible character count so it scales from a 500pt meta strip
  * column down to a 70pt table field. */
-function truncateToWidth(value: string, font: PDFFont, size: number, maxWidth: number): string {
+function truncateToWidth(rawValue: string, font: PDFFont, size: number, maxWidth: number): string {
+  const value = toWinAnsiSafe(rawValue);
   if (font.widthOfTextAtSize(value, size) <= maxWidth) return value;
 
   const ellipsis = "…";
@@ -418,12 +481,13 @@ function truncateToWidth(value: string, font: PDFFont, size: number, maxWidth: n
  * than being cut off. Falls back to truncateToWidth only if even the floor
  * size doesn't fit (pathologically long values). */
 function fitTextToWidth(
-  value: string,
+  rawValue: string,
   font: PDFFont,
   size: number,
   maxWidth: number,
   minSize = 7
 ): { text: string; size: number } {
+  const value = toWinAnsiSafe(rawValue);
   let s = size;
   while (s > minSize && font.widthOfTextAtSize(value, s) > maxWidth) {
     s -= 0.5;

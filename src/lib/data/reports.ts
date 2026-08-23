@@ -38,7 +38,7 @@ export async function buildReportData(
     if (includePricing) {
       return {
         headers: ["Code", "Name", "Category", "Stocks", "Unit", "Unit Price", "Value"],
-        columnWeights: [1, 2.6, 1.4, 0.8, 0.9, 1, 1],
+        columnWeights: [1, 2.33, 1.68, 0.83, 0.66, 1.09, 1.12],
         rows: products.map((p) => [
           p.code,
           p.name,
@@ -53,7 +53,7 @@ export async function buildReportData(
     }
     return {
       headers: ["Code", "Name", "Category", "Stocks", "Unit"],
-      columnWeights: [1, 2.8, 1.6, 0.9, 0.9],
+      columnWeights: [1, 2.33, 1.68, 0.83, 0.66],
       rows: products.map((p) => [p.code, p.name, p.category.name, String(p.stocks), p.unit]),
       summary: `${products.length} active products · as of ${to.toLocaleDateString("en-PH")}${capNote(products.length)}`,
     };
@@ -115,7 +115,7 @@ export async function buildReportData(
 
     return {
       headers: ["Date", "Type", "Slip / Adj #", "Request # (MRF)", "Description"],
-      columnWeights: [1, 1, 1.2, 1.2, 3],
+      columnWeights: [1, 1, 0.96, 1.38, 4.91],
       rows,
       summary: `${rows.length} movements · ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")}${
         capped ? " (showing first 5000 rows per type)" : ""
@@ -132,7 +132,7 @@ export async function buildReportData(
     const flagged = products.filter((p) => p.stocks <= p.minLevel);
     return {
       headers: ["Code", "Name", "Category", "Stocks", "Min. Level"],
-      columnWeights: [1, 2.8, 1.6, 0.9, 1],
+      columnWeights: [1, 2.33, 1.68, 0.83, 1.07],
       rows: flagged.map((p) => [p.code, p.name, p.category.name, String(p.stocks), String(p.minLevel)]),
       summary: `${flagged.length} items flagged${capNote(products.length)}`,
     };
@@ -150,7 +150,7 @@ export async function buildReportData(
     });
     return {
       headers: ["Request #", "Date", "Technician", "Project", "Status", "Requested", "Released", "Ext. Ref"],
-      columnWeights: [1.1, 0.9, 1.6, 1.6, 1, 0.9, 0.9, 1],
+      columnWeights: [1, 1.05, 2.26, 2.7, 1.48, 1.06, 0.94, 1.35],
       rows: mrfs.map((m) => {
         const requested = m.items.reduce((s, i) => s + i.qtyRequested, 0);
         const fulfilled = m.items.reduce((s, i) => s + i.qtyFulfilled, 0);
@@ -170,7 +170,7 @@ export async function buildReportData(
   }
 
   if (type === "Stock Reconciliation") {
-    // Opening balance isn't tracked historically, so this shows SI−SO+ADJ deltas vs current on-hand.
+    // Opening balance isn't tracked historically, so this shows SI-SO+ADJ deltas vs current on-hand.
     const products = await prisma.product.findMany({
       where: { archivedAt: null },
       include: { category: true },
@@ -202,8 +202,8 @@ export async function buildReportData(
     const adjMap = Object.fromEntries(adjs.map((r) => [r.productId, r._sum.delta ?? 0]));
 
     return {
-      headers: ["Code", "Name", "Category", "On hand", "SI (range)", "SO (range)", "ADJ Δ", "Net movement"],
-      columnWeights: [0.9, 2.2, 1.3, 0.9, 0.9, 0.9, 0.8, 1],
+      headers: ["Code", "Name", "Category", "On hand", "SI (range)", "SO (range)", "ADJ Change", "Net movement"],
+      columnWeights: [1, 2.33, 1.68, 0.92, 1.06, 1.15, 1.25, 1.49],
       rows: products.map((p) => {
         const si = inMap[p.id] ?? 0;
         const so = outMap[p.id] ?? 0;
@@ -220,7 +220,7 @@ export async function buildReportData(
           String(net),
         ];
       }),
-      summary: `${products.length} products · range ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")} · Net movement = SI−SO+ADJ in range only (not opening balance); compare to On hand as a spot-check, not a full reconcile${capNote(products.length)}`,
+      summary: `${products.length} products · range ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")} · Net movement = SI-SO+ADJ in range only (not opening balance); compare to On hand as a spot-check, not a full reconcile${capNote(products.length)}`,
     };
   }
 
@@ -237,7 +237,7 @@ export async function buildReportData(
   });
   return {
     headers: ["Supplier", "Deliveries in Range", "Total Qty"],
-    columnWeights: [2.2, 1.3, 1],
+    columnWeights: [1.67, 1, 0.52],
     rows: suppliers.map((s) => [
       s.name,
       String(s.stockInBatches.length),

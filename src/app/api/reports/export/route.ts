@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
   const includePricing = auth.role === "OWNER" || auth.role === "ADMIN";
 
-  const [{ headers, rows, summary }, company, refNo] = await Promise.all([
+  const [{ headers, rows, summary, columnWeights }, company, refNo] = await Promise.all([
     buildReportData(type, from, to, { includePricing }),
     getCompanySettings(),
     prisma.$transaction((tx) => nextActivityRefNo(tx, "RPT", 3)),
@@ -53,8 +53,7 @@ export async function POST(req: Request) {
     : await generateReportPdf({
         title: type,
         summary,
-        headers,
-        rows,
+        sections: [{ headers, rows, columnWeights }],
         generatedAt,
         company,
         refNo,

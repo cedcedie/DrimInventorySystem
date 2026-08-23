@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { Box, ButtonBase, Checkbox, CircularProgress, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDateTime } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination, RowActionButton } from "@/components/DataTable";
@@ -41,7 +42,6 @@ const COLS = "minmax(0,1.1fr) 160px minmax(0,1.6fr) 90px 64px";
 const HIST_COLS = "130px minmax(0,1fr) 96px";
 
 export function UsersScreen({ initialData }: { initialData?: UsersData }) {
-  const [page, setPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [editingUser, setEditingUser] = useState<EditableUser | null>(null);
   const [addUserOpen, setAddUserOpen] = useState(false);
@@ -53,11 +53,10 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
   const canNotify = session?.user?.role === "OWNER" || session?.user?.role === "ADMIN";
   const cols = canNotify ? COLS_WITH_NOTIFY : COLS;
 
-  const { data } = useQuery({
-    queryKey: queryKeys.users({ page }),
-    queryFn: () => fetchJson<UsersData>(`/api/users?page=${page}`),
-    initialData: page === 1 ? initialData : undefined,
-    placeholderData: keepPreviousData,
+  const { data, page, setPage } = usePaginatedQuery<UsersData>({
+    queryKey: (p) => queryKeys.users({ page: p }),
+    url: (p) => `/api/users?page=${p}`,
+    initialData,
   });
 
   const { data: historyData, isLoading: historyLoading } = useQuery({

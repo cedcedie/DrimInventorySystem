@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState, Suspense } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
 import { EntityModal } from "@/components/EntityModal";
 import { fetchJson } from "@/lib/api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveHot, liveWarm } from "@/lib/liveQuery";
 import { formatDate } from "@/lib/format";
@@ -301,17 +302,15 @@ function OpenMrfsTab({
 }
 
 function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boolean }) {
-  const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [correcting, setCorrecting] = useState<{ product: AdjustableProduct; note: string } | null>(null);
   const canCorrect = useCan("inventory", "canEdit");
   const t = useTheme().palette;
 
-  const { data } = useQuery({
-    queryKey: queryKeys.stockIn({ page }),
-    queryFn: () => fetchJson<StockInData>(`/api/stock-in?page=${page}`),
-    placeholderData: keepPreviousData,
-    ...liveWarm,
+  const { data, page, setPage } = usePaginatedQuery<StockInData>({
+    queryKey: (p) => queryKeys.stockIn({ page: p }),
+    url: (p) => `/api/stock-in?page=${p}`,
+    live: liveWarm,
   });
 
   const cols = canCorrect ? SI_COLS : "110px 106px minmax(0,1.2fr) minmax(0,1.2fr) 80px";
@@ -431,7 +430,6 @@ function StockOutTab({
   viewOnly: boolean;
   onFulfill: () => void;
 }) {
-  const [page, setPage] = useState(1);
   const [pickedIdx, setPickedIdx] = useState(0);
   const [correcting, setCorrecting] = useState<{ product: AdjustableProduct; note: string } | null>(null);
   const canCorrect = useCan("inventory", "canEdit");
@@ -441,11 +439,10 @@ function StockOutTab({
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
-  const { data } = useQuery({
-    queryKey: queryKeys.stockOut({ page }),
-    queryFn: () => fetchJson<StockOutData>(`/api/stock-out?page=${page}`),
-    placeholderData: keepPreviousData,
-    ...liveWarm,
+  const { data, page, setPage } = usePaginatedQuery<StockOutData>({
+    queryKey: (p) => queryKeys.stockOut({ page: p }),
+    url: (p) => `/api/stock-out?page=${p}`,
+    live: liveWarm,
   });
 
   const picked = data?.rows[pickedIdx] ?? data?.rows[0];

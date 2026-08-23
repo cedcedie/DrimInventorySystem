@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Box } from "@mui/material";
-import { fetchJson } from "@/lib/api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveCool } from "@/lib/liveQuery";
 import { formatDateTime } from "@/lib/format";
@@ -16,13 +14,11 @@ import type { StockAdjustmentsData } from "@/lib/data/adjustments";
 const COLS = "100px 130px minmax(0,1.2fr) 72px 72px 72px minmax(0,1fr) 96px";
 
 export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustmentsData }) {
-  const [page, setPage] = useState(1);
-  const { data } = useQuery({
-    queryKey: queryKeys.adjustments({ page }),
-    queryFn: () => fetchJson<StockAdjustmentsData>(`/api/stock-adjustments?page=${page}`),
-    initialData: page === 1 ? initialData : undefined,
-    placeholderData: keepPreviousData,
-    ...liveCool,
+  const { data, page, setPage } = usePaginatedQuery<StockAdjustmentsData>({
+    queryKey: (p) => queryKeys.adjustments({ page: p }),
+    url: (p) => `/api/stock-adjustments?page=${p}`,
+    initialData,
+    live: liveCool,
   });
   const t = useTheme().palette;
 

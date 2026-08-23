@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Box, Typography, ButtonBase } from "@mui/material";
 import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
-import { fetchJson } from "@/lib/api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveCool } from "@/lib/liveQuery";
 import { formatDateTime } from "@/lib/format";
@@ -35,14 +34,12 @@ function activityLinkFor(ref: string): string | null {
 
 export function ActivityScreen({ initialData }: { initialData?: ActivityData }) {
   const router = useRouter();
-  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<ActivityRow | null>(null);
-  const { data } = useQuery({
-    queryKey: queryKeys.activity({ page }),
-    queryFn: () => fetchJson<ActivityData>(`/api/activity?page=${page}`),
-    initialData: page === 1 ? initialData : undefined,
-    placeholderData: keepPreviousData,
-    ...liveCool,
+  const { data, page, setPage } = usePaginatedQuery<ActivityData>({
+    queryKey: (p) => queryKeys.activity({ page: p }),
+    url: (p) => `/api/activity?page=${p}`,
+    initialData,
+    live: liveCool,
   });
   const t = useTheme().palette;
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery, keepPreviousData, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Box, ButtonBase, InputBase, Typography } from "@mui/material";
-import { fetchJson } from "@/lib/api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveCool } from "@/lib/liveQuery";
 import {
@@ -39,7 +39,6 @@ export function ProductsScreen({
   initialData?: ProductsData;
 }) {
   void role;
-  const [page, setPage] = useState(1);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("All");
   const [modalOpen, setModalOpen] = useState(false);
@@ -51,12 +50,11 @@ export function ProductsScreen({
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const { data } = useQuery({
-    queryKey: queryKeys.products({ page }),
-    queryFn: () => fetchJson<ProductsData>(`/api/products?page=${page}`),
-    initialData: page === 1 ? initialData : undefined,
-    placeholderData: keepPreviousData,
-    ...liveCool,
+  const { data, page, setPage } = usePaginatedQuery<ProductsData>({
+    queryKey: (p) => queryKeys.products({ page: p }),
+    url: (p) => `/api/products?page=${p}`,
+    initialData,
+    live: liveCool,
   });
   const t = useTheme().palette;
 

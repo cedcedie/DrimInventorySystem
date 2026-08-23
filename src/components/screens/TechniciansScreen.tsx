@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
-import { fetchJson } from "@/lib/api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, RowActionButton, Pagination } from "@/components/DataTable";
@@ -30,12 +30,10 @@ export function TechniciansScreen({
   role: Role;
   initialData?: TechniciansData;
 }) {
-  const [page, setPage] = useState(1);
-  const { data } = useQuery({
-    queryKey: queryKeys.technicians({ page }),
-    queryFn: () => fetchJson<TechniciansData>(`/api/technicians?page=${page}`),
-    initialData: page === 1 ? initialData : undefined,
-    placeholderData: keepPreviousData,
+  const { data, setPage } = usePaginatedQuery<TechniciansData>({
+    queryKey: (p) => queryKeys.technicians({ page: p }),
+    url: (p) => `/api/technicians?page=${p}`,
+    initialData,
   });
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);

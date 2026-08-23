@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Box, ButtonBase, Typography } from "@mui/material";
-import { fetchJson } from "@/lib/api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveHot } from "@/lib/liveQuery";
 import { formatDate } from "@/lib/format";
@@ -42,12 +41,10 @@ export function MrfScreen({
     }
   }, []);
 
-  const [page, setPage] = useState(1);
-  const { data } = useQuery({
-    queryKey: queryKeys.mrf({ page }),
-    queryFn: () => fetchJson<MrfListData>(`/api/mrf?page=${page}`),
-    placeholderData: keepPreviousData,
-    ...liveHot,
+  const { data, setPage } = usePaginatedQuery<MrfListData>({
+    queryKey: (p) => queryKeys.mrf({ page: p }),
+    url: (p) => `/api/mrf?page=${p}`,
+    live: liveHot,
   });
 
   const recent = data?.rows[0];

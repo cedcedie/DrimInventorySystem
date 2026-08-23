@@ -2,9 +2,8 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Box } from "@mui/material";
-import { fetchJson } from "@/lib/api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveWarm } from "@/lib/liveQuery";
 import { formatDate } from "@/lib/format";
@@ -33,18 +32,16 @@ export function PurchaseOrdersScreen({ initialData }: { initialData?: PurchaseOr
 
 function PurchaseOrdersScreenInner({ initialData }: { initialData?: PurchaseOrdersData }) {
   const searchParams = useSearchParams();
-  const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const canCreate = useCan("purchaseOrders", "canCreate");
   const t = useTheme().palette;
 
-  const { data, dataUpdatedAt } = useQuery({
-    queryKey: queryKeys.purchaseOrders({ page }),
-    queryFn: () => fetchJson<PurchaseOrdersData>(`/api/purchase-orders?page=${page}`),
-    initialData: page === 1 ? initialData : undefined,
-    placeholderData: keepPreviousData,
-    ...liveWarm,
+  const { data, dataUpdatedAt, page, setPage } = usePaginatedQuery<PurchaseOrdersData>({
+    queryKey: (p) => queryKeys.purchaseOrders({ page: p }),
+    url: (p) => `/api/purchase-orders?page=${p}`,
+    initialData,
+    live: liveWarm,
   });
 
   // Deep link from Activity Log: "?ref=PO-0123" opens that order's detail

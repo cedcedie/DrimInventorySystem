@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Box } from "@mui/material";
-import { fetchJson } from "@/lib/api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
@@ -26,15 +25,13 @@ export function SuppliersScreen({
   initialData?: SuppliersData;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
-  const [page, setPage] = useState(1);
   const canCreate = useCan("suppliers", "canCreate");
   void role;
 
-  const { data } = useQuery({
-    queryKey: queryKeys.suppliers({ page }),
-    queryFn: () => fetchJson<SuppliersData>(`/api/suppliers?page=${page}`),
-    initialData: page === 1 ? initialData : undefined,
-    placeholderData: keepPreviousData,
+  const { data, setPage } = usePaginatedQuery<SuppliersData>({
+    queryKey: (p) => queryKeys.suppliers({ page: p }),
+    url: (p) => `/api/suppliers?page=${p}`,
+    initialData,
   });
   const t = useTheme().palette;
 

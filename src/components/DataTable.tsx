@@ -67,9 +67,12 @@ export function TableHeaderRow({
         borderColor: t.line,
       }}
     >
-      {headers.map((h) => (
+      {headers.map((h, i) => (
         <Box
-          key={h}
+          // Positional, not content-keyed — headers are a fixed-order array and
+          // more than one column (checkbox/actions) can legitimately share an
+          // empty-string label, which collided as a duplicate key before.
+          key={i}
           sx={{
             px: 1.75,
             py: 1.375,

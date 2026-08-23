@@ -238,7 +238,7 @@ export function DashboardScreen({
                 headers={["Date & Time", "Ref. No", "Type", "Description", "User", "MRF# / Slip#"]}
               />
               {data.transactions.map((tx) => (
-                <TableRow key={tx.ref} columns={TX_COLS}>
+                <TableRow key={tx.id} columns={TX_COLS}>
                   <TableCell label="Date & Time" color={t.text2}>{formatDateTime(new Date(tx.dt))}</TableCell>
                   <TableCell label="Ref. No" mono>{tx.ref}</TableCell>
                   <TableCell label="Type">

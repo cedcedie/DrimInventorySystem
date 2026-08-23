@@ -74,6 +74,7 @@ async function getTechnicianDashboard(technicianId: string) {
     }),
     activity: [] as Array<{ dt: string; action: string; refNo: string; user: string }>,
     transactions: [] as Array<{
+      id: string;
       dt: string;
       ref: string;
       type: "Stock-In" | "Stock-Out";
@@ -157,6 +158,7 @@ async function getWarehouseDashboard() {
       orderBy: { createdAt: "desc" },
       take: 8,
       select: {
+        id: true,
         createdAt: true,
         qty: true,
         product: { select: { name: true } },
@@ -173,6 +175,7 @@ async function getWarehouseDashboard() {
       orderBy: { createdAt: "desc" },
       take: 8,
       select: {
+        id: true,
         createdAt: true,
         refNo: true,
         qty: true,
@@ -249,6 +252,7 @@ async function getWarehouseDashboard() {
 
   const transactions = [
     ...stockIns.map((si) => ({
+      id: si.id,
       dt: si.createdAt.toISOString(),
       ref: si.stockInBatch.refNo,
       type: "Stock-In" as const,
@@ -257,6 +261,7 @@ async function getWarehouseDashboard() {
       link: `Slip# ${si.stockInBatch.refNo}`,
     })),
     ...stockOuts.map((so) => ({
+      id: so.id,
       dt: so.createdAt.toISOString(),
       ref: so.refNo,
       type: "Stock-Out" as const,

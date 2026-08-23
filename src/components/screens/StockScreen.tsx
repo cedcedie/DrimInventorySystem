@@ -28,7 +28,7 @@ import type { StockInData, StockOutData } from "@/lib/data/stock";
 import type { OpenMrfsQueueData } from "@/lib/data/mrf";
 import { ACCENT_HOVER, motion } from "@/theme/tokens";
 
-const SI_COLS = "110px 106px minmax(0,1.1fr) minmax(0,1.1fr) 76px 40px";
+const SI_COLS = "110px 106px minmax(0,1.1fr) minmax(0,1.1fr) 76px 64px";
 const SO_COLS = "92px 96px minmax(0,1fr) minmax(0,1.1fr) 48px 84px minmax(0,1fr)";
 const MRF_COLS = "100px 96px minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) 72px 72px 88px";
 
@@ -330,7 +330,7 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
       {!data ? (
         <TableSkeleton label="Loading stock-in deliveries…" columns={5} rows={5} />
       ) : (
-        <TableShell minWidth={620} dimmed={isFetching}>
+        <TableShell minWidth={660} dimmed={isFetching}>
           <TableHeaderRow
             columns={cols}
             headers={

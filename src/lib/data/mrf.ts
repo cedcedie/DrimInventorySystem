@@ -86,27 +86,33 @@ function deriveMrfStatus(
   return "PARTIAL";
 }
 
-async function loadMrfsForTechnician(technicianId: string) {
+const MRF_PAGE_SIZE = 15;
+
+async function loadMrfsForTechnician(technicianId: string, page: number) {
   "use cache";
   tagAndLife(["mrf", `mrf-tech-${technicianId}`], CACHE_SECONDS.short);
 
-  const mrfs = await prisma.mrf.findMany({
-    where: { technicianId },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: {
-      items: {
-        include: {
-          product: {
-            select: {
-              name: true,
-              code: true,
+  const [total, mrfs] = await Promise.all([
+    prisma.mrf.count({ where: { technicianId } }),
+    prisma.mrf.findMany({
+      where: { technicianId },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * MRF_PAGE_SIZE,
+      take: MRF_PAGE_SIZE,
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                code: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+  ]);
 
   return {
     rows: mrfs.map((m) => {
@@ -127,6 +133,9 @@ async function loadMrfsForTechnician(technicianId: string) {
         itemCount,
       };
     }),
+    page,
+    totalPages: Math.max(1, Math.ceil(total / MRF_PAGE_SIZE)),
+    total,
   };
 }
 
@@ -200,8 +209,8 @@ async function loadOpenMrfsQueue() {
   };
 }
 
-export async function getMrfsForTechnician(technicianId: string) {
-  return loadMrfsForTechnician(technicianId);
+export async function getMrfsForTechnician(technicianId: string, page = 1) {
+  return loadMrfsForTechnician(technicianId, page);
 }
 
 export async function getOpenMrfsQueue() {

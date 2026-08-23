@@ -79,7 +79,7 @@ export function MultiItemMrfModal({
     onSuccess: (data) => {
       sessionStorage.setItem("drim-mrf-filed", data.refNo);
       draft.clear();
-      queryClient.invalidateQueries({ queryKey: queryKeys.mrf });
+      queryClient.invalidateQueries({ queryKey: ["mrf"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
       queryClient.invalidateQueries({ queryKey: ["activity"] });

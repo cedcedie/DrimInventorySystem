@@ -6,11 +6,13 @@ import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { technicianSchema } from "@/lib/schemas";
 
-export async function GET() {
+export async function GET(req: Request) {
   const auth = await requireModuleAccess("technicians");
   if ("error" in auth) return auth.error;
 
-  return NextResponse.json(await getTechniciansData());
+  const { searchParams } = new URL(req.url);
+  const page = Number(searchParams.get("page") ?? "1");
+  return NextResponse.json(await getTechniciansData({ page }));
 }
 
 export async function POST(req: Request) {

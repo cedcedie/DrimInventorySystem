@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
-import { TableShell, TableHeaderRow, TableRow, TableCell, RowActionButton } from "@/components/DataTable";
+import { TableShell, TableHeaderRow, TableRow, TableCell, RowActionButton, Pagination } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme, type Palette } from "@mui/material/styles";
 import { EntityModal } from "@/components/EntityModal";
@@ -30,10 +30,12 @@ export function TechniciansScreen({
   role: Role;
   initialData?: TechniciansData;
 }) {
-  const { data } = useQuery({
-    queryKey: queryKeys.technicians,
-    queryFn: () => fetchJson<TechniciansData>("/api/technicians"),
-    initialData,
+  const [page, setPage] = useState(1);
+  const { data, isFetching } = useQuery({
+    queryKey: queryKeys.technicians({ page }),
+    queryFn: () => fetchJson<TechniciansData>(`/api/technicians?page=${page}`),
+    initialData: page === 1 ? initialData : undefined,
+    placeholderData: keepPreviousData,
   });
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -86,7 +88,7 @@ export function TechniciansScreen({
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
         {/* minWidth must be >= TableShell's own minWidth, else the table's overflow-x never triggers and the Actions column clips */}
         <Box sx={{ flex: "2 1 420px", minWidth: { xs: "100%", sm: canManage ? 680 : 560 } }}>
-          <TableShell minWidth={canManage ? 680 : 560}>
+          <TableShell minWidth={canManage ? 680 : 560} dimmed={isFetching}>
             <TableHeaderRow
               columns={canManage ? COLS + " 128px" : COLS}
               headers={[
@@ -158,6 +160,15 @@ export function TechniciansScreen({
                       }
                     : undefined
                 }
+              />
+            )}
+            {data.rows.length > 0 && (
+              <Pagination
+                info={`${data.total} technician${data.total === 1 ? "" : "s"}`}
+                page={data.page}
+                totalPages={data.totalPages}
+                onPrev={() => setPage((p) => Math.max(1, p - 1))}
+                onNext={() => setPage((p) => Math.min(data.totalPages, p + 1))}
               />
             )}
           </TableShell>

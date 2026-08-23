@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveHot } from "@/lib/liveQuery";
 import { formatDate } from "@/lib/format";
-import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/DataTable";
+import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
@@ -42,9 +42,11 @@ export function MrfScreen({
     }
   }, []);
 
-  const { data } = useQuery({
-    queryKey: queryKeys.mrf,
-    queryFn: () => fetchJson<MrfListData>("/api/mrf"),
+  const [page, setPage] = useState(1);
+  const { data, isFetching } = useQuery({
+    queryKey: queryKeys.mrf({ page }),
+    queryFn: () => fetchJson<MrfListData>(`/api/mrf?page=${page}`),
+    placeholderData: keepPreviousData,
     ...liveHot,
   });
 
@@ -82,7 +84,7 @@ export function MrfScreen({
         {!data ? (
           <TableSkeleton label="Loading your material requests…" columns={6} rows={4} />
         ) : (
-          <TableShell minWidth={660}>
+          <TableShell minWidth={660} dimmed={isFetching}>
             <TableHeaderRow columns={COLS} headers={["Request # (MRF)", "Date", "Item(s)", "Requested (released)", "Project", "Status"]} />
             {data.rows.map((r) => (
               <TableRow
@@ -122,6 +124,15 @@ export function MrfScreen({
               <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
                 No material requests filed yet.
               </Box>
+            )}
+            {data.rows.length > 0 && (
+              <Pagination
+                info={`${data.total} request${data.total === 1 ? "" : "s"}`}
+                page={data.page}
+                totalPages={data.totalPages}
+                onPrev={() => setPage((p) => Math.max(1, p - 1))}
+                onNext={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+              />
             )}
           </TableShell>
         )}

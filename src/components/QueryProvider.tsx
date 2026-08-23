@@ -1,9 +1,22 @@
 "use client";
 
 import { useState, useRef, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache, focusManager } from "@tanstack/react-query";
 import { SessionProvider, signOut } from "next-auth/react";
 import { ApiError } from "@/lib/api";
+
+// React Query's default focus listener re-fires on plain `window` focus/blur,
+// which MUI portals (menus, popovers, modals) trigger just by opening or
+// closing — not just real tab-away-and-back. That caused refetchOnWindowFocus
+// to dim every table on any button click. Only visibilitychange reflects an
+// actual tab switch.
+if (typeof document !== "undefined") {
+  focusManager.setEventListener((handleFocus) => {
+    const listener = () => handleFocus(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", listener, false);
+    return () => document.removeEventListener("visibilitychange", listener);
+  });
+}
 
 /** A 401 means the session died server-side; without this, polling queries fail
  * silently forever. Force back to login. Guarded so a burst of failing polls

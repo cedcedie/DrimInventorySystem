@@ -9,7 +9,7 @@ import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { mrfCreateSchema } from "@/lib/schemas";
 
-export async function GET() {
+export async function GET(req: Request) {
   const auth = await requireModuleAccess("mrf");
   if ("error" in auth) return auth.error;
   if (auth.role !== "TECHNICIAN") {
@@ -24,7 +24,9 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json(await getMrfsForTechnician(technician.id));
+  const { searchParams } = new URL(req.url);
+  const page = Number(searchParams.get("page") ?? "1");
+  return NextResponse.json(await getMrfsForTechnician(technician.id, page));
 }
 
 export async function POST(req: Request) {

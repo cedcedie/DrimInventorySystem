@@ -1,21 +1,28 @@
 import { prisma } from "@/lib/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
-export async function getTechniciansData() {
+const PAGE_SIZE = 15;
+
+export async function getTechniciansData(params: { page?: number } = {}) {
   "use cache";
   tagAndLife("technicians", CACHE_SECONDS.list);
+  const page = params.page ?? 1;
 
-  const technicians = await prisma.technician.findMany({
-    orderBy: { name: "asc" },
-    include: {
-      mrfs: {
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        include: { items: { include: { product: { select: { name: true } } } } },
+  const [total, technicians] = await Promise.all([
+    prisma.technician.count(),
+    prisma.technician.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        mrfs: {
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: { items: { include: { product: { select: { name: true } } } } },
+        },
       },
-    },
-    take: 500,
-  });
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+  ]);
 
   return {
     rows: technicians.map((t) => ({
@@ -39,6 +46,9 @@ export async function getTechniciansData() {
         };
       }),
     })),
+    page,
+    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+    total,
   };
 }
 

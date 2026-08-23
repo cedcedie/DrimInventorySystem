@@ -69,7 +69,7 @@ export function StockOutModal({
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.mrf });
+      queryClient.invalidateQueries({ queryKey: ["mrf"] });
       const mrfRef = selectedMrfItem?.mrfRefNo;
       showToast(
         mrfRef

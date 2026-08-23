@@ -98,10 +98,12 @@ export async function generateReportPdf(params: {
     const x = MARGIN + i * metaColWidth;
     page.drawText(label, { x, y, size: 8.5, font: boldFont, color: MUTED2 });
     // Wider gutter than 6pt — up to 4 columns on 532pt leaves little room for values like a full address.
-    page.drawText(truncateToWidth(value, boldFont, 9.5, metaColWidth - 14), {
+    // Shrinks to fit rather than truncating — a warehouse address needs to stay whole, not "…"-cut.
+    const fitted = fitTextToWidth(value, boldFont, 9.5, metaColWidth - 14);
+    page.drawText(fitted.text, {
       x,
       y: y - 12,
-      size: 9.5,
+      size: fitted.size,
       font: boldFont,
       color: INK,
     });
@@ -179,12 +181,15 @@ export async function generateReportPdf(params: {
         y -= ROW_HEIGHT;
       }
       row.forEach((cell, i) => {
-        // Small gutter so adjacent columns never touch even at the truncation boundary.
+        // Small gutter so adjacent columns never touch. Shrinks to fit
+        // instead of truncating — table values (names, addresses) must stay
+        // fully readable rather than being cut to "…".
         const available = colWidth - 6;
-        page.drawText(truncateToWidth(cell, font, 10.5, available), {
+        const fitted = fitTextToWidth(cell, font, 10.5, available);
+        page.drawText(fitted.text, {
           x: MARGIN + i * colWidth,
           y,
-          size: 10.5,
+          size: fitted.size,
           font,
           color: INK,
         });
@@ -212,9 +217,15 @@ export async function generateReportPdf(params: {
     y -= 10;
   }
 
+  let closingPageHasLetterhead = false;
   if (y < CONTENT_BOTTOM + 70) {
     page = newPage();
-    y = PAGE_HEIGHT - MARGIN;
+    // Draw this new page's letterhead immediately — the disclaimer/signature
+    // block below shares this same page and must not be placed at the raw
+    // top-of-page y, or it lands under the letterhead once that's drawn in
+    // the loop below (they'd overlap: both start from PAGE_HEIGHT - MARGIN).
+    y = drawLetterhead(page, { font, boldFont, dMark, companyName, company, reportType, refNo: params.refNo });
+    closingPageHasLetterhead = true;
   }
   y -= 8;
   page.drawText(
@@ -229,9 +240,11 @@ export async function generateReportPdf(params: {
     page.drawText(label, { x, y: y - 12, size: 8.5, font, color: MUTED });
   });
 
-  // Letterhead repeats past page 1; the footer repeats on all pages.
+  // Letterhead repeats on every page after the first — except the closing
+  // page above, if it already got one from the disclaimer's own page-break.
+  const lastPageIndex = pages.length - 1;
   pages.forEach((p, i) => {
-    if (i > 0) {
+    if (i > 0 && !(i === lastPageIndex && closingPageHasLetterhead)) {
       drawLetterhead(p, { font, boldFont, dMark, companyName, company, reportType, refNo: params.refNo });
     }
     drawFooter(p, font, generatedAt, i + 1, pages.length);
@@ -286,18 +299,20 @@ function drawLetterhead(
   const rightSideGutter = 16;
   const leftSideAvailable = PAGE_WIDTH - MARGIN - textX - rightSideWidth - rightSideGutter;
 
-  page.drawText(truncateToWidth(companyName, boldFont, 11, leftSideAvailable), {
+  const fittedName = fitTextToWidth(companyName, boldFont, 11, leftSideAvailable);
+  page.drawText(fittedName.text, {
     x: textX,
     y: y - 10,
-    size: 11,
+    size: fittedName.size,
     font: boldFont,
     color: INK,
   });
   if (company?.warehouseLocation) {
-    page.drawText(truncateToWidth(company.warehouseLocation, font, 8.5, leftSideAvailable), {
+    const fittedAddr = fitTextToWidth(company.warehouseLocation, font, 8.5, leftSideAvailable);
+    page.drawText(fittedAddr.text, {
       x: textX,
       y: y - 22,
-      size: 8.5,
+      size: fittedAddr.size,
       font,
       color: MUTED,
     });
@@ -359,4 +374,25 @@ function truncateToWidth(value: string, font: PDFFont, size: number, maxWidth: n
     else hi = mid - 1;
   }
   return lo === 0 ? ellipsis : value.slice(0, lo) + ellipsis;
+}
+
+/** Shrinks font size (down to a floor) so the full string fits with no "…" —
+ * used for table/meta cells where every character must stay legible rather
+ * than being cut off. Falls back to truncateToWidth only if even the floor
+ * size doesn't fit (pathologically long values). */
+function fitTextToWidth(
+  value: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number,
+  minSize = 7
+): { text: string; size: number } {
+  let s = size;
+  while (s > minSize && font.widthOfTextAtSize(value, s) > maxWidth) {
+    s -= 0.5;
+  }
+  if (font.widthOfTextAtSize(value, s) <= maxWidth) {
+    return { text: value, size: s };
+  }
+  return { text: truncateToWidth(value, font, s, maxWidth), size: s };
 }

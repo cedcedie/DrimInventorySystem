@@ -89,7 +89,7 @@ export function MrfDetailModal({
 
   const invalidateMrf = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
-    queryClient.invalidateQueries({ queryKey: queryKeys.mrf });
+    queryClient.invalidateQueries({ queryKey: ["mrf"] });
     queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
     queryClient.invalidateQueries({ queryKey: ["mrf-detail", mrfId] });
     queryClient.invalidateQueries({ queryKey: ["activity"] });

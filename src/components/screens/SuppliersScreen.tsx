@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Box } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
-import { TableShell, TableHeaderRow, TableRow, TableCell } from "@/components/DataTable";
+import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme } from "@mui/material/styles";
 import { SupplierModal } from "@/components/modals/SupplierModal";
@@ -26,13 +26,15 @@ export function SuppliersScreen({
   initialData?: SuppliersData;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
   const canCreate = useCan("suppliers", "canCreate");
   void role;
 
-  const { data } = useQuery({
-    queryKey: queryKeys.suppliers,
-    queryFn: () => fetchJson<SuppliersData>("/api/suppliers"),
-    initialData,
+  const { data, isFetching } = useQuery({
+    queryKey: queryKeys.suppliers({ page }),
+    queryFn: () => fetchJson<SuppliersData>(`/api/suppliers?page=${page}`),
+    initialData: page === 1 ? initialData : undefined,
+    placeholderData: keepPreviousData,
   });
   const t = useTheme().palette;
 
@@ -47,7 +49,7 @@ export function SuppliersScreen({
       {!data ? (
         <TableSkeleton label="Loading supplier registry…" columns={5} rows={5} />
       ) : (
-        <TableShell minWidth={680}>
+        <TableShell minWidth={680} dimmed={isFetching}>
           <TableHeaderRow
             columns={COLS}
             headers={["Supplier", "Contact", "Supplies", "Last Delivery", "Deliveries"]}
@@ -70,6 +72,15 @@ export function SuppliersScreen({
               message="No suppliers in the registry yet."
               actionLabel={canCreate ? "Add Supplier" : undefined}
               onAction={canCreate ? () => setModalOpen(true) : undefined}
+            />
+          )}
+          {data.rows.length > 0 && (
+            <Pagination
+              info={`${data.total} supplier${data.total === 1 ? "" : "s"}`}
+              page={data.page}
+              totalPages={data.totalPages}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => Math.min(data.totalPages, p + 1))}
             />
           )}
         </TableShell>

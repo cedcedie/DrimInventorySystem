@@ -43,7 +43,7 @@ export function MrfScreen({
   }, []);
 
   const [page, setPage] = useState(1);
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: queryKeys.mrf({ page }),
     queryFn: () => fetchJson<MrfListData>(`/api/mrf?page=${page}`),
     placeholderData: keepPreviousData,
@@ -84,7 +84,7 @@ export function MrfScreen({
         {!data ? (
           <TableSkeleton label="Loading your material requests…" columns={6} rows={4} />
         ) : (
-          <TableShell minWidth={660} dimmed={isFetching}>
+          <TableShell minWidth={660}>
             <TableHeaderRow columns={COLS} headers={["Request # (MRF)", "Date", "Item(s)", "Requested (released)", "Project", "Status"]} />
             {data.rows.map((r) => (
               <TableRow

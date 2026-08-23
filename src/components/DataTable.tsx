@@ -17,12 +17,9 @@ const CARD_MODE_BP = "sm";
 
 export function TableShell({
   minWidth,
-  dimmed,
   children,
 }: {
   minWidth?: number | string;
-  /** True during a background refetch — dims existing rows instead of showing a skeleton. */
-  dimmed?: boolean;
   children: React.ReactNode;
 }) {
   const { mode } = useColorMode();
@@ -38,8 +35,6 @@ export function TableShell({
         boxShadow: "0 1px 2px rgba(16,24,40,0.04)",
         overflow: "hidden",
         overflowX: { xs: "hidden", [CARD_MODE_BP]: "auto" },
-        opacity: dimmed ? 0.55 : 1,
-        transition: `opacity ${motion.duration.color}ms ${motion.easing.standard}`,
       }}
     >
       <Box sx={{ minWidth: { xs: 0, [CARD_MODE_BP]: minWidth } }}>{children}</Box>

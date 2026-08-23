@@ -168,7 +168,7 @@ function OpenMrfsTab({
   onOpenDetail: (mrfId: string) => void;
 }) {
   const t = useTheme().palette;
-  const { data, isFetching, dataUpdatedAt } = useQuery({
+  const { data, dataUpdatedAt } = useQuery({
     queryKey: queryKeys.openMrfs,
     queryFn: () => fetchJson<OpenMrfsQueueData>("/api/mrf/open"),
     ...liveHot,
@@ -217,7 +217,7 @@ function OpenMrfsTab({
       {!data ? (
         <TableSkeleton label="Loading open material requests…" columns={8} rows={6} />
       ) : (
-        <TableShell minWidth={900} dimmed={isFetching}>
+        <TableShell minWidth={900}>
           <TableHeaderRow
             columns={MRF_COLS}
             headers={[
@@ -307,7 +307,7 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
   const canCorrect = useCan("inventory", "canEdit");
   const t = useTheme().palette;
 
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: queryKeys.stockIn({ page }),
     queryFn: () => fetchJson<StockInData>(`/api/stock-in?page=${page}`),
     placeholderData: keepPreviousData,
@@ -349,7 +349,7 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
       {!data ? (
         <TableSkeleton label="Loading stock-in deliveries…" columns={5} rows={5} />
       ) : (
-        <TableShell minWidth={660} dimmed={isFetching}>
+        <TableShell minWidth={660}>
           <TableHeaderRow
             columns={cols}
             headers={
@@ -441,7 +441,7 @@ function StockOutTab({
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: queryKeys.stockOut({ page }),
     queryFn: () => fetchJson<StockOutData>(`/api/stock-out?page=${page}`),
     placeholderData: keepPreviousData,
@@ -482,7 +482,7 @@ function StockOutTab({
         {!data ? (
           <TableSkeleton label="Loading stock-out releases…" columns={7} rows={5} />
         ) : (
-          <TableShell minWidth={720} dimmed={isFetching}>
+          <TableShell minWidth={720}>
             <TableHeaderRow
               columns={SO_COLS}
               headers={[

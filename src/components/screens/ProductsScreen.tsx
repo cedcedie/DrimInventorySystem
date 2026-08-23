@@ -51,7 +51,7 @@ export function ProductsScreen({
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: queryKeys.products({ page }),
     queryFn: () => fetchJson<ProductsData>(`/api/products?page=${page}`),
     initialData: page === 1 ? initialData : undefined,
@@ -183,7 +183,7 @@ export function ProductsScreen({
       {!data ? (
         <TableSkeleton label="Loading product catalog…" columns={canManage ? 7 : 6} rows={8} />
       ) : (
-        <TableShell minWidth={minWidth} dimmed={isFetching}>
+        <TableShell minWidth={minWidth}>
           <TableHeaderRow columns={columns} headers={headers} />
           {filteredRows.map((r) => {
             const src = thumbSrc(r.imageKey);

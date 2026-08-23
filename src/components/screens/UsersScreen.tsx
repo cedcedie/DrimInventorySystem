@@ -53,7 +53,7 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
   const canNotify = session?.user?.role === "OWNER" || session?.user?.role === "ADMIN";
   const cols = canNotify ? COLS_WITH_NOTIFY : COLS;
 
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: queryKeys.users({ page }),
     queryFn: () => fetchJson<UsersData>(`/api/users?page=${page}`),
     initialData: page === 1 ? initialData : undefined,
@@ -120,7 +120,7 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
       {!data ? (
         <TableSkeleton label="Loading user accounts…" columns={4} rows={6} />
       ) : (
-        <TableShell minWidth={600} dimmed={isFetching}>
+        <TableShell minWidth={600}>
           <TableHeaderRow
             columns={cols}
             headers={

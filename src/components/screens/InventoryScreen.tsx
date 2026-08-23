@@ -54,7 +54,7 @@ export function InventoryScreen({
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: queryKeys.inventory({ q, category, page }),
     queryFn: () =>
       fetchJson<InventoryData>(
@@ -203,7 +203,7 @@ export function InventoryScreen({
       {!data ? (
         <TableSkeleton label="Loading inventory…" columns={canManage ? (showMinLevel ? 9 : 8) : 7} rows={8} />
       ) : (
-        <TableShell minWidth={minWidth} dimmed={isFetching}>
+        <TableShell minWidth={minWidth}>
           <TableHeaderRow columns={columns} headers={headers} />
           {data.rows.map((r) => (
             <TableRow key={r.id} columns={columns}>

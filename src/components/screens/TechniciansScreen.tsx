@@ -31,7 +31,7 @@ export function TechniciansScreen({
   initialData?: TechniciansData;
 }) {
   const [page, setPage] = useState(1);
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: queryKeys.technicians({ page }),
     queryFn: () => fetchJson<TechniciansData>(`/api/technicians?page=${page}`),
     initialData: page === 1 ? initialData : undefined,
@@ -88,7 +88,7 @@ export function TechniciansScreen({
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
         {/* minWidth must be >= TableShell's own minWidth, else the table's overflow-x never triggers and the Actions column clips */}
         <Box sx={{ flex: "2 1 420px", minWidth: { xs: "100%", sm: canManage ? 680 : 560 } }}>
-          <TableShell minWidth={canManage ? 680 : 560} dimmed={isFetching}>
+          <TableShell minWidth={canManage ? 680 : 560}>
             <TableHeaderRow
               columns={canManage ? COLS + " 128px" : COLS}
               headers={[

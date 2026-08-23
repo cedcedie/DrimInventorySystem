@@ -30,7 +30,7 @@ export function SuppliersScreen({
   const canCreate = useCan("suppliers", "canCreate");
   void role;
 
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: queryKeys.suppliers({ page }),
     queryFn: () => fetchJson<SuppliersData>(`/api/suppliers?page=${page}`),
     initialData: page === 1 ? initialData : undefined,
@@ -49,7 +49,7 @@ export function SuppliersScreen({
       {!data ? (
         <TableSkeleton label="Loading supplier registry…" columns={5} rows={5} />
       ) : (
-        <TableShell minWidth={680} dimmed={isFetching}>
+        <TableShell minWidth={680}>
           <TableHeaderRow
             columns={COLS}
             headers={["Supplier", "Contact", "Supplies", "Last Delivery", "Deliveries"]}

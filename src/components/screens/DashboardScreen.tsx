@@ -120,6 +120,12 @@ export function DashboardScreen({
               borderColor: t.line,
               borderRadius: "12px",
               p: 2,
+              // Flex parent stretches this card to match the taller sibling
+              // (Pending MRFs) — without its own flex column, the chart's
+              // fixed 220px box left dead space below it instead of filling
+              // the stretched height.
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <Typography sx={{ fontSize: 14, fontWeight: 800, mb: 0.25 }}>
@@ -128,7 +134,7 @@ export function DashboardScreen({
             <Typography sx={{ fontSize: 12, color: t.muted, mb: 1.5 }}>
               Units received vs released
             </Typography>
-            <Box sx={{ width: "100%", height: 220 }}>
+            <Box sx={{ width: "100%", flex: 1, minHeight: 220 }}>
               <StockMovementChart data={data.weeklyMovement ?? []} />
             </Box>
           </Box>

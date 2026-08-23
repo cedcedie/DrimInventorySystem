@@ -39,7 +39,7 @@ function PurchaseRequestsScreenInner({ initialData }: { initialData?: PurchaseRe
   const canCreate = useCan("purchaseRequests", "canCreate");
   const t = useTheme().palette;
 
-  const { data, isFetching, dataUpdatedAt } = useQuery({
+  const { data, dataUpdatedAt } = useQuery({
     queryKey: queryKeys.purchaseRequests({ page }),
     queryFn: () => fetchJson<PurchaseRequestsData>(`/api/purchase-requests?page=${page}`),
     initialData: page === 1 ? initialData : undefined,
@@ -70,7 +70,7 @@ function PurchaseRequestsScreenInner({ initialData }: { initialData?: PurchaseRe
       {!data ? (
         <TableSkeleton label="Loading purchase requests…" columns={7} rows={6} />
       ) : (
-        <TableShell minWidth={780} dimmed={isFetching}>
+        <TableShell minWidth={780}>
           <TableHeaderRow
             columns={COLS}
             headers={["Request #", "Filed", "Supplier", "Requested by", "Items", "Status", "PO / Notes"]}

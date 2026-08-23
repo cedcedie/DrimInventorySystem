@@ -37,7 +37,7 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<ActivityRow | null>(null);
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: queryKeys.activity({ page }),
     queryFn: () => fetchJson<ActivityData>(`/api/activity?page=${page}`),
     initialData: page === 1 ? initialData : undefined,
@@ -52,7 +52,7 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
 
   return (
     <>
-      <TableShell minWidth={680} dimmed={isFetching}>
+      <TableShell minWidth={680}>
         <TableHeaderRow
           columns={COLS}
           headers={["Date & Time", "User", "Role", "Action", "Reference"]}

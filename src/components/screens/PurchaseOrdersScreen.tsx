@@ -39,7 +39,7 @@ function PurchaseOrdersScreenInner({ initialData }: { initialData?: PurchaseOrde
   const canCreate = useCan("purchaseOrders", "canCreate");
   const t = useTheme().palette;
 
-  const { data, isFetching, dataUpdatedAt } = useQuery({
+  const { data, dataUpdatedAt } = useQuery({
     queryKey: queryKeys.purchaseOrders({ page }),
     queryFn: () => fetchJson<PurchaseOrdersData>(`/api/purchase-orders?page=${page}`),
     initialData: page === 1 ? initialData : undefined,
@@ -70,7 +70,7 @@ function PurchaseOrdersScreenInner({ initialData }: { initialData?: PurchaseOrde
       {!data ? (
         <TableSkeleton label="Loading purchase orders…" columns={7} rows={6} />
       ) : (
-        <TableShell minWidth={780} dimmed={isFetching}>
+        <TableShell minWidth={780}>
           <TableHeaderRow
             columns={COLS}
             headers={["Order #", "Date", "Supplier", "Items", "Ordered", "Received", "Status"]}

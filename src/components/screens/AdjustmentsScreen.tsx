@@ -17,7 +17,7 @@ const COLS = "100px 130px minmax(0,1.2fr) 72px 72px 72px minmax(0,1fr) 96px";
 
 export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustmentsData }) {
   const [page, setPage] = useState(1);
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: queryKeys.adjustments({ page }),
     queryFn: () => fetchJson<StockAdjustmentsData>(`/api/stock-adjustments?page=${page}`),
     initialData: page === 1 ? initialData : undefined,
@@ -33,7 +33,7 @@ export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustme
   return (
     <Box>
       <PageChrome title="Stock Adjustments" />
-      <TableShell minWidth={820} dimmed={isFetching}>
+      <TableShell minWidth={820}>
         <TableHeaderRow
           columns={COLS}
           headers={["Adj. #", "Date", "Product", "Before", "After", "Delta", "Reason", "By"]}

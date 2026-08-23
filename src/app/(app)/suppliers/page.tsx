@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { auth } from "@/lib/auth";
-import type { Role } from "@/generated/prisma";
 import { ScreenBody } from "@/components/ScreenBody";
 import { SuppliersScreen } from "@/components/screens/SuppliersScreen";
 import { getSuppliersData } from "@/lib/data/suppliers";
@@ -10,12 +8,11 @@ export const metadata: Metadata = {
 };
 
 export default async function SuppliersPage() {
-  const [session, data] = await Promise.all([auth(), getSuppliersData()]);
-  const role = session!.user.role as Role;
+  const data = await getSuppliersData();
 
   return (
     <ScreenBody>
-      <SuppliersScreen role={role} initialData={data} />
+      <SuppliersScreen initialData={data} />
     </ScreenBody>
   );
 }

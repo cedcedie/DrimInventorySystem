@@ -17,17 +17,14 @@ import { MrfDetailModal } from "@/components/modals/MrfDetailModal";
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role } from "@/generated/prisma";
 import type { TechniciansData } from "@/lib/data/technicians";
 import { motion } from "@/theme/tokens";
 
 const COLS = "minmax(0,1.1fr) 110px minmax(0,1fr) minmax(0,1.4fr)";
 
 export function TechniciansScreen({
-  role,
   initialData,
 }: {
-  role: Role;
   initialData?: TechniciansData;
 }) {
   const { data, setPage } = usePaginatedQuery<TechniciansData>({
@@ -43,7 +40,6 @@ export function TechniciansScreen({
   const canEdit = useCan("technicians", "canEdit");
   const canDelete = useCan("technicians", "canDelete");
   const canManage = canEdit || canDelete;
-  void role;
   const theme = useTheme();
   const t = theme.palette;
   // Same as StockScreen's Release detail panel: below `sm` a tap opens a modal instead of an inline panel.

@@ -26,6 +26,13 @@ interface ReportSection {
   title?: string;
   headers: string[];
   rows: string[][];
+  /** Relative width per column (e.g. [1, 2.5, 1.5, 1, 1] — same idea as the
+   * app's own CSS grid `fr` columns). Omit for an equal split. A short code
+   * or a number needs far less room than a product name; splitting evenly
+   * starved long values into truncation even after shrinking to an
+   * unreadable size, which a wider column fixes at no cost to the short
+   * ones. Length must match headers.length or it's ignored. */
+  columnWeights?: number[];
 }
 
 interface Kpi {
@@ -87,18 +94,20 @@ export async function generateReportPdf(params: {
   y -= 6;
   page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 0.75, color: HAIRLINE });
   y -= 14;
+  // GENERATED / PERIOD / PREPARED BY are always short (a date, a date range, a
+  // name) — a 3-column strip fits them comfortably. WAREHOUSE is a full postal
+  // address and needs real width: even shrunk to an unreadable ~5pt it barely
+  // fit a 4th column here, so it gets its own full-width row below instead —
+  // full-size font, no shrinking, nothing left to truncate.
   const metaCols: [string, string][] = [
     ["GENERATED", generatedAt.toLocaleString("en-PH")],
     ...(period ? ([["PERIOD", period]] as [string, string][]) : []),
     ...(preparedBy ? ([["PREPARED BY", preparedBy]] as [string, string][]) : []),
-    ...(company?.warehouseLocation ? ([["WAREHOUSE", company.warehouseLocation]] as [string, string][]) : []),
   ];
   const metaColWidth = (PAGE_WIDTH - MARGIN * 2) / metaCols.length;
   metaCols.forEach(([label, value], i) => {
     const x = MARGIN + i * metaColWidth;
     page.drawText(label, { x, y, size: 8.5, font: boldFont, color: MUTED2 });
-    // Wider gutter than 6pt — up to 4 columns on 532pt leaves little room for values like a full address.
-    // Shrinks to fit rather than truncating — a warehouse address needs to stay whole, not "…"-cut.
     const fitted = fitTextToWidth(value, boldFont, 9.5, metaColWidth - 14);
     page.drawText(fitted.text, {
       x,
@@ -109,6 +118,19 @@ export async function generateReportPdf(params: {
     });
   });
   y -= 30;
+
+  if (company?.warehouseLocation) {
+    page.drawText("WAREHOUSE", { x: MARGIN, y, size: 8.5, font: boldFont, color: MUTED2 });
+    page.drawText(company.warehouseLocation, {
+      x: MARGIN,
+      y: y - 12,
+      size: 9.5,
+      font: boldFont,
+      color: INK,
+    });
+    y -= 30;
+  }
+
   page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 0.75, color: HAIRLINE });
   y -= 18;
 
@@ -150,12 +172,27 @@ export async function generateReportPdf(params: {
       y -= 18;
     }
 
-    const colWidth = (PAGE_WIDTH - MARGIN * 2) / Math.max(1, section.headers.length);
+    // Equal split unless the caller supplies weights (e.g. [1, 2.5, 1.5, ...]
+    // — same idea as the app's own CSS grid `fr` columns) sized to what each
+    // column actually holds. A flat equal split starved long values (product
+    // names, addresses) into truncation even after shrinking to unreadable
+    // sizes; wider columns for the columns that need it fixes that for free.
+    const contentWidth = PAGE_WIDTH - MARGIN * 2;
+    const weights =
+      section.columnWeights?.length === section.headers.length
+        ? section.columnWeights
+        : section.headers.map(() => 1);
+    const weightSum = weights.reduce((a, b) => a + b, 0);
+    const colWidths = weights.map((w) => (contentWidth * w) / weightSum);
+    const colX = colWidths.reduce<number[]>((acc, w, i) => {
+      acc.push(i === 0 ? MARGIN : acc[i - 1] + colWidths[i - 1]);
+      return acc;
+    }, []);
 
     const drawHeaderRow = (yPos: number) => {
       section.headers.forEach((h, i) => {
-        page.drawText(truncateToWidth(h.toUpperCase(), boldFont, 8.5, colWidth - 6), {
-          x: MARGIN + i * colWidth,
+        page.drawText(truncateToWidth(h.toUpperCase(), boldFont, 8.5, colWidths[i] - 6), {
+          x: colX[i],
           y: yPos,
           size: 8.5,
           font: boldFont,
@@ -184,10 +221,10 @@ export async function generateReportPdf(params: {
         // Small gutter so adjacent columns never touch. Shrinks to fit
         // instead of truncating — table values (names, addresses) must stay
         // fully readable rather than being cut to "…".
-        const available = colWidth - 6;
+        const available = colWidths[i] - 6;
         const fitted = fitTextToWidth(cell, font, 10.5, available);
         page.drawText(fitted.text, {
-          x: MARGIN + i * colWidth,
+          x: colX[i],
           y,
           size: fitted.size,
           font,

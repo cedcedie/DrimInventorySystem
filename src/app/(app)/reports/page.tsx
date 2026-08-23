@@ -23,7 +23,7 @@ export default async function ReportsPage() {
         permSummary={PERM_SUMMARY[role]}
       />
       <ScreenBody>
-        <ReportsScreen role={role} initialData={data} />
+        <ReportsScreen initialData={data} />
       </ScreenBody>
     </>
   );

@@ -26,14 +26,11 @@ import { ProductModal, type ProductFormRow } from "@/components/modals/ProductMo
 import { CategoryModal } from "@/components/modals/CategoryModal";
 import { AdjustStockModal, type AdjustableProduct } from "@/components/modals/AdjustStockModal";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role } from "@/generated/prisma";
 import type { InventoryData } from "@/lib/data/inventory";
 
 export function InventoryScreen({
-  role,
   initialData,
 }: {
-  role: Role;
   initialData?: InventoryData;
 }) {
   const [q, setQ] = useState("");
@@ -49,7 +46,6 @@ export function InventoryScreen({
   const canEditInventory = useCan("inventory", "canEdit");
   const canManage = canEditProduct || canDeleteProduct || canEditInventory;
   const showMinLevel = canEditInventory;
-  void role;
   const isDefaultView = q === "" && category === "All" && page === 1;
   const queryClient = useQueryClient();
   const { showToast } = useToast();

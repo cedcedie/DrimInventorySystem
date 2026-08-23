@@ -22,7 +22,6 @@ import { deleteJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { ProductModal, type ProductFormRow } from "@/components/modals/ProductModal";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role } from "@/generated/prisma";
 import type { ProductsData } from "@/lib/data/products";
 import { motion } from "@/theme/tokens";
 
@@ -32,13 +31,10 @@ function thumbSrc(imageKey: string | null | undefined) {
 }
 
 export function ProductsScreen({
-  role,
   initialData,
 }: {
-  role: Role;
   initialData?: ProductsData;
 }) {
-  void role;
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("All");
   const [modalOpen, setModalOpen] = useState(false);

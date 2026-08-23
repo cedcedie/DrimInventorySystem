@@ -43,7 +43,3 @@ export const liveCool = {
   ...focusReconnect,
 };
 
-/** @deprecated Prefer liveHot / liveWarm / liveCool — kept as hot alias. */
-export const liveQueryOptions = liveHot;
-
-export const LIVE_POLL_MS = 10_000;

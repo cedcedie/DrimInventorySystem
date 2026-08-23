@@ -9,7 +9,6 @@ import { KpiSkeleton } from "@/components/Skeleton";
 import { useTheme, type Palette } from "@mui/material/styles";
 import { useToast } from "@/components/Toast";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role } from "@/generated/prisma";
 import type { DashboardData } from "@/lib/data/dashboard";
 import { ACCENT_HOVER, motion } from "@/theme/tokens";
 
@@ -31,14 +30,11 @@ function firstOfMonthIso() {
 }
 
 export function ReportsScreen({
-  role,
   initialData,
 }: {
-  role: Role;
   initialData?: DashboardData;
 }) {
   const canReport = useCan("reports", "canExport");
-  void role;
   const { data } = useQuery({
     queryKey: queryKeys.dashboard,
     queryFn: () => fetchJson<DashboardData>("/api/dashboard"),

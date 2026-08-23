@@ -38,6 +38,7 @@ export async function buildReportData(
     if (includePricing) {
       return {
         headers: ["Code", "Name", "Category", "Stocks", "Unit", "Unit Price", "Value"],
+        columnWeights: [1, 2.6, 1.4, 0.8, 0.9, 1, 1],
         rows: products.map((p) => [
           p.code,
           p.name,
@@ -52,6 +53,7 @@ export async function buildReportData(
     }
     return {
       headers: ["Code", "Name", "Category", "Stocks", "Unit"],
+      columnWeights: [1, 2.8, 1.6, 0.9, 0.9],
       rows: products.map((p) => [p.code, p.name, p.category.name, String(p.stocks), p.unit]),
       summary: `${products.length} active products · as of ${to.toLocaleDateString("en-PH")}${capNote(products.length)}`,
     };
@@ -113,6 +115,7 @@ export async function buildReportData(
 
     return {
       headers: ["Date", "Type", "Slip / Adj #", "Request # (MRF)", "Description"],
+      columnWeights: [1, 1, 1.2, 1.2, 3],
       rows,
       summary: `${rows.length} movements · ${from.toLocaleDateString("en-PH")}–${to.toLocaleDateString("en-PH")}${
         capped ? " (showing first 5000 rows per type)" : ""
@@ -129,6 +132,7 @@ export async function buildReportData(
     const flagged = products.filter((p) => p.stocks <= p.minLevel);
     return {
       headers: ["Code", "Name", "Category", "Stocks", "Min. Level"],
+      columnWeights: [1, 2.8, 1.6, 0.9, 1],
       rows: flagged.map((p) => [p.code, p.name, p.category.name, String(p.stocks), String(p.minLevel)]),
       summary: `${flagged.length} items flagged${capNote(products.length)}`,
     };
@@ -146,6 +150,7 @@ export async function buildReportData(
     });
     return {
       headers: ["Request #", "Date", "Technician", "Project", "Status", "Requested", "Released", "Ext. Ref"],
+      columnWeights: [1.1, 0.9, 1.6, 1.6, 1, 0.9, 0.9, 1],
       rows: mrfs.map((m) => {
         const requested = m.items.reduce((s, i) => s + i.qtyRequested, 0);
         const fulfilled = m.items.reduce((s, i) => s + i.qtyFulfilled, 0);
@@ -198,6 +203,7 @@ export async function buildReportData(
 
     return {
       headers: ["Code", "Name", "Category", "On hand", "SI (range)", "SO (range)", "ADJ Δ", "Net movement"],
+      columnWeights: [0.9, 2.2, 1.3, 0.9, 0.9, 0.9, 0.8, 1],
       rows: products.map((p) => {
         const si = inMap[p.id] ?? 0;
         const so = outMap[p.id] ?? 0;
@@ -231,6 +237,7 @@ export async function buildReportData(
   });
   return {
     headers: ["Supplier", "Deliveries in Range", "Total Qty"],
+    columnWeights: [2.2, 1.3, 1],
     rows: suppliers.map((s) => [
       s.name,
       String(s.stockInBatches.length),

@@ -24,7 +24,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { ViewOnlyBanner } from "@/components/ViewOnlyBanner";
 import { LastUpdated } from "@/components/LastUpdated";
 import { useCan } from "@/components/PermissionsProvider";
-import type { Role } from "@/generated/prisma";
 import type { StockInData, StockOutData } from "@/lib/data/stock";
 import type { OpenMrfsQueueData } from "@/lib/data/mrf";
 import { ACCENT_HOVER, motion } from "@/theme/tokens";
@@ -33,15 +32,15 @@ const SI_COLS = "110px 106px minmax(0,1.1fr) minmax(0,1.1fr) 76px 64px";
 const SO_COLS = "92px 96px minmax(0,1fr) minmax(0,1.1fr) 48px 84px minmax(0,1fr)";
 const MRF_COLS = "100px 96px minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) 72px 72px 88px";
 
-export function StockScreen({ role, initialTab }: { role: Role; initialTab?: string }) {
+export function StockScreen({ initialTab }: { initialTab?: string }) {
   return (
     <Suspense fallback={<TableSkeleton label="Loading stock…" columns={6} rows={6} />}>
-      <StockScreenInner role={role} initialTab={initialTab} />
+      <StockScreenInner initialTab={initialTab} />
     </Suspense>
   );
 }
 
-function StockScreenInner({ role, initialTab }: { role: Role; initialTab?: string }) {
+function StockScreenInner({ initialTab }: { initialTab?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -51,7 +50,6 @@ function StockScreenInner({ role, initialTab }: { role: Role; initialTab?: strin
   const [detailMrfId, setDetailMrfId] = useState<string | null>(null);
   const canStock = useCan("stock", "canCreate");
   const viewOnly = !canStock;
-  void role;
   const t = useTheme().palette;
 
   const setTab = useCallback(

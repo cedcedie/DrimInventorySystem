@@ -36,7 +36,7 @@ export default async function StockPage({
   // Title/breadcrumb come from StockScreen's PageChrome — don't add ScreenHeader here.
   return (
     <ScreenBody>
-      <StockScreen role={role} initialTab={params.tab} />
+      <StockScreen initialTab={params.tab} />
     </ScreenBody>
   );
 }

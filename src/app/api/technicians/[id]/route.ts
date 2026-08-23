@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { technicianSchema } from "@/lib/schemas";
+import { uniqueConstraintResponse } from "@/lib/apiError";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireModuleAccess("technicians", "canEdit");
@@ -36,9 +37,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     revalidateAfterMutation(["technicians"]);
     return NextResponse.json({ id: technician.id });
   } catch (e) {
-    if (e instanceof Error && e.message.includes("Unique constraint")) {
-      return NextResponse.json({ error: "Employee number already exists" }, { status: 409 });
-    }
+    const conflict = uniqueConstraintResponse(e, "Employee number already exists");
+    if (conflict) return conflict;
     throw e;
   }
 }

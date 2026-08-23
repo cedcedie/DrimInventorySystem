@@ -7,6 +7,7 @@ import { revalidateAfterMutation } from "@/lib/revalidate";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { parseBody } from "@/lib/validate";
 import { userCreateSchema } from "@/lib/schemas";
+import { uniqueConstraintResponse } from "@/lib/apiError";
 
 export async function GET(req: Request) {
   const auth = await requireModuleAccess("users");
@@ -51,9 +52,8 @@ export async function POST(req: Request) {
     revalidateAfterMutation(["users"]);
     return NextResponse.json({ id: user.id }, { status: 201 });
   } catch (e) {
-    if (e instanceof Error && e.message.includes("Unique constraint")) {
-      return NextResponse.json({ error: "Username already exists" }, { status: 409 });
-    }
+    const conflict = uniqueConstraintResponse(e, "Username already exists");
+    if (conflict) return conflict;
     throw e;
   }
 }

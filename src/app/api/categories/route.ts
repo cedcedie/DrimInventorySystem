@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { categoryCreateSchema } from "@/lib/schemas";
+import { uniqueConstraintResponse } from "@/lib/apiError";
 
 export async function POST(req: Request) {
   const auth = await requireModuleAccess("products", "canCreate");
@@ -29,9 +30,8 @@ export async function POST(req: Request) {
     revalidateAfterMutation(["products", "inventory"]);
     return NextResponse.json({ id: category.id, name: category.name }, { status: 201 });
   } catch (e) {
-    if (e instanceof Error && e.message.includes("Unique constraint")) {
-      return NextResponse.json({ error: "Category already exists" }, { status: 409 });
-    }
+    const conflict = uniqueConstraintResponse(e, "Category already exists");
+    if (conflict) return conflict;
     throw e;
   }
 }

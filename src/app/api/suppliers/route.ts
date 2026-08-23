@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { supplierCreateSchema } from "@/lib/schemas";
+import { uniqueConstraintResponse } from "@/lib/apiError";
 
 export async function GET(req: Request) {
   const auth = await requireModuleAccess("suppliers");
@@ -44,9 +45,8 @@ export async function POST(req: Request) {
     revalidateAfterMutation(["suppliers"]);
     return NextResponse.json({ id: supplier.id }, { status: 201 });
   } catch (e) {
-    if (e instanceof Error && e.message.includes("Unique constraint")) {
-      return NextResponse.json({ error: "Supplier already exists" }, { status: 409 });
-    }
+    const conflict = uniqueConstraintResponse(e, "Supplier already exists");
+    if (conflict) return conflict;
     throw e;
   }
 }

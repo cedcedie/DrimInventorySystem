@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Box } from "@mui/material";
 import { fetchJson } from "@/lib/api";
@@ -23,6 +24,15 @@ import type { PurchaseOrdersData } from "@/lib/data/purchaseOrders";
 const COLS = "106px 96px minmax(0,1fr) 76px 100px 90px 100px";
 
 export function PurchaseOrdersScreen({ initialData }: { initialData?: PurchaseOrdersData }) {
+  return (
+    <Suspense fallback={<TableSkeleton label="Loading purchase orders…" columns={7} rows={6} />}>
+      <PurchaseOrdersScreenInner initialData={initialData} />
+    </Suspense>
+  );
+}
+
+function PurchaseOrdersScreenInner({ initialData }: { initialData?: PurchaseOrdersData }) {
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -36,6 +46,15 @@ export function PurchaseOrdersScreen({ initialData }: { initialData?: PurchaseOr
     placeholderData: keepPreviousData,
     ...liveWarm,
   });
+
+  // Deep link from Activity Log: "?ref=PO-0123" opens that order's detail
+  // once page 1 loads and contains it (older orders on later pages won't match).
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (!ref || !data) return;
+    const match = data.rows.find((r) => r.refNo === ref);
+    if (match) setDetailId(match.id);
+  }, [searchParams, data]);
 
   return (
     <Box>

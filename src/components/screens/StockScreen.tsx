@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, Suspense } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
@@ -61,6 +61,25 @@ function StockScreenInner({ role, initialTab }: { role: Role; initialTab?: strin
     },
     [pathname, router, searchParams]
   );
+
+  // Deep link from Activity Log: "?ref=MRF-0123" opens that request's detail
+  // once the open queue loads. Only covers still-open (pending/partial) MRFs
+  // — a fulfilled/old one won't be in the queue, so it just lands on the tab.
+  const refParam = searchParams.get("ref");
+  const { data: openMrfsForLink } = useQuery({
+    queryKey: queryKeys.openMrfs,
+    queryFn: () => fetchJson<OpenMrfsQueueData>("/api/mrf/open"),
+    enabled: Boolean(refParam) && tab === "requests",
+  });
+  useEffect(() => {
+    if (!refParam || tab !== "requests" || !openMrfsForLink) return;
+    const match = openMrfsForLink.mrfs.find((m) => m.refNo === refParam);
+    if (match) setDetailMrfId(match.id);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("ref");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when the linked data arrives, not on every searchParams identity change
+  }, [refParam, tab, openMrfsForLink]);
 
   const openFulfill = (mrfItemId?: string) => {
     setFulfillItemId(mrfItemId);

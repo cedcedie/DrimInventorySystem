@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, ButtonBase } from "@mui/material";
+import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveCool } from "@/lib/liveQuery";
@@ -11,6 +13,7 @@ import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/c
 import { TableSkeleton } from "@/components/Skeleton";
 import { EntityModal } from "@/components/EntityModal";
 import { useTheme, type Palette } from "@mui/material/styles";
+import { ACCENT, motion } from "@/theme/tokens";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import type { ActivityData } from "@/lib/data/activity";
 
@@ -18,7 +21,20 @@ const COLS = "130px minmax(0,1fr) 140px minmax(0,2fr) 96px";
 
 type ActivityRow = ActivityData["rows"][number];
 
+/** Only these ref prefixes have a reliable, unambiguous format — everything
+ * else (product codes, usernames, raw IDs) has no shared convention, so
+ * linking those risks landing on the wrong record or nowhere at all. */
+function activityLinkFor(ref: string): string | null {
+  if (ref.startsWith("MRF-")) return `/stock?ref=${encodeURIComponent(ref)}`;
+  if (ref.startsWith("SI-")) return `/stock?tab=si&ref=${encodeURIComponent(ref)}`;
+  if (ref.startsWith("SO-")) return `/stock?tab=so&ref=${encodeURIComponent(ref)}`;
+  if (ref.startsWith("PO-")) return `/purchaseOrders?ref=${encodeURIComponent(ref)}`;
+  if (ref.startsWith("PR-")) return `/purchaseRequests?ref=${encodeURIComponent(ref)}`;
+  return null;
+}
+
 export function ActivityScreen({ initialData }: { initialData?: ActivityData }) {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<ActivityRow | null>(null);
   const { data, isFetching } = useQuery({
@@ -75,7 +91,27 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
           <Box sx={{ p: 2.25, display: "flex", flexDirection: "column", gap: 1.5 }}>
             <DetailRow label="Date & Time" value={formatDateTime(new Date(selected.dt))} t={t} />
             <DetailRow label="User" value={`${selected.user} (${ROLE_LABELS[selected.role]})`} t={t} />
-            <DetailRow label="Reference" value={selected.ref} t={t} mono />
+            <Box sx={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 1 }}>
+              <DetailRow label="Reference" value={selected.ref} t={t} mono />
+              {activityLinkFor(selected.ref) && (
+                <ButtonBase
+                  onClick={() => router.push(activityLinkFor(selected.ref)!)}
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: ACCENT,
+                    pb: 0.25,
+                    transition: `opacity ${motion.duration.color}ms ${motion.easing.standard}`,
+                    "&:hover": { opacity: 0.8 },
+                  }}
+                >
+                  Go to record <OpenInNewOutlinedIcon sx={{ fontSize: 14 }} />
+                </ButtonBase>
+              )}
+            </Box>
             <Box>
               <Typography
                 sx={{

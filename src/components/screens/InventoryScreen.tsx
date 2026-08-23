@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, keepPreviousData, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Box, ButtonBase, InputBase } from "@mui/material";
+import { Box, ButtonBase, InputBase, Select, MenuItem } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveCool } from "@/lib/liveQuery";
@@ -177,33 +177,27 @@ export function InventoryScreen({
             bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
           }}
         />
-        <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
-          {["All", ...(data?.categories ?? [])].slice(0, 10).map((c) => {
-            const active = category === c;
-            return (
-              <ButtonBase
-                key={c}
-                onClick={() => {
-                  setCategory(c);
-                  setPage(1);
-                }}
-                sx={{
-                  border: "1px solid",
-                  borderColor: active ? t.primary.main : t.border,
-                  bgcolor: active ? t.primary.main : t.surface,
-                  color: active ? "#fff" : t.text2,
-                  borderRadius: "8px",
-                  px: 1.25,
-                  py: 0.625,
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-              >
-                {c}
-              </ButtonBase>
-            );
-          })}
-        </Box>
+        <Select
+          value={category}
+          onChange={(e) => {
+            setCategory(e.target.value);
+            setPage(1);
+          }}
+          size="small"
+          sx={{
+            minWidth: 160,
+            fontSize: 13,
+            fontWeight: 700,
+            bgcolor: t.surface,
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: t.border },
+          }}
+        >
+          {["All", ...(data?.categories ?? [])].map((c) => (
+            <MenuItem key={c} value={c} sx={{ fontSize: 13 }}>
+              {c}
+            </MenuItem>
+          ))}
+        </Select>
       </Box>
 
       {!data ? (

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Box, MenuItem, Select, Alert, Typography } from "@mui/material";
+import { useSession } from "next-auth/react";
+import { Box, ButtonBase, MenuItem, Select, Alert, Typography } from "@mui/material";
 import { EntityModal, ModalFormActions, FormField, fieldInputSx } from "@/components/EntityModal";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens } from "@/theme/tokens";
-import { patchJson } from "@/lib/mutate";
+import { ACCENT, motion, lightTokens, darkTokens } from "@/theme/tokens";
+import { patchJson, postJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import type { Role, UserStatus } from "@/generated/prisma";
@@ -31,11 +32,17 @@ export function EditUserModal({
   const t = mode === "dark" ? darkTokens : lightTokens;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { data: session } = useSession();
+  const canResetPassword = session?.user?.role === "OWNER" || session?.user?.role === "ADMIN";
 
   const [name, setName] = useState("");
   const [role, setRole] = useState<Role>("WAREHOUSE_STAFF");
   const [status, setStatus] = useState<UserStatus>("ACTIVE");
   const [error, setError] = useState("");
+
+  const [resetOpen, setResetOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [resetError, setResetError] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -43,6 +50,9 @@ export function EditUserModal({
       setRole(user.role);
       setStatus(user.status);
       setError("");
+      setResetOpen(false);
+      setNewPassword("");
+      setResetError("");
     }
   }, [user]);
 
@@ -57,6 +67,16 @@ export function EditUserModal({
     onError: (e: Error) => setError(e.message),
   });
 
+  const resetMutation = useMutation({
+    mutationFn: () => postJson(`/api/users/${user!.id}/reset-password`, { newPassword }),
+    onSuccess: () => {
+      showToast(`Password reset for ${user!.name}.`);
+      setResetOpen(false);
+      setNewPassword("");
+    },
+    onError: (e: Error) => setResetError(e.message),
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -65,6 +85,16 @@ export function EditUserModal({
       return;
     }
     mutation.mutate();
+  };
+
+  const handleResetSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError("");
+    if (newPassword.length < 8) {
+      setResetError("New password must be at least 8 characters.");
+      return;
+    }
+    resetMutation.mutate();
   };
 
   return (
@@ -112,9 +142,76 @@ export function EditUserModal({
         </Box>
 
         <Typography sx={{ fontSize: 11, color: t.muted2, mt: 1.5 }}>
-          Username and password can&apos;t be changed here. Each user sets their own password from
-          My Account.
+          Username can&apos;t be changed here. Each user can change their own password from My
+          Account{canResetPassword ? " — or reset it below if they forgot it." : "."}
         </Typography>
+
+        {canResetPassword && (
+          <Box sx={{ mt: 1.25, border: "1px solid", borderColor: t.line, borderRadius: "8px", p: 1.25 }}>
+            {!resetOpen ? (
+              <ButtonBase
+                onClick={() => setResetOpen(true)}
+                sx={{
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  color: ACCENT,
+                  transition: `opacity ${motion.duration.color}ms ${motion.easing.standard}`,
+                  "&:hover": { opacity: 0.8 },
+                }}
+              >
+                Reset password…
+              </ButtonBase>
+            ) : (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <Typography sx={{ fontSize: 11.5, color: t.muted2 }}>
+                  Sets a new password for {user?.name} immediately — no confirmation from them needed.
+                </Typography>
+                <Box
+                  component="input"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
+                  placeholder="New password (min. 8 characters)"
+                  sx={fieldInputSx(t)}
+                />
+                {resetError && (
+                  <Alert severity="error" sx={{ fontSize: 12 }}>
+                    {resetError}
+                  </Alert>
+                )}
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <ButtonBase
+                    onClick={handleResetSubmit}
+                    disabled={resetMutation.isPending}
+                    sx={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#fff",
+                      bgcolor: ACCENT,
+                      borderRadius: "6px",
+                      px: 1.25,
+                      py: 0.625,
+                      opacity: resetMutation.isPending ? 0.6 : 1,
+                    }}
+                  >
+                    Set new password
+                  </ButtonBase>
+                  <ButtonBase
+                    onClick={() => {
+                      setResetOpen(false);
+                      setNewPassword("");
+                      setResetError("");
+                    }}
+                    sx={{ fontSize: 12, fontWeight: 600, color: t.muted, px: 1.25, py: 0.625 }}
+                  >
+                    Cancel
+                  </ButtonBase>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        )}
 
         {error && (
           <Alert severity="error" sx={{ mt: 1.5 }}>

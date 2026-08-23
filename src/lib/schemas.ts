@@ -95,6 +95,15 @@ export const userUpdateSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"], { message: "A valid status is required" }),
 });
 
+// Owner/Admin resetting another user's forgotten password — no current-password
+// check (that's the whole point), unlike passwordChangeSchema's self-service flow.
+export const passwordResetSchema = z.object({
+  newPassword: z
+    .string()
+    .min(8, "New password must be at least 8 characters")
+    .max(200, "New password is too long"),
+});
+
 export const mrfCreateSchema = z.object({
   productId: id,
   qty: positiveQty,

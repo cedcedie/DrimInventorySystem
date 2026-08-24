@@ -349,7 +349,11 @@ export function SideNav({
         borderRight: "1px solid",
         borderColor: t.line,
         zIndex: 1202,
+        // Same one-shot, user-triggered exception as AppShell's matching margin-left
+        // transition — the rail's inner labels genuinely reflow/fade as it narrows,
+        // so this can't be a transform. will-change hints the browser to pre-optimize it.
         transition: hydrated ? `width ${motion.duration.sidebar}ms ${motion.easing.standard}` : undefined,
+        willChange: hydrated ? "width" : undefined,
         overflow: "hidden",
       }}
     >

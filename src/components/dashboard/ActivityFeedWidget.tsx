@@ -6,6 +6,7 @@ import { useTheme } from "@mui/material/styles";
 import { formatDateTime } from "@/lib/format";
 import { TableShell } from "@/components/DataTable";
 import { EmptyState } from "@/components/EmptyState";
+import { UserAvatar } from "@/components/UserAvatar";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import type { Role } from "@/generated/prisma";
 
@@ -14,6 +15,7 @@ export interface ActivityFeedRow {
   dt: string;
   user: string;
   role: Role;
+  avatarKey: string | null;
   action: string;
   ref: string;
 }
@@ -61,15 +63,18 @@ export function ActivityFeedWidget({ rows }: { rows: ActivityFeedRow[] }) {
                 borderColor: t.line2,
               }}
             >
-              <Typography sx={{ fontSize: 12.5, whiteSpace: "normal" }}>
-                <Box component="span" sx={{ fontWeight: 700 }}>
-                  {row.user}
-                </Box>
-                <Box component="span" sx={{ color: t.muted, mx: 0.5 }}>
-                  ({ROLE_LABELS[row.role]})
-                </Box>
-                {row.action}
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.875 }}>
+                <UserAvatar avatarKey={row.avatarKey} name={row.user} size={22} />
+                <Typography sx={{ fontSize: 12.5, whiteSpace: "normal" }}>
+                  <Box component="span" sx={{ fontWeight: 700 }}>
+                    {row.user}
+                  </Box>
+                  <Box component="span" sx={{ color: t.muted, mx: 0.5 }}>
+                    ({ROLE_LABELS[row.role]})
+                  </Box>
+                  {row.action}
+                </Typography>
+              </Box>
               <Box sx={{ display: "flex", gap: 1, mt: 0.375, alignItems: "center" }}>
                 <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: t.primary.main }}>
                   {row.ref}

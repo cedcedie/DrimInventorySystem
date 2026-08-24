@@ -20,6 +20,7 @@ import { SendNotificationModal } from "@/components/modals/SendNotificationModal
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { useCan } from "@/components/PermissionsProvider";
+import { UserAvatar } from "@/components/UserAvatar";
 import type { Role, UserStatus } from "@/generated/prisma";
 import type { UsersData } from "@/lib/data/users";
 
@@ -249,52 +250,6 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
           }}
         />
       )}
-    </Box>
-  );
-}
-
-/** Uploaded picture if set, else initials on a neutral circle — same blob
- * route the Profile screen's own picture uses (@/components/screens/ProfileScreen). */
-function UserAvatar({ avatarKey, name }: { avatarKey: string | null; name: string }) {
-  const t = useTheme().palette;
-  const initial = name.trim().charAt(0).toUpperCase() || "?";
-
-  if (avatarKey) {
-    return (
-      <Box
-        component="img"
-        src={`/api/blobs/${avatarKey}`}
-        alt=""
-        sx={{
-          width: 26,
-          height: 26,
-          borderRadius: "50%",
-          border: "1px solid",
-          borderColor: t.border,
-          objectFit: "cover",
-          flexShrink: 0,
-        }}
-      />
-    );
-  }
-
-  return (
-    <Box
-      sx={{
-        width: 26,
-        height: 26,
-        borderRadius: "50%",
-        bgcolor: t.hover,
-        color: t.muted,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 11,
-        fontWeight: 700,
-        flexShrink: 0,
-      }}
-    >
-      {initial}
     </Box>
   );
 }

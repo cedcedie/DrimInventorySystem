@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Box, ButtonBase } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
@@ -8,22 +9,15 @@ import AddIcon from "@mui/icons-material/Add";
 import Link from "next/link";
 import type { Role } from "@/generated/prisma";
 import { useColorMode } from "@/theme/ThemeRegistry";
-import { lightTokens, darkTokens, ACCENT, ACCENT_HOVER, NAVY, motion } from "@/theme/tokens";
+import { lightTokens, darkTokens, ACCENT, ACCENT_HOVER, motion } from "@/theme/tokens";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import { SIDENAV_WIDTH } from "@/components/SideNav";
 import { useCan } from "@/components/PermissionsProvider";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationBell } from "@/components/NotificationBell";
-
-function initialsOf(name: string): string {
-  return name
-    .split(/[.\s]+/)
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
+import { UserAvatar } from "@/components/UserAvatar";
+import { fetchJson } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function ChromeBar({
   userName,
@@ -43,7 +37,14 @@ export function ChromeBar({
   const t = mode === "dark" ? darkTokens : lightTokens;
   const canAddProducts = useCan("products", "canCreate");
   void activeSegment;
-  void role;
+
+  // Shares queryKeys.profile with ProfileScreen, so uploading/removing a
+  // picture there updates this header immediately via cache invalidation.
+  const { data: profile } = useQuery({
+    queryKey: queryKeys.profile,
+    queryFn: () => fetchJson<{ avatarKey: string | null }>("/api/me"),
+    staleTime: 60_000,
+  });
 
   const iconButtonSx = {
     width: 38,
@@ -141,26 +142,9 @@ export function ChromeBar({
             pl: 0.5,
             color: "inherit",
             textDecoration: "none",
-            "&:hover .chrome-avatar": { bgcolor: ACCENT },
           }}
         >
-          <Box
-            className="chrome-avatar"
-            sx={{
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              bgcolor: NAVY,
-              color: "#fff",
-              display: "grid",
-              placeItems: "center",
-              fontSize: 13,
-              fontWeight: 700,
-              transition: "background-color 0.12s ease",
-            }}
-          >
-            {initialsOf(userName)}
-          </Box>
+          <UserAvatar avatarKey={profile?.avatarKey} name={userName} size={38} />
           <Box sx={{ lineHeight: 1.25, display: { xs: "none", lg: "block" } }}>
             <Box sx={{ fontSize: 13.5, fontWeight: 700, color: t.text }}>{userName}</Box>
             <Box sx={{ fontSize: 11.5, color: t.muted }}>{ROLE_LABELS[role]}</Box>

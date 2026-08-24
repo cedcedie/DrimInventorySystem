@@ -23,6 +23,7 @@ async function fetchUsersData(page: number) {
       name: u.name,
       role: u.role,
       status: u.status,
+      avatarKey: u.avatarKey,
       recentActivity: u.activities[0]
         ? `${u.activities[0].action} · ${u.activities[0].refNo}`
         : "No recorded activity",

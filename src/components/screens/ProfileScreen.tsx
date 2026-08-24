@@ -13,6 +13,27 @@ import { useToast } from "@/components/Toast";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import type { Role } from "@/generated/prisma";
 import { ACCENT, ACCENT_HOVER, motion } from "@/theme/tokens";
+import { AvatarCropModal } from "@/components/modals/AvatarCropModal";
+
+// Above this on either edge, crop first rather than upload the raw file —
+// covers typical phone-camera photos while leaving already-small pictures alone.
+const CROP_THRESHOLD_PX = 640;
+
+function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read image"));
+    };
+    img.src = url;
+  });
+}
 
 type ProfileData = {
   id: string;
@@ -148,6 +169,7 @@ function AvatarField({
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -174,18 +196,38 @@ function AvatarField({
     onSuccess: () => {
       setError("");
       setFile(null);
+      setCropFile(null);
       onChange();
       showToast("Profile picture updated.");
     },
     onError: (e: Error) => setError(e.message),
   });
 
-  const handlePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = e.target.files?.[0];
     e.target.value = "";
     if (!picked) return;
+
+    try {
+      const { width, height } = await readImageDimensions(picked);
+      if (Math.max(width, height) > CROP_THRESHOLD_PX) {
+        setCropFile(picked);
+        return;
+      }
+    } catch {
+      // Couldn't read dimensions (e.g. corrupt file) — let the upload
+      // endpoint's own validation reject it instead of blocking here.
+    }
     setFile(picked);
     upload.mutate(picked);
+  };
+
+  const handleCropConfirm = (blob: Blob) => {
+    // Modal stays open (showing "Uploading…") until the mutation settles —
+    // onSuccess/onError above clear cropFile and surface the result.
+    const cropped = new File([blob], "avatar.webp", { type: "image/webp" });
+    setFile(cropped);
+    upload.mutate(cropped);
   };
 
   return (
@@ -196,6 +238,14 @@ function AvatarField({
           {error}
         </Alert>
       )}
+      <AvatarCropModal
+        open={!!cropFile}
+        file={cropFile}
+        onCancel={() => setCropFile(null)}
+        onConfirm={handleCropConfirm}
+        confirming={upload.isPending}
+        error={error}
+      />
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flexWrap: "wrap", mt: 0.5 }}>
         {(previewUrl || avatarKey) && (
           <Box

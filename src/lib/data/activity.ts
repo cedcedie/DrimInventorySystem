@@ -22,7 +22,7 @@ async function fetchActivityData(page: number, includeSensitive: boolean, take =
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * take,
       take,
-      include: { user: { select: { name: true, role: true } } },
+      include: { user: { select: { name: true, role: true, avatarKey: true } } },
     }),
   ]);
 
@@ -32,6 +32,7 @@ async function fetchActivityData(page: number, includeSensitive: boolean, take =
       dt: a.createdAt.toISOString(),
       user: a.user.name,
       role: a.user.role,
+      avatarKey: a.user.avatarKey,
       action: a.action,
       ref: a.refNo,
     })),

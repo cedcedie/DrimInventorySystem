@@ -26,7 +26,10 @@ export function StockMovementChart({
   const isDark = t.mode === "dark";
 
   return (
-    <Box sx={{ width: "100%", height: 220 }}>
+    // height: 100% (not a fixed px value) so this actually fills whatever
+    // the parent card's flex-stretch gives it, instead of capping at
+    // minHeight and leaving dead space below when the sibling card is taller.
+    <Box sx={{ width: "100%", height: "100%", minHeight: 220 }}>
       <ResponsiveContainer>
         <BarChart data={data} barGap={4} barCategoryGap="28%">
           <CartesianGrid strokeDasharray="3 3" stroke={t.line} vertical={false} />

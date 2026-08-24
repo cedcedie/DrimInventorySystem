@@ -1,0 +1,20 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "layout-transition",
+        "value": "transition: margin-left",
+        "createdAt": "2026-08-24T20:53:52.406Z",
+        "reason": "Claude: one-shot user-triggered sidebar-collapse transition, not a scroll/hot path; content must actually reflow (main pane width) so transform can't substitute — will-change hint added, see AppShell.tsx:105 comment"
+      },
+      {
+        "rule": "layout-transition",
+        "value": "transition: width",
+        "createdAt": "2026-08-24T20:53:57.458Z",
+        "reason": "Claude: same sidebar-collapse exception as AppShell.tsx margin-left — SideNav's fixed-position rail genuinely reflows its inner labels as it narrows, not a hot/scroll path; will-change hint added, see SideNav.tsx:355 comment"
+      }
+    ]
+  }
+}

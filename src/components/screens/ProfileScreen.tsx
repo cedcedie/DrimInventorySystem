@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Box, ButtonBase, InputBase, Typography, Alert } from "@mui/material";
+import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
 import { useTheme, type Palette } from "@mui/material/styles";
 import { fetchJson } from "@/lib/api";
 import { patchJson } from "@/lib/mutate";
@@ -11,7 +12,7 @@ import { TableSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import type { Role } from "@/generated/prisma";
-import { ACCENT_HOVER, motion } from "@/theme/tokens";
+import { ACCENT, ACCENT_HOVER, motion } from "@/theme/tokens";
 
 type ProfileData = {
   id: string;
@@ -19,6 +20,7 @@ type ProfileData = {
   name: string;
   role: Role;
   status: "ACTIVE" | "INACTIVE";
+  avatarKey: string | null;
   createdAt: string;
   technician: { empNo: string; position: string } | null;
 };
@@ -89,6 +91,13 @@ function IdentityPanel({
         </Alert>
       )}
 
+      <AvatarField
+        avatarKey={data.avatarKey}
+        t={t}
+        showToast={showToast}
+        onChange={() => queryClient.invalidateQueries({ queryKey: queryKeys.profile })}
+      />
+
       <Box>
         <FieldLabel t={t}>Display Name</FieldLabel>
         <InputBase
@@ -123,6 +132,120 @@ function IdentityPanel({
         {save.isPending ? "Saving…" : "Save changes"}
       </ButtonBase>
     </Panel>
+  );
+}
+
+function AvatarField({
+  avatarKey,
+  t,
+  showToast,
+  onChange,
+}: {
+  avatarKey: string | null;
+  t: Palette;
+  showToast: (m: string) => void;
+  onChange: () => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const upload = useMutation({
+    mutationFn: async (picked: File) => {
+      const formData = new FormData();
+      formData.append("file", picked);
+      const res = await fetch("/api/me/avatar", { method: "POST", body: formData });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Upload failed" }));
+        throw new Error(data.error ?? "Upload failed");
+      }
+    },
+    onSuccess: () => {
+      setError("");
+      setFile(null);
+      onChange();
+      showToast("Profile picture updated.");
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const handlePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = e.target.files?.[0];
+    e.target.value = "";
+    if (!picked) return;
+    setFile(picked);
+    upload.mutate(picked);
+  };
+
+  return (
+    <Box>
+      <FieldLabel t={t}>Profile Picture</FieldLabel>
+      {error && (
+        <Alert severity="error" sx={{ mt: 0.5, mb: 0.5 }}>
+          {error}
+        </Alert>
+      )}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flexWrap: "wrap", mt: 0.5 }}>
+        {(previewUrl || avatarKey) && (
+          <Box
+            component="img"
+            src={previewUrl ?? `/api/blobs/${avatarKey}`}
+            alt=""
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              border: "1px solid",
+              borderColor: t.border,
+              objectFit: "cover",
+              flexShrink: 0,
+            }}
+          />
+        )}
+        <ButtonBase
+          onClick={() => fileInputRef.current?.click()}
+          disabled={upload.isPending}
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 0.75,
+            border: "1px solid",
+            borderColor: t.border,
+            borderRadius: "8px",
+            px: 1.5,
+            py: 0.875,
+            fontSize: 12.5,
+            fontWeight: 600,
+            color: t.text.primary,
+            bgcolor: t.surface,
+            opacity: upload.isPending ? 0.6 : 1,
+            transition: `border-color ${motion.duration.color}ms ${motion.easing.standard}, color ${motion.duration.color}ms ${motion.easing.standard}`,
+            "&:hover": upload.isPending ? undefined : { borderColor: ACCENT, color: ACCENT },
+          }}
+        >
+          <UploadFileOutlinedIcon sx={{ fontSize: 16 }} />
+          {upload.isPending ? "Uploading…" : avatarKey ? "Change picture" : "Upload picture"}
+        </ButtonBase>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handlePick}
+          style={{ display: "none" }}
+        />
+      </Box>
+    </Box>
   );
 }
 

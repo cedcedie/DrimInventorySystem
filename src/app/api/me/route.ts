@@ -19,6 +19,7 @@ export async function GET() {
       name: true,
       role: true,
       status: true,
+      avatarKey: true,
       createdAt: true,
       technician: { select: { empNo: true, position: true } },
     },

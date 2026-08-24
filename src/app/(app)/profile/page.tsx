@@ -23,6 +23,7 @@ export default async function ProfilePage() {
       name: true,
       role: true,
       status: true,
+      avatarKey: true,
       createdAt: true,
       technician: { select: { empNo: true, position: true } },
     },

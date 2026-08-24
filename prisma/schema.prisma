@@ -66,6 +66,7 @@ model User {
   name                     String
   role                     Role
   status                   UserStatus        @default(ACTIVE)
+  avatarKey                String? // Blob key from the same store as product images (see storage.ts)
   permissionOverrides      Json? // NEW: User-specific permission overrides
   activities               ActivityLog[]
   stockInBatches           StockInBatch[]

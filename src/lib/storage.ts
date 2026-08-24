@@ -4,7 +4,7 @@ import { uploadToR2, getSignedR2Url } from "@/lib/r2";
 /** Callers never learn whether bytes live in Postgres or R2 — swapping adapters is
  * a config change, not a code change. */
 export interface BlobStore {
-  put(bytes: Buffer, contentType: string, extension: string): Promise<string>;
+  put(bytes: Buffer, contentType: string, extension: string, prefix?: string): Promise<string>;
   url(ref: string): Promise<string>;
 }
 
@@ -22,8 +22,8 @@ function r2IsConfigured(): boolean {
 /** Bytes in Postgres, served through /api/blobs/[key]; Neon's free tier is 0.5GB total,
  * so this is the first thing to move off if the catalog grows. */
 const postgresBlobStore: BlobStore = {
-  async put(bytes, contentType, extension) {
-    const key = `products/${crypto.randomUUID()}.${extension}`;
+  async put(bytes, contentType, extension, prefix = "products") {
+    const key = `${prefix}/${crypto.randomUUID()}.${extension}`;
     await prisma.storedBlob.create({
       // Buffer is a Uint8Array, but TS wants the narrower form spelled out.
       data: { key, contentType, size: bytes.length, bytes: new Uint8Array(bytes) },
@@ -37,8 +37,8 @@ const postgresBlobStore: BlobStore = {
 
 /** Activates automatically once the R2_* vars are set — no code change required. */
 const r2BlobStore: BlobStore = {
-  async put(bytes, contentType, extension) {
-    const key = `products/${crypto.randomUUID()}.${extension}`;
+  async put(bytes, contentType, extension, prefix = "products") {
+    const key = `${prefix}/${crypto.randomUUID()}.${extension}`;
     await uploadToR2(key, bytes, contentType);
     return key;
   },

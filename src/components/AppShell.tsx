@@ -98,7 +98,12 @@ export function AppShell({
           minHeight: "calc(100vh - 64px)",
           display: "flex",
           flexDirection: "column",
+          // margin-left is a layout property (reflow, not just composite) — but this
+          // only fires once per explicit sidebar toggle, not a hot/scroll-linked path,
+          // and content must actually reflow to the new width, so a transform can't
+          // substitute here. will-change lets the browser pre-optimize the one-shot cost.
           transition: hydrated ? `margin-left ${motion.duration.sidebar}ms ${motion.easing.standard}` : undefined,
+          willChange: hydrated ? "margin-left" : undefined,
         }}
       >
         <Box

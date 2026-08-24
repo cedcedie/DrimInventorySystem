@@ -2,6 +2,9 @@
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { Box } from "@mui/material";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlineOutlined";
+import CloseIcon from "@mui/icons-material/CloseOutlined";
 import { lightTokens, motion } from "@/theme/tokens";
 
 export type ToastSeverity = "success" | "error";
@@ -54,8 +57,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             maxWidth: "min(420px, calc(100vw - 44px))",
             bgcolor: "#1f2a35",
             color: "#fff",
-            px: 2,
-            py: 1.375,
+            px: 1.75,
+            py: 1.25,
+            borderRadius: "10px",
             fontSize: "12.5px",
             fontWeight: 600,
             lineHeight: 1.45,
@@ -64,7 +68,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             alignItems: "flex-start",
             gap: 1,
             // Fixed dark surface in both modes, so uses light-mode tokens directly (dark tokens would wash out).
-            borderLeft: `3px solid ${severity === "error" ? lightTokens.danger : lightTokens.success}`,
             boxShadow: "0 8px 30px rgba(0,0,0,0.3)",
             zIndex: 1400,
             animation: `drim-toast-enter ${motion.duration.enter}ms ${motion.easing.entrance}`,
@@ -74,12 +77,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             },
           }}
         >
+          {severity === "error" ? (
+            <ErrorOutlineIcon sx={{ fontSize: 18, color: lightTokens.danger, flexShrink: 0, mt: 0.0625 }} />
+          ) : (
+            <CheckCircleOutlineIcon sx={{ fontSize: 18, color: lightTokens.success, flexShrink: 0, mt: 0.0625 }} />
+          )}
           <Box component="span" sx={{ flex: 1 }}>
             {message}
           </Box>
-          <Box component="span" sx={{ fontSize: 11, opacity: 0.6, flexShrink: 0, mt: 0.125 }}>
-            ✕
-          </Box>
+          <CloseIcon sx={{ fontSize: 15, opacity: 0.6, flexShrink: 0, mt: 0.125 }} />
         </Box>
       )}
     </ToastContext.Provider>

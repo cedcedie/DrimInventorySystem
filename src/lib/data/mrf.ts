@@ -139,34 +139,39 @@ async function loadMrfsForTechnician(technicianId: string, page: number) {
   };
 }
 
-/** Pending/partial MRFs with remaining line items, for the warehouse queue. */
-async function loadOpenMrfsQueue() {
-  "use cache";
-  tagAndLife("mrf", CACHE_SECONDS.short);
+const OPEN_MRF_PAGE_SIZE = 15;
 
-  const mrfs = await prisma.mrf.findMany({
-    where: {
-      status: { in: ["PENDING", "PARTIAL"] },
-    },
-    orderBy: { createdAt: "asc" },
-    take: 100,
-    include: {
-      technician: { select: { name: true, empNo: true } },
-      items: {
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              code: true,
-              stocks: true,
-              unit: true,
+/** Pending/partial MRFs with remaining line items, for the warehouse queue.
+ * Not cached: paginated and polled by liveHot, so a stale "use cache" entry
+ * would fight the client's own 10s refetch. */
+async function loadOpenMrfsQueue(page: number) {
+  const where = { status: { in: ["PENDING", "PARTIAL"] as const } };
+
+  const [total, mrfs] = await Promise.all([
+    prisma.mrf.count({ where }),
+    prisma.mrf.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
+      skip: (page - 1) * OPEN_MRF_PAGE_SIZE,
+      take: OPEN_MRF_PAGE_SIZE,
+      include: {
+        technician: { select: { name: true, empNo: true } },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                stocks: true,
+                unit: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+  ]);
 
   const openMrfs = mrfs
     .map((m) => {
@@ -206,6 +211,9 @@ async function loadOpenMrfsQueue() {
   return {
     mrfs: openMrfs,
     openItemCount: openMrfs.reduce((sum, m) => sum + m.items.length, 0),
+    page,
+    totalPages: Math.max(1, Math.ceil(total / OPEN_MRF_PAGE_SIZE)),
+    total,
   };
 }
 
@@ -213,8 +221,8 @@ export async function getMrfsForTechnician(technicianId: string, page = 1) {
   return loadMrfsForTechnician(technicianId, page);
 }
 
-export async function getOpenMrfsQueue() {
-  return loadOpenMrfsQueue();
+export async function getOpenMrfsQueue(page = 1) {
+  return loadOpenMrfsQueue(page);
 }
 
 export type MrfListData = Awaited<ReturnType<typeof getMrfsForTechnician>>;

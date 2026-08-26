@@ -3,9 +3,11 @@ import { requireModuleAccess } from "@/lib/apiAuth";
 import { getOpenMrfsQueue } from "@/lib/data/mrf";
 
 /** Warehouse queue — open material requests awaiting fulfillment. */
-export async function GET() {
+export async function GET(req: Request) {
   const auth = await requireModuleAccess("stock");
   if ("error" in auth) return auth.error;
 
-  return NextResponse.json(await getOpenMrfsQueue());
+  const { searchParams } = new URL(req.url);
+  const page = Number(searchParams.get("page") ?? "1");
+  return NextResponse.json(await getOpenMrfsQueue(page));
 }

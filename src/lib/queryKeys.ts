@@ -15,7 +15,7 @@ export const queryKeys = {
   stockOut: (params: { page?: number; q?: string }) => ["stock-out", params] as const,
   stockOptions: ["stock-options"] as const,
   mrf: (params: { page?: number }) => ["mrf", params] as const,
-  openMrfs: ["mrf-open"] as const,
+  openMrfs: (params: { page?: number } = {}) => ["mrf-open", params] as const,
   adjustments: (params: { page?: number }) => ["adjustments", params] as const,
   notifications: ["notifications"] as const,
   myPermissions: ["me-permissions"] as const,

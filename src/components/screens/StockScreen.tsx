@@ -66,7 +66,7 @@ function StockScreenInner({ initialTab }: { initialTab?: string }) {
   // — a fulfilled/old one won't be in the queue, so it just lands on the tab.
   const refParam = searchParams.get("ref");
   const { data: openMrfsForLink } = useQuery({
-    queryKey: queryKeys.openMrfs,
+    queryKey: queryKeys.openMrfs(),
     queryFn: () => fetchJson<OpenMrfsQueueData>("/api/mrf/open"),
     enabled: Boolean(refParam) && tab === "requests",
   });
@@ -167,10 +167,10 @@ function OpenMrfsTab({
   onOpenDetail: (mrfId: string) => void;
 }) {
   const t = useTheme().palette;
-  const { data, dataUpdatedAt } = useQuery({
-    queryKey: queryKeys.openMrfs,
-    queryFn: () => fetchJson<OpenMrfsQueueData>("/api/mrf/open"),
-    ...liveHot,
+  const { data, dataUpdatedAt, setPage } = usePaginatedQuery<OpenMrfsQueueData>({
+    queryKey: (p) => queryKeys.openMrfs({ page: p }),
+    url: (p) => `/api/mrf/open?page=${p}`,
+    live: liveHot,
   });
 
   // One row per MRF, not per line item, so multi-item MRFs don't repeat as duplicate-looking rows.
@@ -292,6 +292,15 @@ function OpenMrfsTab({
           ))}
           {mrfRows.length === 0 && (
             <EmptyState message="No open material requests — all caught up." />
+          )}
+          {data && mrfRows.length > 0 && (
+            <Pagination
+              info={`${data.total} open request${data.total === 1 ? "" : "s"}`}
+              page={data.page}
+              totalPages={data.totalPages}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+            />
           )}
         </TableShell>
       )}

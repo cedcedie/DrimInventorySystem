@@ -85,7 +85,7 @@ export function MultiItemMrfModal({
       draft.clear();
       queryClient.invalidateQueries({ queryKey: ["mrf"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
-      queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
+      queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs() });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
       showToast(`Request ${data.refNo} filed — sent to warehouse for fulfillment.`);
       resetForm();

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Box, MenuItem, Select, Alert } from "@mui/material";
+import { Box, Typography, Alert } from "@mui/material";
 import { EntityModal, ModalFormActions, FormField, fieldInputSx } from "@/components/EntityModal";
+import { SearchablePicker } from "@/components/SearchablePicker";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens, ACCENT } from "@/theme/tokens";
 import { postJson } from "@/lib/mutate";
@@ -12,6 +13,8 @@ import { useToast } from "@/components/Toast";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveHot } from "@/lib/liveQuery";
 import type { StockFormOptions } from "@/lib/data/stock";
+
+type PendingMrfItem = StockFormOptions["pendingMrfItems"][number];
 
 export function StockOutModal({
   open,
@@ -64,7 +67,7 @@ export function StockOutModal({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["stock-out"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.stockOptions });
-      queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
+      queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs() });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
@@ -84,7 +87,7 @@ export function StockOutModal({
       // A same-item race (another worker fulfilled this line first) rejects the
       // transaction with stale numbers on screen — refetch to show current state.
       queryClient.invalidateQueries({ queryKey: queryKeys.stockOptions });
-      queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs });
+      queryClient.invalidateQueries({ queryKey: queryKeys.openMrfs() });
       setError(`${e.message} — numbers below have been refreshed to reflect the current state.`);
     },
   });
@@ -114,26 +117,44 @@ export function StockOutModal({
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
           <FormField label="MRF line item" span2>
-            <Select
+            <SearchablePicker<PendingMrfItem>
               value={mrfItemId}
-              onChange={(e) => {
-                setMrfItemId(e.target.value);
+              onChange={(item) => {
+                setMrfItemId(item.id);
                 setQty("");
                 setError("");
               }}
-              size="small"
-              displayEmpty
-              sx={{ fontSize: 12.5, bgcolor: t.surface }}
-            >
-              <MenuItem value="" sx={{ fontSize: 12.5 }}>
-                Select a pending MRF item
-              </MenuItem>
-              {options?.pendingMrfItems.map((item) => (
-                <MenuItem key={item.id} value={item.id} sx={{ fontSize: 12.5 }}>
-                  {item.mrfRefNo} · {item.productName} · need {item.qtyRemaining} {item.unit}
-                </MenuItem>
-              ))}
-            </Select>
+              options={options?.pendingMrfItems}
+              matches={(item, needle) =>
+                item.mrfRefNo.toLowerCase().includes(needle) ||
+                item.productName.toLowerCase().includes(needle) ||
+                item.productCode.toLowerCase().includes(needle) ||
+                item.technicianName.toLowerCase().includes(needle) ||
+                item.project.toLowerCase().includes(needle)
+              }
+              renderLabel={(item) => `${item.mrfRefNo} · ${item.productName} · need ${item.qtyRemaining} ${item.unit}`}
+              getKey={(item) => item.id}
+              placeholder="Search by MRF #, item, technician, or project…"
+              emptyMessage="No pending MRF items match."
+              loadingMessage="Loading pending MRF items…"
+              renderOption={(item) => (
+                <Box
+                  sx={{
+                    px: 1.5,
+                    py: 0.875,
+                    cursor: "pointer",
+                    "&:hover": { bgcolor: t.hover },
+                  }}
+                >
+                  <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: t.text }}>
+                    {item.mrfRefNo} · {item.productName}
+                  </Typography>
+                  <Typography sx={{ fontSize: 10.5, color: t.muted2 }}>
+                    need {item.qtyRemaining} {item.unit} · {item.technicianName} · {item.project}
+                  </Typography>
+                </Box>
+              )}
+            />
           </FormField>
           {selectedMrfItem && (
             <>

@@ -310,7 +310,9 @@ export function ProductModal({
         )}
 
         <ModalFormActions
-          onCancel={onClose}
+          onCancel={() => {
+            if (confirmClose()) onClose();
+          }}
           submitLabel={isEdit ? "Save Changes" : "Add Product"}
           disabled={mutation.isPending}
         />

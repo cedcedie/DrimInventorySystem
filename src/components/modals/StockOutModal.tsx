@@ -260,7 +260,9 @@ export function StockOutModal({
         )}
 
         <ModalFormActions
-          onCancel={onClose}
+          onCancel={() => {
+            if (confirmClose()) onClose();
+          }}
           submitLabel="Record release (SO)"
           disabled={mutation.isPending || qtyExceedsMax}
         />

@@ -188,7 +188,9 @@ export function AdjustStockModal({
         )}
 
         <ModalFormActions
-          onCancel={onClose}
+          onCancel={() => {
+            if (confirmClose()) onClose();
+          }}
           submitLabel="Record adjustment"
           disabled={mutation.isPending}
         />

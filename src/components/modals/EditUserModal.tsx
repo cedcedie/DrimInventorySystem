@@ -226,7 +226,9 @@ export function EditUserModal({
         )}
 
         <ModalFormActions
-          onCancel={onClose}
+          onCancel={() => {
+            if (confirmClose()) onClose();
+          }}
           submitLabel="Save changes"
           disabled={mutation.isPending}
         />

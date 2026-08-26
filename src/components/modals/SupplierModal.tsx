@@ -85,7 +85,13 @@ export function SupplierModal({ open, onClose }: { open: boolean; onClose: () =>
           </Alert>
         )}
 
-        <ModalFormActions onCancel={onClose} submitLabel="Save Supplier" disabled={mutation.isPending} />
+        <ModalFormActions
+          onCancel={() => {
+            if (confirmClose()) onClose();
+          }}
+          submitLabel="Save Supplier"
+          disabled={mutation.isPending}
+        />
       </Box>
     </EntityModal>
   );

@@ -109,7 +109,13 @@ export function UserModal({ open, onClose }: { open: boolean; onClose: () => voi
           </Alert>
         )}
 
-        <ModalFormActions onCancel={onClose} submitLabel="Save User" disabled={mutation.isPending} />
+        <ModalFormActions
+          onCancel={() => {
+            if (confirmClose()) onClose();
+          }}
+          submitLabel="Save User"
+          disabled={mutation.isPending}
+        />
       </Box>
     </EntityModal>
   );

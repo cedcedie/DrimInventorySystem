@@ -123,7 +123,9 @@ export function TechnicianModal({
         )}
 
         <ModalFormActions
-          onCancel={onClose}
+          onCancel={() => {
+            if (confirmClose()) onClose();
+          }}
           submitLabel={isEdit ? "Save Changes" : "Add Technician"}
           disabled={mutation.isPending}
         />

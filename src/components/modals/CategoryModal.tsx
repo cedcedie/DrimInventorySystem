@@ -72,7 +72,13 @@ export function CategoryModal({
           </Alert>
         )}
 
-        <ModalFormActions onCancel={onClose} submitLabel="Add Category" disabled={mutation.isPending} />
+        <ModalFormActions
+          onCancel={() => {
+            if (confirmClose()) onClose();
+          }}
+          submitLabel="Add Category"
+          disabled={mutation.isPending}
+        />
       </Box>
     </EntityModal>
   );

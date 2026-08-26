@@ -10,6 +10,7 @@ import { fetchJson } from "@/lib/api";
 import { postJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { ROLE_LABELS } from "@/lib/navConfig";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import type { Role } from "@/generated/prisma";
 
 const ROLES: Role[] = ["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"];
@@ -82,13 +83,12 @@ export function SendNotificationModal({
     setRoles((prev) => (prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]));
   };
 
+  const isDirty = Boolean(title) || Boolean(body) || userIds.length > 0 || roles.length > 0;
+  const confirmClose = useUnsavedChangesGuard(isDirty, "Discard this notification? This can't be undone.");
   const handleClose = () => {
-    if (title || body || userIds.length > 0 || roles.length > 0) {
-      const confirmed = window.confirm("Discard this notification? This can't be undone.");
-      if (confirmed) resetForm();
-      return confirmed;
-    }
-    return true;
+    const ok = confirmClose();
+    if (ok) resetForm();
+    return ok;
   };
 
   const handleSubmit = (e: React.FormEvent) => {

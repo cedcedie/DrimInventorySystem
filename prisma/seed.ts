@@ -253,15 +253,19 @@ async function main() {
 
   await Promise.all(
     stockInsSeed.map((si) =>
-      prisma.stockIn.upsert({
+      prisma.stockInBatch.upsert({
         where: { refNo: si.ref },
         update: {},
         create: {
           refNo: si.ref,
-          productId: productIdByCode.get(si.productCode)!,
           supplierId: supplierIdByName.get(si.supplierName)!,
-          qty: si.qty,
           byUserId: userIdByUsername.get(si.byUsername)!,
+          items: {
+            create: {
+              productId: productIdByCode.get(si.productCode)!,
+              qty: si.qty,
+            },
+          },
         },
       })
     )

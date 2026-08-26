@@ -11,6 +11,7 @@ import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { useToast } from "@/components/Toast";
 import { useFormDraft } from "@/lib/useFormDraft";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { ItemCartEditor, type CartItem, type CartProductOption } from "@/components/ItemCartEditor";
 
 export function MultiItemMrfModal({
@@ -104,16 +105,18 @@ export function MultiItemMrfModal({
     setError("");
   };
 
+  const isDirty = items.length > 0 || Boolean(project) || Boolean(externalRefNo) || Boolean(description);
+  const confirmClose = useUnsavedChangesGuard(
+    isDirty,
+    "Discard this material request? This can't be undone."
+  );
   const handleClose = () => {
-    if (items.length > 0 || project || externalRefNo || description) {
-      const confirmed = window.confirm("Discard this material request? This can't be undone.");
-      if (confirmed) {
-        draft.clear();
-        resetForm();
-      }
-      return confirmed;
+    const ok = confirmClose();
+    if (ok) {
+      draft.clear();
+      resetForm();
     }
-    return true;
+    return ok;
   };
 
   const handleSubmit = (e: React.FormEvent) => {

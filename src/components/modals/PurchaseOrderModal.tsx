@@ -10,6 +10,7 @@ import { postJson } from "@/lib/mutate";
 import { fetchJson } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { ItemCartEditor, type CartItem } from "@/components/ItemCartEditor";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import type { StockFormOptions } from "@/lib/data/stock";
 
 export function PurchaseOrderModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -54,13 +55,12 @@ export function PurchaseOrderModal({ open, onClose }: { open: boolean; onClose: 
     setError("");
   };
 
+  const isDirty = items.length > 0 || Boolean(supplierId) || Boolean(notes);
+  const confirmClose = useUnsavedChangesGuard(isDirty, "Discard this Purchase Order? This can't be undone.");
   const handleClose = () => {
-    if (items.length > 0 || supplierId || notes) {
-      const confirmed = window.confirm("Discard this Purchase Order? This can't be undone.");
-      if (confirmed) resetForm();
-      return confirmed;
-    }
-    return true;
+    const ok = confirmClose();
+    if (ok) resetForm();
+    return ok;
   };
 
   const handleSubmit = (e: React.FormEvent) => {

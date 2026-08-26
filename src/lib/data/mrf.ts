@@ -146,7 +146,17 @@ const OPEN_MRF_PAGE_SIZE = 15;
  * Not cached: paginated and polled by liveHot, so a stale "use cache" entry
  * would fight the client's own 10s refetch. */
 async function loadOpenMrfsQueue(page: number) {
-  const where: Prisma.MrfWhereInput = { status: { in: ["PENDING", "PARTIAL"] } };
+  // Status PENDING/PARTIAL should always imply at least one item still open —
+  // fulfillMrfItemInTx keeps the two in sync on every write. But the count
+  // must match this exactly, or pagination goes stale the moment that
+  // invariant ever slips (a page rendering fewer rows than the count implies,
+  // or a trailing page going unreachable). Filtering at the DB level via a
+  // field-to-field comparison (same pattern as stock.ts's pending-MRF query)
+  // keeps `total`/`totalPages` truthful no matter what.
+  const where: Prisma.MrfWhereInput = {
+    status: { in: ["PENDING", "PARTIAL"] },
+    items: { some: { qtyFulfilled: { lt: prisma.mrfItem.fields.qtyRequested } } },
+  };
 
   const [total, mrfs] = await Promise.all([
     prisma.mrf.count({ where }),

@@ -3,14 +3,27 @@ import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const PAGE_SIZE = 15;
 
-async function loadProductsPage(page: number) {
-  "use cache";
-  tagAndLife("products", CACHE_SECONDS.list);
+async function fetchProductsData(page: number, q: string, category: string) {
+  const where = {
+    AND: [
+      { archivedAt: null },
+      category !== "All" ? { category: { name: category } } : {},
+      q
+        ? {
+            OR: [
+              { code: { contains: q, mode: "insensitive" as const } },
+              { name: { contains: q, mode: "insensitive" as const } },
+              { supplier: { name: { contains: q, mode: "insensitive" as const } } },
+            ],
+          }
+        : {},
+    ],
+  };
 
   const [total, products, categories, suppliers] = await Promise.all([
-    prisma.product.count({ where: { archivedAt: null } }),
+    prisma.product.count({ where }),
     prisma.product.findMany({
-      where: { archivedAt: null },
+      where,
       include: { category: true, supplier: true },
       orderBy: { code: "asc" },
       skip: (page - 1) * PAGE_SIZE,
@@ -43,9 +56,22 @@ async function loadProductsPage(page: number) {
   };
 }
 
-export async function getProductsData(params: { page?: number }) {
+/** Default catalog view (no search/filter) is cached; filtered views hit the DB directly. */
+async function loadDefaultProducts() {
+  "use cache";
+  tagAndLife("products", CACHE_SECONDS.list);
+  return fetchProductsData(1, "", "All");
+}
+
+export async function getProductsData(params: { page?: number; q?: string; category?: string }) {
   const page = Math.max(1, params.page ?? 1);
-  return loadProductsPage(page);
+  const q = params.q?.trim() ?? "";
+  const category = params.category ?? "All";
+
+  if (!q && category === "All" && page === 1) {
+    return loadDefaultProducts();
+  }
+  return fetchProductsData(page, q, category);
 }
 
 export type ProductsData = Awaited<ReturnType<typeof getProductsData>>;

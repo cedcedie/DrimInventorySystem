@@ -18,9 +18,14 @@ export async function getDashboardData(technicianId?: string) {
 
 async function getTechnicianDashboard(technicianId: string) {
   const mrfOpenStatuses: MrfStatus[] = ["PENDING", "PARTIAL"];
+  // Matches loadOpenMrfsQueue's filter (src/lib/data/mrf.ts) — status
+  // PENDING/PARTIAL should always imply an open item, but a plain status
+  // filter can drift from that (a stray zero-item MRF) and disagree with the
+  // queue's count. The field-to-field comparison keeps both truthful.
   const mrfOpenFilter = {
     status: { in: mrfOpenStatuses },
     technicianId,
+    items: { some: { qtyFulfilled: { lt: prisma.mrfItem.fields.qtyRequested } } },
   };
 
   const [pendingMrfCount, pendingMrfs, activityFeed] = await Promise.all([
@@ -103,7 +108,11 @@ async function getTechnicianDashboard(technicianId: string) {
 
 async function getWarehouseDashboard() {
   const mrfOpenStatuses: MrfStatus[] = ["PENDING", "PARTIAL"];
-  const mrfOpenFilter = { status: { in: mrfOpenStatuses } };
+  // See matching comment in getTechnicianDashboard above.
+  const mrfOpenFilter = {
+    status: { in: mrfOpenStatuses },
+    items: { some: { qtyFulfilled: { lt: prisma.mrfItem.fields.qtyRequested } } },
+  };
 
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 6);

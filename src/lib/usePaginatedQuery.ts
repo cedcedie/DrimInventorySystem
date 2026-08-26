@@ -25,11 +25,22 @@ export function usePaginatedQuery<T>(opts: {
   // a new search term) silently served the original unfiltered snapshot
   // back forever.
   const seedDataRef = useRef(opts.initialData);
+  // The seed data only matches the *exact* key it was server-rendered for
+  // (page 1 with whatever filters were in effect at mount, usually none).
+  // React Query seeds whatever key it's handed `initialData` for — so handing
+  // it unconditionally on every render means a caller with extra filter state
+  // (Products/Inventory's search box) gets its *new* key (e.g. page 1 + a
+  // search term) pre-seeded with the old unfiltered snapshot too, marked
+  // fresh, and never actually fetched until staleTime elapses. Only apply it
+  // when the current key still matches the one it was seeded for.
+  const seedKeyRef = useRef(JSON.stringify(opts.queryKey(page)));
+  const currentKey = opts.queryKey(page);
+  const isSeedKey = JSON.stringify(currentKey) === seedKeyRef.current;
 
   const query = useQuery({
-    queryKey: opts.queryKey(page),
+    queryKey: currentKey,
     queryFn: () => fetchJson<T>(opts.url(page)),
-    initialData: seedDataRef.current,
+    initialData: isSeedKey ? seedDataRef.current : undefined,
     placeholderData: keepPreviousData,
     ...opts.live,
   });

@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Box, ButtonBase, InputBase, Typography } from "@mui/material";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveCool } from "@/lib/liveQuery";
 import {
@@ -35,8 +37,23 @@ export function ProductsScreen({
 }: {
   initialData?: ProductsData;
 }) {
+  return (
+    <Suspense fallback={<TableSkeleton label="Loading product catalog…" columns={7} rows={8} />}>
+      <ProductsScreenInner initialData={initialData} />
+    </Suspense>
+  );
+}
+
+function ProductsScreenInner({
+  initialData,
+}: {
+  initialData?: ProductsData;
+}) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("All");
+  // The input stays instant (local state) — only the actual server fetch
+  // waits for typing to pause, so it's not a full request per keystroke.
+  const debouncedQ = useDebouncedValue(q, 300);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductFormRow | null>(null);
   const canCreate = useCan("products", "canCreate");
@@ -45,13 +62,38 @@ export function ProductsScreen({
   const canManage = canEdit || canDelete;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Deep link from the header's "+ Add New" button: "?add=1" opens the Add
+  // Product modal immediately instead of just landing on this page.
+  useEffect(() => {
+    if (!canCreate || searchParams.get("add") !== "1") return;
+    setEditingProduct(null);
+    setModalOpen(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("add");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount for this deep link, not on every searchParams identity change
+  }, [canCreate]);
 
   const { data, page, setPage } = usePaginatedQuery<ProductsData>({
-    queryKey: (p) => queryKeys.products({ page: p }),
-    url: (p) => `/api/products?page=${p}`,
+    queryKey: (p) => queryKeys.products({ page: p, q: debouncedQ, category }),
+    url: (p) =>
+      `/api/products?page=${p}&q=${encodeURIComponent(debouncedQ)}&category=${encodeURIComponent(category)}`,
     initialData,
     live: liveCool,
   });
+
+  // Reset to page 1 once the search/category filter actually changes (i.e.
+  // once a new fetch is about to happen) — not on every keystroke.
+  useEffect(() => {
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real filter change, not every render
+  }, [debouncedQ, category]);
+
   const t = useTheme().palette;
 
   const deleteMutation = useMutation({
@@ -74,19 +116,7 @@ export function ProductsScreen({
     return ["All", ...names];
   }, [data?.categories]);
 
-  const filteredRows = useMemo(() => {
-    if (!data) return [];
-    const needle = q.trim().toLowerCase();
-    return data.rows.filter((r) => {
-      if (category !== "All" && r.category !== category) return false;
-      if (!needle) return true;
-      return (
-        r.name.toLowerCase().includes(needle) ||
-        r.code.toLowerCase().includes(needle) ||
-        r.supplier.toLowerCase().includes(needle)
-      );
-    });
-  }, [data, q, category]);
+  const rows = data?.rows ?? [];
 
   const columns = canManage
     ? "52px 88px minmax(0,1.5fr) minmax(0,1fr) 62px minmax(0,1fr) 100px"
@@ -179,7 +209,7 @@ export function ProductsScreen({
       ) : (
         <TableShell minWidth={minWidth}>
           <TableHeaderRow columns={columns} headers={headers} />
-          {filteredRows.map((r) => {
+          {rows.map((r) => {
             const src = thumbSrc(r.imageKey);
             return (
               <TableRow key={r.id} columns={columns}>
@@ -242,7 +272,7 @@ export function ProductsScreen({
               </TableRow>
             );
           })}
-          {filteredRows.length === 0 && (
+          {rows.length === 0 && (
             <EmptyState
               message={
                 q || category !== "All"

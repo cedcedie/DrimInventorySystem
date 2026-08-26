@@ -10,6 +10,7 @@ import { postJson } from "@/lib/mutate";
 import { fetchJson } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { ItemCartEditor, type CartItem } from "@/components/ItemCartEditor";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import type { StockFormOptions } from "@/lib/data/stock";
 
 interface OpenPurchaseOrder {
@@ -99,13 +100,12 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
     setError("");
   };
 
+  const isDirty = items.length > 0 || Boolean(supplierId);
+  const confirmClose = useUnsavedChangesGuard(isDirty, "Discard this delivery? This can't be undone.");
   const handleClose = () => {
-    if (items.length > 0 || supplierId) {
-      const confirmed = window.confirm("Discard this delivery? This can't be undone.");
-      if (confirmed) resetForm();
-      return confirmed;
-    }
-    return true;
+    const ok = confirmClose();
+    if (ok) resetForm();
+    return ok;
   };
 
   const handleSubmit = (e: React.FormEvent) => {

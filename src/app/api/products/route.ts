@@ -12,7 +12,11 @@ export async function GET(req: Request) {
   if ("error" in auth) return auth.error;
 
   const { searchParams } = new URL(req.url);
-  const data = await getProductsData({ page: Number(searchParams.get("page") ?? "1") });
+  const data = await getProductsData({
+    page: Number(searchParams.get("page") ?? "1"),
+    q: searchParams.get("q") ?? undefined,
+    category: searchParams.get("category") ?? undefined,
+  });
 
   // Unit cost is Owner/Admin-only — never let it leave the server for other roles,
   // regardless of what the UI chooses to render.

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, keepPreviousData, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Box, ButtonBase, InputBase, Select, MenuItem } from "@mui/material";
-import { fetchJson } from "@/lib/api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveCool } from "@/lib/liveQuery";
 import {
@@ -35,7 +36,9 @@ export function InventoryScreen({
 }) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("All");
-  const [page, setPage] = useState(1);
+  // The input stays instant (local state) — only the actual server fetch
+  // waits for typing to pause, so it's not a full request per keystroke.
+  const debouncedQ = useDebouncedValue(q, 300);
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductFormRow | null>(null);
@@ -46,21 +49,24 @@ export function InventoryScreen({
   const canEditInventory = useCan("inventory", "canEdit");
   const canManage = canEditProduct || canDeleteProduct || canEditInventory;
   const showMinLevel = canEditInventory;
-  const isDefaultView = q === "" && category === "All" && page === 1;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const { data } = useQuery({
-    queryKey: queryKeys.inventory({ q, category, page }),
-    queryFn: () =>
-      fetchJson<InventoryData>(
-        `/api/inventory?q=${encodeURIComponent(q)}&category=${encodeURIComponent(category)}&page=${page}`
-      ),
-    initialData: isDefaultView ? initialData : undefined,
-    // avoids flashing to skeleton on filter/page change
-    placeholderData: keepPreviousData,
-    ...liveCool,
+  const { data, page, setPage } = usePaginatedQuery<InventoryData>({
+    queryKey: (p) => queryKeys.inventory({ q: debouncedQ, category, page: p }),
+    url: (p) =>
+      `/api/inventory?q=${encodeURIComponent(debouncedQ)}&category=${encodeURIComponent(category)}&page=${p}`,
+    initialData,
+    live: liveCool,
   });
+
+  // Reset to page 1 once the search/category filter actually changes (i.e.
+  // once a new fetch is about to happen) — not on every keystroke.
+  useEffect(() => {
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real filter change, not every render
+  }, [debouncedQ, category]);
+
   const t = useTheme().palette;
 
   const invalidateAll = () => {
@@ -157,10 +163,7 @@ export function InventoryScreen({
       >
         <InputBase
           value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setQ(e.target.value)}
           placeholder="Search by Product Code or Name"
           sx={{
             flex: "1 1 200px",
@@ -175,10 +178,7 @@ export function InventoryScreen({
         />
         <Select
           value={category}
-          onChange={(e) => {
-            setCategory(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setCategory(e.target.value)}
           size="small"
           sx={{
             minWidth: 160,

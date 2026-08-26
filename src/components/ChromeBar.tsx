@@ -99,7 +99,7 @@ export function ChromeBar({
         {canAddProducts && (
           <ButtonBase
             component={Link}
-            href="/products"
+            href="/products?add=1"
             sx={{
               display: { xs: "none", sm: "inline-flex" },
               alignItems: "center",

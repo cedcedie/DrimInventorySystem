@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { Role } from "@/generated/prisma";
 import { auth } from "@/lib/auth";
 import { getEffectivePermissions } from "@/lib/effectivePermissions";
-import { getMrfFilingProductOptions, getStockFormOptions } from "@/lib/data/stock";
+import { getMrfFilingProductOptions, getStockFormOptions, getRecentMrfProducts } from "@/lib/data/stock";
+import { getTechnicianForUser } from "@/lib/data/mrf";
 
 /** Warehouse gets full SI/SO options (incl. open MRF lines). Technicians with
  * MRF create rights get active products only — never the warehouse-wide queue. */
@@ -20,7 +21,12 @@ export async function GET() {
   }
 
   if (role === "TECHNICIAN" && perms.mrf?.canCreate) {
-    return NextResponse.json(await getMrfFilingProductOptions());
+    const [options, technician] = await Promise.all([
+      getMrfFilingProductOptions(),
+      getTechnicianForUser(session.user.id),
+    ]);
+    const recentProducts = technician ? await getRecentMrfProducts(technician.id) : [];
+    return NextResponse.json({ ...options, recentProducts });
   }
 
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });

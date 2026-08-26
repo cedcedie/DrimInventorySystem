@@ -27,12 +27,16 @@ export function MultiItemMrfModal({
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const { data: products } = useQuery({
+  const { data: optionsData } = useQuery({
     queryKey: ["mrf-products"],
-    queryFn: () => fetchJson<{ products: CartProductOption[] }>("/api/stock/options"),
+    queryFn: () =>
+      fetchJson<{ products: CartProductOption[]; recentProducts: CartProductOption[] }>(
+        "/api/stock/options"
+      ),
     enabled: open,
-    select: (data) => data.products,
   });
+  const products = optionsData?.products;
+  const recentProducts = optionsData?.recentProducts;
 
   const [items, setItems] = useState<CartItem[]>([]);
   const [project, setProject] = useState("");
@@ -143,6 +147,7 @@ export function MultiItemMrfModal({
 
         <ItemCartEditor
           products={products}
+          recentProducts={recentProducts}
           items={items}
           onItemsChange={setItems}
           addSectionLabel="Add Items to Request"

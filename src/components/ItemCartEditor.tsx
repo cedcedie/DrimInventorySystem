@@ -43,6 +43,7 @@ export function ItemCartEditor({
   addSectionLabel,
   cartLabel,
   emptyProductError,
+  recentProducts,
 }: {
   products: CartProductOption[] | undefined;
   items: CartItem[];
@@ -53,6 +54,10 @@ export function ItemCartEditor({
   cartLabel: string;
   /** Shown when Add is clicked with nothing selected. */
   emptyProductError: string;
+  /** This user's most recently used products — shown above the category
+   * browse view (empty query) as a "Recent" shortcut. Omit if the caller
+   * has no such history to offer. */
+  recentProducts?: CartProductOption[];
 }) {
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
@@ -227,32 +232,55 @@ export function ItemCartEditor({
                       ))
                     )
                   ) : (
-                    browseGroups.map((group) => (
-                      <Box key={group.categoryName}>
-                        <Typography
-                          sx={{
-                            fontSize: 10.5,
-                            fontWeight: 700,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.5px",
-                            color: t.muted2,
-                            px: 1.5,
-                            pt: 1,
-                            pb: 0.5,
-                          }}
-                        >
-                          {group.categoryName}
-                        </Typography>
-                        {group.items.map((p) => (
-                          <ProductOption key={p.id} product={p} t={t} onClick={() => pickProduct(p)} />
-                        ))}
-                        {group.totalCount > RESULT_CAP && (
-                          <Typography sx={{ fontSize: 11, color: t.muted2, px: 1.5, pb: 0.75 }}>
-                            +{group.totalCount - RESULT_CAP} more — type to search
+                    <>
+                      {recentProducts && recentProducts.length > 0 && (
+                        <Box>
+                          <Typography
+                            sx={{
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              color: t.muted2,
+                              px: 1.5,
+                              pt: 1,
+                              pb: 0.5,
+                            }}
+                          >
+                            Recent
                           </Typography>
-                        )}
-                      </Box>
-                    ))
+                          {recentProducts.map((p) => (
+                            <ProductOption key={p.id} product={p} t={t} onClick={() => pickProduct(p)} />
+                          ))}
+                        </Box>
+                      )}
+                      {browseGroups.map((group) => (
+                        <Box key={group.categoryName}>
+                          <Typography
+                            sx={{
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              color: t.muted2,
+                              px: 1.5,
+                              pt: 1,
+                              pb: 0.5,
+                            }}
+                          >
+                            {group.categoryName}
+                          </Typography>
+                          {group.items.map((p) => (
+                            <ProductOption key={p.id} product={p} t={t} onClick={() => pickProduct(p)} />
+                          ))}
+                          {group.totalCount > RESULT_CAP && (
+                            <Typography sx={{ fontSize: 11, color: t.muted2, px: 1.5, pb: 0.75 }}>
+                              +{group.totalCount - RESULT_CAP} more — type to search
+                            </Typography>
+                          )}
+                        </Box>
+                      ))}
+                    </>
                   )}
                 </Box>
               )}

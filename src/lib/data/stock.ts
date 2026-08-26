@@ -231,3 +231,29 @@ async function loadMrfFilingProducts(): Promise<StockFormOptions> {
 export async function getMrfFilingProductOptions() {
   return loadMrfFilingProducts();
 }
+
+/** Products this technician has most recently requested — feeds the "Recent"
+ * shortcut above the full search list in the MRF filing picker. Not cached:
+ * changes with every MRF filed, and it's a small, cheap per-user query. */
+export async function getRecentMrfProducts(technicianId: string, limit = 5) {
+  const recentItems = await prisma.mrfItem.findMany({
+    where: { mrf: { technicianId } },
+    orderBy: { mrf: { createdAt: "desc" } },
+    take: limit * 3, // over-fetch since the same product can repeat across MRFs
+    select: {
+      product: {
+        select: { id: true, name: true, code: true, stocks: true, unit: true, categoryId: true },
+      },
+    },
+  });
+
+  const seen = new Set<string>();
+  const recent = [];
+  for (const { product } of recentItems) {
+    if (seen.has(product.id)) continue;
+    seen.add(product.id);
+    recent.push(product);
+    if (recent.length >= limit) break;
+  }
+  return recent;
+}

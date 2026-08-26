@@ -31,10 +31,14 @@ export function StockOutModal({
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
+  // Not gated on `open` — this component is mounted once with the Stock
+  // screen, so fetching only when the modal opens meant staring at "Loading
+  // pending MRF items…" every single time. Fetching as soon as this mounts
+  // (and keeping it warm via liveHot's polling) means the picker already has
+  // its data by the time anyone actually opens the modal.
   const { data: options } = useQuery({
     queryKey: queryKeys.stockOptions,
     queryFn: () => fetchJson<StockFormOptions>("/api/stock/options"),
-    enabled: open,
     ...liveHot,
   });
 

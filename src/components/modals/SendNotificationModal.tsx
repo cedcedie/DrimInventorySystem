@@ -35,10 +35,11 @@ export function SendNotificationModal({
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
+  // Not gated on `open` — warms the recipient picker before the modal is
+  // ever opened instead of showing "Loading…" every time.
   const { data: options } = useQuery({
     queryKey: ["users-options"],
     queryFn: () => fetchJson<{ users: UserOption[] }>("/api/users/options"),
-    enabled: open,
     select: (d) => d.users,
   });
 

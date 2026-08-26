@@ -7,6 +7,7 @@ import { Box, ButtonBase, InputBase, Typography, useMediaQuery } from "@mui/mate
 import { EntityModal } from "@/components/EntityModal";
 import { fetchJson } from "@/lib/api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveHot, liveWarm } from "@/lib/liveQuery";
 import { formatDate } from "@/lib/format";
@@ -440,6 +441,9 @@ function StockOutTab({
   const [pickedIdx, setPickedIdx] = useState(0);
   const [correcting, setCorrecting] = useState<{ product: AdjustableProduct; note: string } | null>(null);
   const [q, setQ] = useState("");
+  // The input stays instant (local state) — only the actual server fetch
+  // waits for typing to pause, so it's not a full request per keystroke.
+  const debouncedQ = useDebouncedValue(q, 300);
   const canCorrect = useCan("inventory", "canEdit");
   const theme = useTheme();
   const t = theme.palette;
@@ -448,10 +452,17 @@ function StockOutTab({
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   const { data, page, setPage } = usePaginatedQuery<StockOutData>({
-    queryKey: (p) => queryKeys.stockOut({ page: p, q }),
-    url: (p) => `/api/stock-out?page=${p}&q=${encodeURIComponent(q)}`,
+    queryKey: (p) => queryKeys.stockOut({ page: p, q: debouncedQ }),
+    url: (p) => `/api/stock-out?page=${p}&q=${encodeURIComponent(debouncedQ)}`,
     live: liveWarm,
   });
+
+  // Reset to page 1 once the debounced search actually changes (i.e. once a
+  // new fetch is about to happen) — not on every keystroke.
+  useEffect(() => {
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real search change, not every render
+  }, [debouncedQ]);
 
   const picked = data?.rows[pickedIdx] ?? data?.rows[0];
 
@@ -489,10 +500,7 @@ function StockOutTab({
            together instead of scattered across pages of unrelated releases. */}
         <InputBase
           value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setQ(e.target.value)}
           placeholder="Search by item name or code…"
           fullWidth
           sx={{

@@ -27,13 +27,15 @@ export function MultiItemMrfModal({
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
+  // Not gated on `open` — fetching only once the modal opens meant the
+  // product picker always showed "Loading…" first. This mounts once with
+  // the page, so warming it early means the list is usually already there.
   const { data: optionsData } = useQuery({
     queryKey: ["mrf-products"],
     queryFn: () =>
       fetchJson<{ products: CartProductOption[]; recentProducts: CartProductOption[] }>(
         "/api/stock/options"
       ),
-    enabled: open,
   });
   const products = optionsData?.products;
   const recentProducts = optionsData?.recentProducts;

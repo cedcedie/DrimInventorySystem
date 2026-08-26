@@ -18,10 +18,11 @@ export function PurchaseOrderModal({ open, onClose }: { open: boolean; onClose: 
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
+  // Not gated on `open` — warms the supplier/product picker before the modal
+  // is ever opened instead of showing "Loading…" every time.
   const { data: options } = useQuery({
     queryKey: ["stock-options"],
     queryFn: () => fetchJson<StockFormOptions>("/api/stock/options"),
-    enabled: open,
   });
 
   const [supplierId, setSupplierId] = useState("");

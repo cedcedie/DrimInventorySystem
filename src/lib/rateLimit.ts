@@ -1,3 +1,10 @@
+// KNOWN LIMITATION: in-memory only. On Vercel this resets on every cold
+// start/redeploy and doesn't coordinate across concurrent serverless
+// instances — it's a soft deterrent against casual brute-forcing, not a
+// hard guarantee under sustained/distributed attack. A real fix needs a
+// shared store (e.g. Upstash Redis, which has a first-class Vercel
+// integration) — deliberately not done yet; flagged for whoever picks this
+// up next rather than adding new infra right before handover.
 const buckets = new Map<string, number[]>();
 
 export function checkRateLimit(

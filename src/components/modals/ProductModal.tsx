@@ -10,6 +10,7 @@ import { lightTokens, darkTokens, ACCENT, motion } from "@/theme/tokens";
 import { queryKeys } from "@/lib/queryKeys";
 import { postJson, patchJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 
 export interface ProductFormRow {
   id: string;
@@ -82,6 +83,17 @@ export function ProductModal({
     }
   }, [open, product, categories]);
 
+  const isDirty =
+    code !== (product?.code ?? "") ||
+    name !== (product?.name ?? "") ||
+    categoryId !== (product?.categoryId ?? categories[0]?.id ?? "") ||
+    unit !== (product?.unit ?? "Pcs") ||
+    stocks !== String(product?.stocks ?? 0) ||
+    minLevel !== String(product?.minLevel ?? 0) ||
+    supplierId !== (product?.supplierId ?? "") ||
+    imageFile !== null;
+  const confirmClose = useUnsavedChangesGuard(isDirty);
+
   const mutation = useMutation({
     mutationFn: async () => {
       let imageKey = product?.imageKey ?? null;
@@ -138,6 +150,7 @@ export function ProductModal({
     <EntityModal
       open={open}
       onClose={onClose}
+      confirmClose={confirmClose}
       title={isEdit ? `Edit Item — ${product!.name}` : "Add Product"}
       width={560}
     >

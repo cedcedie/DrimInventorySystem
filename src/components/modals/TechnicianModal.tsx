@@ -8,6 +8,7 @@ import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens } from "@/theme/tokens";
 import { postJson, patchJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 
 export interface TechnicianFormRow {
   id: string;
@@ -45,6 +46,12 @@ export function TechnicianModal({
     }
   }, [open, technician]);
 
+  const isDirty =
+    empNo !== (technician?.empNo ?? "") ||
+    name !== (technician?.name ?? "") ||
+    position !== (technician?.position ?? "");
+  const confirmClose = useUnsavedChangesGuard(isDirty);
+
   const mutation = useMutation({
     mutationFn: () => {
       const payload = { empNo, name, position };
@@ -74,6 +81,7 @@ export function TechnicianModal({
     <EntityModal
       open={open}
       onClose={onClose}
+      confirmClose={confirmClose}
       title={isEdit ? `Edit Technician — ${technician!.name}` : "Add Technician"}
       width={560}
     >

@@ -60,18 +60,30 @@ export async function POST(req: Request) {
             poRefNo = po.refNo;
 
             // Cap applied qty at what was ordered; extra delivered qty still updates stock below.
+            // Collapsed by productId first (same reasoning as the stock-increment
+            // loop below — two concurrent updates to the same row from inside
+            // one transaction risks a self-deadlock, not just wasted round-trips),
+            // then run concurrently since each remaining update is a distinct row.
+            const deliveredQtyByProduct = new Map<string, number>();
             for (const item of items) {
-              const poItem = po.items.find((i) => i.productId === item.productId);
-              if (!poItem) continue;
-              const remaining = poItem.qtyOrdered - poItem.qtyReceived;
-              const applied = Math.min(remaining, item.qty);
-              if (applied > 0) {
-                await tx.purchaseOrderItem.update({
+              deliveredQtyByProduct.set(
+                item.productId,
+                (deliveredQtyByProduct.get(item.productId) ?? 0) + item.qty
+              );
+            }
+            await Promise.all(
+              Array.from(deliveredQtyByProduct.entries()).map(([productId, deliveredQty]) => {
+                const poItem = po.items.find((i) => i.productId === productId);
+                if (!poItem) return null;
+                const remaining = poItem.qtyOrdered - poItem.qtyReceived;
+                const applied = Math.min(remaining, deliveredQty);
+                if (applied <= 0) return null;
+                return tx.purchaseOrderItem.update({
                   where: { id: poItem.id },
                   data: { qtyReceived: { increment: applied } },
                 });
-              }
-            }
+              })
+            );
 
             const refreshedItems = await tx.purchaseOrderItem.findMany({
               where: { purchaseOrderId },
@@ -100,12 +112,24 @@ export async function POST(req: Request) {
             include: { items: true },
           });
 
+          // Collapse duplicate productIds first — the schema allows the same
+          // product twice in one submission, and firing two concurrent
+          // `increment` updates at the same row from inside one transaction
+          // is a self-deadlock risk, not just a wasted round-trip. Once
+          // collapsed, each remaining update targets a distinct row, so
+          // running them concurrently instead of one-at-a-time is safe.
+          const qtyByProduct = new Map<string, number>();
           for (const item of items) {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: { stocks: { increment: item.qty } },
-            });
+            qtyByProduct.set(item.productId, (qtyByProduct.get(item.productId) ?? 0) + item.qty);
           }
+          await Promise.all(
+            Array.from(qtyByProduct.entries()).map(([productId, qty]) =>
+              tx.product.update({
+                where: { id: productId },
+                data: { stocks: { increment: qty } },
+              })
+            )
+          );
 
           const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
           const itemsSummary =

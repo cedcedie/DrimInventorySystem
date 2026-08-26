@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 
-/** Lists accounts with role and any user-specific permission overrides. */
+/** Lists accounts with role and any user-specific permission overrides. Feeds
+ * the Permissions screen's user picker, which renders every option at once —
+ * a hard cap rather than real pagination. */
+const MAX_USERS_LISTED = 500;
+
 export async function GET() {
   const auth = await requireModuleAccess("users");
   if ("error" in auth) return auth.error;
@@ -31,6 +35,7 @@ export async function GET() {
         },
       },
       orderBy: [{ role: "asc" }, { name: "asc" }],
+      take: MAX_USERS_LISTED,
     });
 
     return NextResponse.json({ users });

@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { getBlobStore } from "@/lib/storage";
-
-const MAX_SIZE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+import { validateImageUpload } from "@/lib/imageUpload";
 
 export async function POST(req: Request) {
   const auth = await requireModuleAccess("products", "canCreate");
@@ -15,14 +13,13 @@ export async function POST(req: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return NextResponse.json({ error: "Only JPEG, PNG, or WebP images are allowed" }, { status: 400 });
-  }
-  if (file.size > MAX_SIZE_BYTES) {
-    return NextResponse.json({ error: "Image must be under 5MB" }, { status: 400 });
-  }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  const validationError = validateImageUpload(file, buffer);
+  if (validationError) {
+    return NextResponse.json(validationError, { status: 400 });
+  }
+
   const extension = file.type.split("/")[1];
 
   try {

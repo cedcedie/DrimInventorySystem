@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
+import type { Prisma } from "@/generated/prisma";
 
 /** Resolves the Technician roster row linked to a logged-in TECHNICIAN user. */
 export async function getTechnicianForUser(userId: string) {
@@ -145,7 +146,7 @@ const OPEN_MRF_PAGE_SIZE = 15;
  * Not cached: paginated and polled by liveHot, so a stale "use cache" entry
  * would fight the client's own 10s refetch. */
 async function loadOpenMrfsQueue(page: number) {
-  const where = { status: { in: ["PENDING", "PARTIAL"] as const } };
+  const where: Prisma.MrfWhereInput = { status: { in: ["PENDING", "PARTIAL"] } };
 
   const [total, mrfs] = await Promise.all([
     prisma.mrf.count({ where }),

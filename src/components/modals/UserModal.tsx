@@ -8,6 +8,7 @@ import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens } from "@/theme/tokens";
 import { postJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import type { Role } from "@/generated/prisma";
 
@@ -23,6 +24,7 @@ export function UserModal({ open, onClose }: { open: boolean; onClose: () => voi
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("WAREHOUSE_STAFF");
   const [error, setError] = useState("");
+  const confirmClose = useUnsavedChangesGuard(Boolean(name || username || password));
 
   const mutation = useMutation({
     mutationFn: () => postJson("/api/users", { name, username, password, role }),
@@ -54,7 +56,7 @@ export function UserModal({ open, onClose }: { open: boolean; onClose: () => voi
   };
 
   return (
-    <EntityModal open={open} onClose={onClose} title="Add User" width={420}>
+    <EntityModal open={open} onClose={onClose} confirmClose={confirmClose} title="Add User" width={420}>
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
           <FormField label="Name">

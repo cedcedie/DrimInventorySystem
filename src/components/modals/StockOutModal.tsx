@@ -13,6 +13,7 @@ import { useToast } from "@/components/Toast";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveHot } from "@/lib/liveQuery";
 import type { StockFormOptions } from "@/lib/data/stock";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 
 type PendingMrfItem = StockFormOptions["pendingMrfItems"][number];
 
@@ -52,6 +53,10 @@ export function StockOutModal({
       setMrfItemId(initialMrfItemId);
     }
   }, [open, initialMrfItemId]);
+
+  // Picking an item alone (e.g. via initialMrfItemId) isn't "work" worth
+  // protecting — typing an actual quantity is.
+  const confirmClose = useUnsavedChangesGuard(qty !== "");
 
   const selectedMrfItem = options?.pendingMrfItems.find((m) => m.id === mrfItemId);
 
@@ -113,7 +118,7 @@ export function StockOutModal({
   };
 
   return (
-    <EntityModal open={open} onClose={onClose} title="Fulfill MRF — Stock Out" width={560}>
+    <EntityModal open={open} onClose={onClose} confirmClose={confirmClose} title="Fulfill MRF — Stock Out" width={560}>
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
           <FormField label="MRF line item" span2>

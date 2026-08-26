@@ -12,7 +12,7 @@ export const queryKeys = {
   profile: ["profile"] as const,
   reports: ["reports"] as const,
   stockIn: (params: { page?: number }) => ["stock-in", params] as const,
-  stockOut: (params: { page?: number }) => ["stock-out", params] as const,
+  stockOut: (params: { page?: number; q?: string }) => ["stock-out", params] as const,
   stockOptions: ["stock-options"] as const,
   mrf: (params: { page?: number }) => ["mrf", params] as const,
   openMrfs: ["mrf-open"] as const,

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
+import { Box, ButtonBase, InputBase, Typography, useMediaQuery } from "@mui/material";
 import { EntityModal } from "@/components/EntityModal";
 import { fetchJson } from "@/lib/api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
@@ -430,6 +430,7 @@ function StockOutTab({
 }) {
   const [pickedIdx, setPickedIdx] = useState(0);
   const [correcting, setCorrecting] = useState<{ product: AdjustableProduct; note: string } | null>(null);
+  const [q, setQ] = useState("");
   const canCorrect = useCan("inventory", "canEdit");
   const theme = useTheme();
   const t = theme.palette;
@@ -438,8 +439,8 @@ function StockOutTab({
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   const { data, page, setPage } = usePaginatedQuery<StockOutData>({
-    queryKey: (p) => queryKeys.stockOut({ page: p }),
-    url: (p) => `/api/stock-out?page=${p}`,
+    queryKey: (p) => queryKeys.stockOut({ page: p, q }),
+    url: (p) => `/api/stock-out?page=${p}&q=${encodeURIComponent(q)}`,
     live: liveWarm,
   });
 
@@ -450,7 +451,7 @@ function StockOutTab({
       {/* minWidth must match TableShell's minWidth={720} below, else the sibling panel squeezes the table and clips it instead of scrolling */}
       <Box sx={{ flex: "2.4 1 460px", minWidth: { xs: "100%", sm: 720 } }}>
         {viewOnly && <ViewOnlyBanner text="View only — releasing Stock Out requires create permission" />}
-        <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 1.5, gap: 1.25, flexWrap: "wrap" }}>
           <Typography sx={{ fontSize: 12, color: t.muted }}>
             Release slips (SO) — stock issued against material requests
           </Typography>
@@ -473,6 +474,29 @@ function StockOutTab({
             </ButtonBase>
           )}
         </Box>
+
+        {/* Filters every release down to one item — e.g. "Copper Pipe 1/2" — so
+           its full history (MRF, slip, requester, project, qty) is visible
+           together instead of scattered across pages of unrelated releases. */}
+        <InputBase
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPage(1);
+          }}
+          placeholder="Search by item name or code…"
+          fullWidth
+          sx={{
+            mb: 1.5,
+            border: "1px solid",
+            borderColor: t.border,
+            borderRadius: "8px",
+            px: 1.375,
+            py: 0.75,
+            fontSize: 13,
+            bgcolor: theme.palette.mode === "dark" ? "background.default" : "#F9FAFB",
+          }}
+        />
 
         {!data ? (
           <TableSkeleton label="Loading stock-out releases…" columns={7} rows={5} />

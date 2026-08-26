@@ -50,10 +50,26 @@ export async function getStockInData(params: { page?: number }) {
 
 export type StockInData = Awaited<ReturnType<typeof getStockInData>>;
 
-async function fetchStockOutData(page: number) {
+async function fetchStockOutData(page: number, q = "") {
+  // Searching "sa item" per client revision — filters releases down to one
+  // product (e.g. "Copper Pipe 1/2") so its full release history (MRF,
+  // slip, requester, project, qty) is visible at once instead of buried
+  // across pages of unrelated releases.
+  const where = q
+    ? {
+        product: {
+          OR: [
+            { name: { contains: q, mode: "insensitive" as const } },
+            { code: { contains: q, mode: "insensitive" as const } },
+          ],
+        },
+      }
+    : {};
+
   const [total, rows] = await Promise.all([
-    prisma.stockOut.count(),
+    prisma.stockOut.count({ where }),
     prisma.stockOut.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -90,10 +106,11 @@ async function loadFirstPageStockOut() {
   return fetchStockOutData(1);
 }
 
-export async function getStockOutData(params: { page?: number }) {
+export async function getStockOutData(params: { page?: number; q?: string }) {
   const page = Math.max(1, params.page ?? 1);
-  if (page === 1) return loadFirstPageStockOut();
-  return fetchStockOutData(page);
+  const q = params.q?.trim() ?? "";
+  if (page === 1 && !q) return loadFirstPageStockOut();
+  return fetchStockOutData(page, q);
 }
 
 export type StockOutData = Awaited<ReturnType<typeof getStockOutData>>;

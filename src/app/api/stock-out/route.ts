@@ -14,7 +14,10 @@ export async function GET(req: Request) {
   if ("error" in auth) return auth.error;
 
   const { searchParams } = new URL(req.url);
-  const data = await getStockOutData({ page: Number(searchParams.get("page") ?? "1") });
+  const data = await getStockOutData({
+    page: Number(searchParams.get("page") ?? "1"),
+    q: searchParams.get("q") ?? undefined,
+  });
 
   return NextResponse.json(data);
 }

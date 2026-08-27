@@ -3,10 +3,35 @@ import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const PAGE_SIZE = 15;
 
-async function fetchPurchaseRequests(page: number) {
+async function fetchPurchaseRequests(page: number, q = "") {
+  // Matches the PR #, supplier, who filed it, or a requested item — not just
+  // the supplier.
+  const where = q
+    ? {
+        OR: [
+          { refNo: { contains: q, mode: "insensitive" as const } },
+          { supplier: { name: { contains: q, mode: "insensitive" as const } } },
+          { byUser: { name: { contains: q, mode: "insensitive" as const } } },
+          {
+            items: {
+              some: {
+                product: {
+                  OR: [
+                    { name: { contains: q, mode: "insensitive" as const } },
+                    { code: { contains: q, mode: "insensitive" as const } },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      }
+    : {};
+
   const [total, rows] = await Promise.all([
-    prisma.purchaseRequest.count(),
+    prisma.purchaseRequest.count({ where }),
     prisma.purchaseRequest.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -46,10 +71,11 @@ async function loadFirstPagePurchaseRequests() {
   return fetchPurchaseRequests(1);
 }
 
-export async function getPurchaseRequestsData(params: { page?: number }) {
+export async function getPurchaseRequestsData(params: { page?: number; q?: string }) {
   const page = Math.max(1, params.page ?? 1);
-  if (page === 1) return loadFirstPagePurchaseRequests();
-  return fetchPurchaseRequests(page);
+  const q = params.q?.trim() ?? "";
+  if (page === 1 && !q) return loadFirstPagePurchaseRequests();
+  return fetchPurchaseRequests(page, q);
 }
 
 export type PurchaseRequestsData = Awaited<ReturnType<typeof getPurchaseRequestsData>>;

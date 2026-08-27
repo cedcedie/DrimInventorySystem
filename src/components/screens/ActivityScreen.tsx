@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Typography, ButtonBase } from "@mui/material";
+import { Box, Typography, ButtonBase, InputBase } from "@mui/material";
 import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveCool } from "@/lib/liveQuery";
 import { formatDateTime } from "@/lib/format";
@@ -35,20 +36,62 @@ function activityLinkFor(ref: string): string | null {
 export function ActivityScreen({ initialData }: { initialData?: ActivityData }) {
   const router = useRouter();
   const [selected, setSelected] = useState<ActivityRow | null>(null);
+  const [q, setQ] = useState("");
+  // The input stays instant (local state) — only the actual server fetch
+  // waits for typing to pause, so it's not a full request per keystroke.
+  const debouncedQ = useDebouncedValue(q, 300);
   const { data, page, setPage } = usePaginatedQuery<ActivityData>({
-    queryKey: (p) => queryKeys.activity({ page: p }),
-    url: (p) => `/api/activity?page=${p}`,
+    queryKey: (p) => queryKeys.activity({ page: p, q: debouncedQ }),
+    url: (p) => `/api/activity?page=${p}&q=${encodeURIComponent(debouncedQ)}`,
     initialData,
     live: liveCool,
   });
-  const t = useTheme().palette;
 
-  if (!data) {
-    return <TableSkeleton label="Loading activity log…" columns={5} rows={9} />;
-  }
+  // Reset to page 1 once the search actually changes (i.e. once a new fetch
+  // is about to happen) — not on every keystroke.
+  useEffect(() => {
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real search change, not every render
+  }, [debouncedQ]);
+
+  const t = useTheme().palette;
 
   return (
     <>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          mb: 1.5,
+          px: 1.5,
+          py: 1.25,
+          bgcolor: t.surface,
+          border: "1px solid",
+          borderColor: t.line,
+          borderRadius: "12px",
+        }}
+      >
+        <InputBase
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search user, action, or reference…"
+          sx={{
+            width: "100%",
+            maxWidth: 360,
+            border: "1px solid",
+            borderColor: t.border,
+            borderRadius: "8px",
+            px: 1.375,
+            py: 0.75,
+            fontSize: 13,
+            bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
+          }}
+        />
+      </Box>
+
+      {!data ? (
+        <TableSkeleton label="Loading activity log…" columns={5} rows={9} />
+      ) : (
       <TableShell minWidth={680}>
         <TableHeaderRow
           columns={COLS}
@@ -67,7 +110,7 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
         ))}
         {data.rows.length === 0 && (
           <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-            No activity recorded yet.
+            {q ? "No activity matches your search." : "No activity recorded yet."}
           </Box>
         )}
         {data.totalPages > 1 && (
@@ -82,6 +125,7 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
           />
         )}
       </TableShell>
+      )}
 
       <EntityModal open={!!selected} onClose={() => setSelected(null)} title="Activity Details" width={420}>
         {selected && (

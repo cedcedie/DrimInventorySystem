@@ -2,8 +2,9 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Box } from "@mui/material";
+import { Box, InputBase } from "@mui/material";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveWarm } from "@/lib/liveQuery";
 import { formatDate } from "@/lib/format";
@@ -36,13 +37,24 @@ function PurchaseRequestsScreenInner({ initialData }: { initialData?: PurchaseRe
   const [detailId, setDetailId] = useState<string | null>(null);
   const canCreate = useCan("purchaseRequests", "canCreate");
   const t = useTheme().palette;
+  const [q, setQ] = useState("");
+  // The input stays instant (local state) — only the actual server fetch
+  // waits for typing to pause, so it's not a full request per keystroke.
+  const debouncedQ = useDebouncedValue(q, 300);
 
   const { data, dataUpdatedAt, page, setPage } = usePaginatedQuery<PurchaseRequestsData>({
-    queryKey: (p) => queryKeys.purchaseRequests({ page: p }),
-    url: (p) => `/api/purchase-requests?page=${p}`,
+    queryKey: (p) => queryKeys.purchaseRequests({ page: p, q: debouncedQ }),
+    url: (p) => `/api/purchase-requests?page=${p}&q=${encodeURIComponent(debouncedQ)}`,
     initialData,
     live: liveWarm,
   });
+
+  // Reset to page 1 once the search actually changes (i.e. once a new fetch
+  // is about to happen) — not on every keystroke.
+  useEffect(() => {
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real search change, not every render
+  }, [debouncedQ]);
 
   // Deep link from Activity Log: "?ref=PR-0123" opens that request's detail
   // once page 1 loads and contains it (older requests on later pages won't match).
@@ -60,8 +72,26 @@ function PurchaseRequestsScreenInner({ initialData }: { initialData?: PurchaseRe
         addLabel={canCreate ? "New Purchase Request" : undefined}
         onAdd={canCreate ? () => setModalOpen(true) : undefined}
       />
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
-        <LastUpdated dataUpdatedAt={dataUpdatedAt} />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1.5, flexWrap: "wrap" }}>
+        <InputBase
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search request #, supplier, item, or who filed it…"
+          sx={{
+            flex: "1 1 260px",
+            maxWidth: 360,
+            border: "1px solid",
+            borderColor: t.border,
+            borderRadius: "8px",
+            px: 1.375,
+            py: 0.75,
+            fontSize: 13,
+            bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
+          }}
+        />
+        <Box sx={{ ml: "auto" }}>
+          <LastUpdated dataUpdatedAt={dataUpdatedAt} />
+        </Box>
       </Box>
 
       {!data ? (
@@ -91,8 +121,8 @@ function PurchaseRequestsScreenInner({ initialData }: { initialData?: PurchaseRe
           ))}
           {data.rows.length === 0 && (
             <EmptyState
-              message="No purchase requests yet — file one when stock needs reordering."
-              actionLabel={canCreate ? "New Purchase Request" : undefined}
+              message={q ? "No purchase requests match your search." : "No purchase requests yet — file one when stock needs reordering."}
+              actionLabel={canCreate && !q ? "New Purchase Request" : undefined}
               onAction={canCreate ? () => setModalOpen(true) : undefined}
             />
           )}

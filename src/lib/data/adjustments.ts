@@ -12,10 +12,25 @@ export const REASON_LABELS: Record<string, string> = {
   CORRECTION: "Data correction",
 };
 
-async function fetchStockAdjustmentsData(page: number) {
+async function fetchStockAdjustmentsData(page: number, q = "") {
+  // Matches the product, the adjustment slip #, who made the correction, or
+  // its note — not just the product.
+  const where = q
+    ? {
+        OR: [
+          { refNo: { contains: q, mode: "insensitive" as const } },
+          { note: { contains: q, mode: "insensitive" as const } },
+          { byUser: { name: { contains: q, mode: "insensitive" as const } } },
+          { product: { name: { contains: q, mode: "insensitive" as const } } },
+          { product: { code: { contains: q, mode: "insensitive" as const } } },
+        ],
+      }
+    : {};
+
   const [total, rows] = await Promise.all([
-    prisma.stockAdjustment.count(),
+    prisma.stockAdjustment.count({ where }),
     prisma.stockAdjustment.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -53,10 +68,11 @@ async function loadFirstPageAdjustments() {
   return fetchStockAdjustmentsData(1);
 }
 
-export async function getStockAdjustmentsData(params: { page?: number }) {
+export async function getStockAdjustmentsData(params: { page?: number; q?: string }) {
   const page = Math.max(1, params.page ?? 1);
-  if (page === 1) return loadFirstPageAdjustments();
-  return fetchStockAdjustmentsData(page);
+  const q = params.q?.trim() ?? "";
+  if (page === 1 && !q) return loadFirstPageAdjustments();
+  return fetchStockAdjustmentsData(page, q);
 }
 
 export type StockAdjustmentsData = Awaited<ReturnType<typeof getStockAdjustmentsData>>;

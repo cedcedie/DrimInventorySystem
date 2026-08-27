@@ -145,7 +145,7 @@ const OPEN_MRF_PAGE_SIZE = 15;
 /** Pending/partial MRFs with remaining line items, for the warehouse queue.
  * Not cached: paginated and polled by liveHot, so a stale "use cache" entry
  * would fight the client's own 10s refetch. */
-async function loadOpenMrfsQueue(page: number) {
+async function loadOpenMrfsQueue(page: number, q = "") {
   // Status PENDING/PARTIAL should always imply at least one item still open —
   // fulfillMrfItemInTx keeps the two in sync on every write. But the count
   // must match this exactly, or pagination goes stale the moment that
@@ -156,6 +156,27 @@ async function loadOpenMrfsQueue(page: number) {
   const where: Prisma.MrfWhereInput = {
     status: { in: ["PENDING", "PARTIAL"] },
     items: { some: { qtyFulfilled: { lt: prisma.mrfItem.fields.qtyRequested } } },
+    ...(q
+      ? {
+          OR: [
+            { project: { contains: q, mode: "insensitive" } },
+            { refNo: { contains: q, mode: "insensitive" } },
+            { technician: { name: { contains: q, mode: "insensitive" } } },
+            {
+              items: {
+                some: {
+                  product: {
+                    OR: [
+                      { name: { contains: q, mode: "insensitive" } },
+                      { code: { contains: q, mode: "insensitive" } },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        }
+      : {}),
   };
 
   const [total, mrfs] = await Promise.all([
@@ -232,8 +253,8 @@ export async function getMrfsForTechnician(technicianId: string, page = 1) {
   return loadMrfsForTechnician(technicianId, page);
 }
 
-export async function getOpenMrfsQueue(page = 1) {
-  return loadOpenMrfsQueue(page);
+export async function getOpenMrfsQueue(page = 1, q = "") {
+  return loadOpenMrfsQueue(page, q.trim());
 }
 
 export type MrfListData = Awaited<ReturnType<typeof getMrfsForTechnician>>;

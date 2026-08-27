@@ -3,11 +3,51 @@ import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const PAGE_SIZE = 15;
 
-async function fetchStockInData(page: number) {
+/** Lets the same search box match a date, e.g. "Jul 30" or "2026-07-30" —
+ * matches the calendar day only (server-local), not an exact timestamp.
+ * Only attempted when `q` has a digit (a bare word like "Copper" should
+ * never accidentally parse as a date). Returns null when `q` isn't a date. */
+function tryParseDateRange(q: string): { gte: Date; lt: Date } | null {
+  if (!/\d/.test(q)) return null;
+  const parsed = new Date(q);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const start = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { gte: start, lt: end };
+}
+
+async function fetchStockInData(page: number, q = "") {
   // Paginate on batches, then flatten to one row per item (table shows one row per product).
+  // Matches item name/code, supplier, receipt slip #, who received it, or the
+  // delivery date — not just the item.
+  const dateRange = tryParseDateRange(q);
+  const where = q
+    ? {
+        OR: [
+          { refNo: { contains: q, mode: "insensitive" as const } },
+          { supplier: { name: { contains: q, mode: "insensitive" as const } } },
+          { byUser: { name: { contains: q, mode: "insensitive" as const } } },
+          {
+            items: {
+              some: {
+                product: {
+                  OR: [
+                    { name: { contains: q, mode: "insensitive" as const } },
+                    { code: { contains: q, mode: "insensitive" as const } },
+                  ],
+                },
+              },
+            },
+          },
+          ...(dateRange ? [{ createdAt: dateRange }] : []),
+        ],
+      }
+    : {};
+
   const [total, batches] = await Promise.all([
-    prisma.stockInBatch.count(),
+    prisma.stockInBatch.count({ where }),
     prisma.stockInBatch.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -42,27 +82,31 @@ async function loadFirstPageStockIn() {
   return fetchStockInData(1);
 }
 
-export async function getStockInData(params: { page?: number }) {
+export async function getStockInData(params: { page?: number; q?: string }) {
   const page = Math.max(1, params.page ?? 1);
-  if (page === 1) return loadFirstPageStockIn();
-  return fetchStockInData(page);
+  const q = params.q?.trim() ?? "";
+  if (page === 1 && !q) return loadFirstPageStockIn();
+  return fetchStockInData(page, q);
 }
 
 export type StockInData = Awaited<ReturnType<typeof getStockInData>>;
 
 async function fetchStockOutData(page: number, q = "") {
-  // Searching "sa item" per client revision — filters releases down to one
-  // product (e.g. "Copper Pipe 1/2") so its full release history (MRF,
-  // slip, requester, project, qty) is visible at once instead of buried
-  // across pages of unrelated releases.
+  // Matches item name/code, the requesting technician, the MRF's project,
+  // the MRF number, or the release date — not just the product, so "who
+  // asked for this" or "which project" or "what shipped on the 30th" all
+  // find the same release history as searching the item would.
+  const dateRange = tryParseDateRange(q);
   const where = q
     ? {
-        product: {
-          OR: [
-            { name: { contains: q, mode: "insensitive" as const } },
-            { code: { contains: q, mode: "insensitive" as const } },
-          ],
-        },
+        OR: [
+          { product: { name: { contains: q, mode: "insensitive" as const } } },
+          { product: { code: { contains: q, mode: "insensitive" as const } } },
+          { technician: { name: { contains: q, mode: "insensitive" as const } } },
+          { mrf: { project: { contains: q, mode: "insensitive" as const } } },
+          { mrf: { refNo: { contains: q, mode: "insensitive" as const } } },
+          ...(dateRange ? [{ createdAt: dateRange }] : []),
+        ],
       }
     : {};
 

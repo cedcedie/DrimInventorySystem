@@ -9,5 +9,6 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const page = Number(searchParams.get("page") ?? "1");
-  return NextResponse.json(await getOpenMrfsQueue(page));
+  const q = searchParams.get("q") ?? "";
+  return NextResponse.json(await getOpenMrfsQueue(page, q));
 }

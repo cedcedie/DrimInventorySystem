@@ -84,29 +84,44 @@ export async function buildReportData(
         take: REPORT_ROW_CAP,
       }),
     ]);
+    // Sort by the real Date, not the formatted "M/D/YYYY" display string —
+    // that string isn't zero-padded, so lexical comparison puts "8/10" before
+    // "8/9" and "12/1" before "9/5". Carry the Date through as a sort key,
+    // sort first, then drop it from the row tuples returned to the caller.
     const rows = [
-      ...stockIns.map((si) => [
-        si.createdAt.toLocaleDateString("en-PH"),
-        "Stock-In",
-        si.stockInBatch.refNo,
-        "—",
-        `${si.qty} × ${si.product.name} from ${si.stockInBatch.supplier.name}`,
-      ]),
-      ...stockOuts.map((so) => [
-        so.createdAt.toLocaleDateString("en-PH"),
-        "Stock-Out",
-        so.refNo,
-        so.mrf?.refNo ?? "—",
-        `${so.qty} × ${so.product.name} to ${so.technician.name}`,
-      ]),
-      ...adjustments.map((a) => [
-        a.createdAt.toLocaleDateString("en-PH"),
-        "Adjustment",
-        a.refNo,
-        "—",
-        `${a.product.name}: ${a.qtyBefore} → ${a.qtyAfter} (${a.delta >= 0 ? "+" : ""}${a.delta})`,
-      ]),
-    ].sort((a, b) => (a[0] < b[0] ? 1 : -1));
+      ...stockIns.map((si) => ({
+        dt: si.createdAt,
+        row: [
+          si.createdAt.toLocaleDateString("en-PH"),
+          "Stock-In",
+          si.stockInBatch.refNo,
+          "—",
+          `${si.qty} × ${si.product.name} from ${si.stockInBatch.supplier.name}`,
+        ],
+      })),
+      ...stockOuts.map((so) => ({
+        dt: so.createdAt,
+        row: [
+          so.createdAt.toLocaleDateString("en-PH"),
+          "Stock-Out",
+          so.refNo,
+          so.mrf?.refNo ?? "—",
+          `${so.qty} × ${so.product.name} to ${so.technician.name}`,
+        ],
+      })),
+      ...adjustments.map((a) => ({
+        dt: a.createdAt,
+        row: [
+          a.createdAt.toLocaleDateString("en-PH"),
+          "Adjustment",
+          a.refNo,
+          "—",
+          `${a.product.name}: ${a.qtyBefore} → ${a.qtyAfter} (${a.delta >= 0 ? "+" : ""}${a.delta})`,
+        ],
+      })),
+    ]
+      .sort((a, b) => b.dt.getTime() - a.dt.getTime())
+      .map((r) => r.row);
 
     const capped =
       stockIns.length === REPORT_ROW_CAP ||

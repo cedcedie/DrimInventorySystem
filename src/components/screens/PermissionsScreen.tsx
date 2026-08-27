@@ -77,9 +77,14 @@ const PERMISSIONS = [
 /** Create/Edit/Delete/Export are meaningless without View — both enforcement
  * layers (the page-level redirect and the API's requireModuleAccess) check
  * canView first and block everything else if it's off, so "Edit without
- * View" would silently do nothing. Checking any of those also checks View,
- * so the matrix can never save that dead combination in the first place. */
+ * View" would silently do nothing. Checking any of those also checks View —
+ * and unchecking View also clears the rest, so the reverse sequence (check
+ * Edit, then uncheck View) can't leave that same dead combination behind
+ * either. The matrix can never save "some other permission on, View off". */
 function withViewImplied(perm: string, value: boolean, base: PermissionSet): PermissionSet {
+  if (perm === "canView" && !value) {
+    return { canView: false, canCreate: false, canEdit: false, canDelete: false, canExport: false };
+  }
   return {
     canView: perm === "canView" ? value : value || base.canView,
     canCreate: perm === "canCreate" ? value : base.canCreate,

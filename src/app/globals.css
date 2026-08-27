@@ -1,4 +1,17 @@
-html,
+/* `overflow-x: hidden` goes on body only, not html — CSS spec propagates
+ * body's overflow to become the real page-scrolling element only when html
+ * itself is left at the default `visible`. Setting it on both broke that
+ * propagation, so html silently became its own independent scroller — which
+ * meant MUI's scroll-lock (used by every Select/Menu/Popover in the app),
+ * which only locks `document.body`, never actually stopped the page from
+ * scrolling while a dropdown was open. The dropdown stayed anchored to its
+ * on-open position while the real content scrolled out from under it —
+ * visually "detaching". Verified live (Playwright): before this fix,
+ * `window.scrollY` moved from 0 to 300 while a Select menu was open with
+ * `body.style.overflow: hidden`; after, it stays pinned as MUI intends. */
+html {
+  max-width: 100vw;
+}
 body {
   max-width: 100vw;
   overflow-x: hidden;

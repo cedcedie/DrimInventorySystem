@@ -7,6 +7,7 @@ import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, RowActionButton, Pagination } from "@/components/DataTable";
+import { RichTooltip } from "@/components/RichTooltip";
 import { TableSkeleton } from "@/components/Skeleton";
 import { useTheme, type Palette } from "@mui/material/styles";
 import { EntityModal } from "@/components/EntityModal";
@@ -107,11 +108,56 @@ export function TechniciansScreen({
                 <TableCell label="Employee No." mono>{r.empNo}</TableCell>
                 <TableCell label="Position" color={t.text2}>{r.position}</TableCell>
                 <TableCell label="Recent Transaction" color={t.muted} sx={{ whiteSpace: "normal" }}>
-                  {r.recentMrfs.length > 0
-                    ? r.recentMrfs.length === 1
-                      ? `${r.recentMrfs[0].refNo} · ${r.recentMrfs[0].itemSummary} × ${r.recentMrfs[0].qty}`
-                      : `${r.recentMrfs[0].refNo} · ${r.recentMrfs[0].itemSummary} × ${r.recentMrfs[0].qty} (+${r.recentMrfs.length - 1} more)`
-                    : "No recent activity"}
+                  {r.recentMrfs.length === 0 ? (
+                    "No recent activity"
+                  ) : r.recentMrfs.length === 1 ? (
+                    `${r.recentMrfs[0].refNo} · ${r.recentMrfs[0].itemSummary} × ${r.recentMrfs[0].qty}`
+                  ) : (
+                    <RichTooltip
+                      arrow
+                      title={
+                        <Box sx={{ py: 1, px: 1.25 }}>
+                          <Box sx={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.4, color: t.muted, mb: 0.75 }}>
+                            {r.recentMrfs.length} RECENT REQUESTS
+                          </Box>
+                          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.625 }}>
+                            {r.recentMrfs.map((mrf) => (
+                              <Box
+                                key={mrf.id}
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "baseline",
+                                  gap: 1,
+                                  pb: 0.625,
+                                  borderBottom: "1px solid",
+                                  borderColor: t.line2,
+                                  "&:last-of-type": { borderBottom: "none", pb: 0 },
+                                }}
+                              >
+                                <Box sx={{ minWidth: 0 }}>
+                                  <Box sx={{ fontSize: 12.5, fontWeight: 600 }}>{mrf.itemSummary}</Box>
+                                  <Box sx={{ fontSize: 10, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
+                                    {mrf.refNo} · {formatDate(new Date(mrf.date))}
+                                  </Box>
+                                </Box>
+                                <Box sx={{ fontSize: 12, fontWeight: 700, color: t.primary.main, whiteSpace: "nowrap" }}>
+                                  × {mrf.qty}
+                                </Box>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      }
+                    >
+                      <Box component="span" sx={{ cursor: "default" }}>
+                        {r.recentMrfs[0].refNo} · {r.recentMrfs[0].itemSummary} × {r.recentMrfs[0].qty}
+                        <Box component="span" sx={{ ml: 0.5, fontSize: 10, color: t.muted, fontWeight: 600 }}>
+                          (+{r.recentMrfs.length - 1} more)
+                        </Box>
+                      </Box>
+                    </RichTooltip>
+                  )}
                 </TableCell>
                 {canManage && (
                   <TableCell>

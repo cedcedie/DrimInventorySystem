@@ -3,7 +3,7 @@ import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { isProductRequestable } from "@/lib/mrfLifecycle";
 import { notifyLowStock } from "@/lib/notifications";
-import { nextRefNo, withRefNoRetry } from "@/lib/refNo";
+import { nextRefNo, withSerializableRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { stockAdjustmentSchema } from "@/lib/schemas";
@@ -40,7 +40,16 @@ export async function POST(req: Request) {
   const { productId, qtyAfter, reason, note } = parsed.data;
 
   try {
-    const result = await withRefNoRetry(() =>
+    // Ref number comes from the atomic RefCounter, outside this transaction —
+    // see the comment in src/app/api/mrf/route.ts for why it must not run
+    // inside a Serializable-isolation transaction. If the transaction below
+    // turns out to have nothing to adjust, this number is simply never used
+    // (a gap, not a collision). Serializable stays on the transaction itself:
+    // it's protecting the real race on `product.stocks` (read-then-correct),
+    // just not a ref-number one anymore.
+    const refNo = await nextRefNo(prisma, "ADJ");
+
+    const result = await withSerializableRetry(() =>
       prisma.$transaction(
         async (tx) => {
           const product = await tx.product.findUnique({ where: { id: productId } });
@@ -53,8 +62,6 @@ export async function POST(req: Request) {
           if (delta === 0) {
             throw new Error("The corrected count matches the current stock — nothing to adjust");
           }
-
-          const refNo = await nextRefNo(tx, "stockAdjustment", "ADJ");
 
           const adjustment = await tx.stockAdjustment.create({
             data: {

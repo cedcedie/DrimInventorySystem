@@ -1,5 +1,4 @@
 import type { Prisma } from "@/generated/prisma";
-import { nextRefNo } from "@/lib/refNo";
 
 type Tx = Prisma.TransactionClient;
 
@@ -16,12 +15,18 @@ export type FulfillLineResult = {
   lowStockCrossed?: { productId: string; productName: string; stocks: number; minLevel: number };
 };
 
-/** Fulfills one MRF line inside an open transaction. Caller owns retry/isolation. */
+/** Fulfills one MRF line inside an open transaction. Caller owns retry/isolation
+ * and must pass a `refNo` already allocated from the atomic RefCounter outside
+ * this transaction — generating it in here would put it inside the caller's
+ * Serializable scope, which is exactly what made ref generation abort under
+ * concurrent load before (see the comment in src/app/api/mrf/route.ts). A
+ * caller fulfilling multiple lines in one transaction (bulk stock-out) must
+ * allocate one refNo per line before starting it. */
 export async function fulfillMrfItemInTx(
   tx: Tx,
-  opts: { mrfItemId: string; quantity: number; byUserId: string }
+  opts: { mrfItemId: string; quantity: number; byUserId: string; refNo: string }
 ): Promise<FulfillLineResult> {
-  const { mrfItemId, quantity, byUserId } = opts;
+  const { mrfItemId, quantity, byUserId, refNo } = opts;
 
   const mrfItem = await tx.mrfItem.findUnique({
     where: { id: mrfItemId },
@@ -51,8 +56,6 @@ export async function fulfillMrfItemInTx(
   if (quantity > freshProduct.stocks) {
     throw new Error(`Only ${freshProduct.stocks} available in stock for ${freshProduct.name}`);
   }
-
-  const refNo = await nextRefNo(tx, "stockOut", "SO");
 
   await tx.stockOut.create({
     data: {

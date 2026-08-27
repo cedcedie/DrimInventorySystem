@@ -3,7 +3,7 @@ import { requireModuleAccess } from "@/lib/apiAuth";
 import { getStockInData } from "@/lib/data/stock";
 import { isProductRequestable } from "@/lib/mrfLifecycle";
 import { prisma } from "@/lib/prisma";
-import { nextRefNo, withRefNoRetry } from "@/lib/refNo";
+import { nextRefNo, withSerializableRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { stockInSchema } from "@/lib/schemas";
@@ -30,7 +30,14 @@ export async function POST(req: Request) {
   const { supplierId, items, purchaseOrderId } = parsed.data;
 
   try {
-    const result = await withRefNoRetry(() =>
+    // Ref number comes from the atomic RefCounter, outside this transaction —
+    // see the comment in src/app/api/mrf/route.ts for why it must not run
+    // inside a Serializable-isolation transaction. Serializable stays on the
+    // transaction itself, wrapped in a retry: it's protecting the real races
+    // (PO qtyReceived, product.stocks), just not a ref-number one anymore.
+    const refNo = await nextRefNo(prisma, "SI");
+
+    const result = await withSerializableRetry(() =>
       prisma.$transaction(
         async (tx) => {
           const supplier = await tx.supplier.findUnique({ where: { id: supplierId } });
@@ -99,8 +106,6 @@ export async function POST(req: Request) {
               data: { status: allReceived ? "RECEIVED" : anyReceived ? "PARTIALLY_RECEIVED" : po.status },
             });
           }
-
-          const refNo = await nextRefNo(tx, "stockInBatch", "SI");
 
           const batch = await tx.stockInBatch.create({
             data: {

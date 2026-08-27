@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { notifyTechMrfUpdate, notifyLowStock } from "@/lib/notifications";
-import { withRefNoRetry } from "@/lib/refNo";
+import { nextRefNo, withSerializableRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { fulfillMrfItemInTx } from "@/lib/stockOutFulfill";
 import { parseBody } from "@/lib/validate";
@@ -23,7 +23,14 @@ export async function POST(req: Request) {
   }
 
   try {
-    const results = await withRefNoRetry(() =>
+    // Ref numbers come from the atomic RefCounter, outside this transaction —
+    // see the comment in src/app/api/mrf/route.ts for why they must not be
+    // generated inside a Serializable-isolation transaction. One per line,
+    // allocated sequentially up front (each call is its own atomic increment,
+    // so this can't collide with another request's allocation either).
+    const refNos = await Promise.all(items.map(() => nextRefNo(prisma, "SO")));
+
+    const results = await withSerializableRetry(() =>
       prisma.$transaction(
         async (tx) => {
           const mrf = await tx.mrf.findUnique({
@@ -49,12 +56,14 @@ export async function POST(req: Request) {
           }
 
           const fulfilled = [];
-          for (const line of items) {
+          for (let i = 0; i < items.length; i++) {
+            const line = items[i];
             fulfilled.push(
               await fulfillMrfItemInTx(tx, {
                 mrfItemId: line.mrfItemId,
                 quantity: line.qty,
                 byUserId: auth.session.user.id,
+                refNo: refNos[i],
               })
             );
           }

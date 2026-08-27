@@ -3,7 +3,7 @@ import { requireModuleAccess } from "@/lib/apiAuth";
 import { getStockOutData } from "@/lib/data/stock";
 import { prisma } from "@/lib/prisma";
 import { notifyTechMrfUpdate, notifyLowStock } from "@/lib/notifications";
-import { withRefNoRetry } from "@/lib/refNo";
+import { nextRefNo, withSerializableRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { fulfillMrfItemInTx } from "@/lib/stockOutFulfill";
 import { parseBody } from "@/lib/validate";
@@ -31,13 +31,18 @@ export async function POST(req: Request) {
   const { mrfItemId, qty: quantity } = parsed.data;
 
   try {
-    const result = await withRefNoRetry(() =>
+    // Ref number comes from the atomic RefCounter, outside this transaction —
+    // see the comment in src/app/api/mrf/route.ts for why it must not run
+    // inside a Serializable-isolation transaction.
+    const refNo = await nextRefNo(prisma, "SO");
+    const result = await withSerializableRetry(() =>
       prisma.$transaction(
         async (tx) =>
           fulfillMrfItemInTx(tx, {
             mrfItemId,
             quantity,
             byUserId: auth.session.user.id,
+            refNo,
           }),
         { isolationLevel: "Serializable", maxWait: 10000, timeout: 15000 }
       )

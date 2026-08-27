@@ -348,6 +348,17 @@ model CompanySettings {
   updatedBy         User?    @relation(fields: [updatedById], references: [id])
 }
 
+// One row per ref-number prefix (MRF, SI, SO, ADJ, PO, PR, RPT). `nextRefNo`
+// atomically increments `value` via a single upsert — replaces the old
+// scan-existing-rows-then-insert approach, which needed Serializable
+// isolation + heavy retries and still failed most of the time under real
+// concurrent load (verified: 4/5 simultaneous MRF filings failed even with
+// 8 retries). An atomic increment can't collide, so nothing to retry.
+model RefCounter {
+  prefix String @id
+  value  Int    @default(0)
+}
+
 // Bytes for uploaded files while the Postgres BlobStore adapter is active.
 // Rows here become dead weight once R2 is configured; see src/lib/storage.
 model StoredBlob {

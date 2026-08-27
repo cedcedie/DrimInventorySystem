@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireModuleAccess, isOwnerOrAdmin } from "@/lib/apiAuth";
+import { isProductRequestable } from "@/lib/mrfLifecycle";
 import { prisma } from "@/lib/prisma";
-import { nextRefNo, withRefNoRetry } from "@/lib/refNo";
+import { nextRefNo, withSerializableRetry } from "@/lib/refNo";
 import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { purchaseRequestDecideSchema } from "@/lib/schemas";
@@ -26,7 +27,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const decision = parsed.data;
 
   try {
-    const result = await withRefNoRetry(() =>
+    // Ref number comes from the atomic RefCounter, outside this transaction —
+    // see the comment in src/app/api/mrf/route.ts for why it must not run
+    // inside a Serializable-isolation transaction. Allocated up front for the
+    // approve path even though the PR's PENDING status is only authoritatively
+    // confirmed once inside the transaction below — if someone else decided
+    // this PR in the meantime, the transaction throws and this PO number is
+    // simply never used (a gap in the sequence, not a collision — fine, same
+    // as any other rolled-back transaction that already claimed a number).
+    // Serializable isolation stays on the transaction itself, wrapped in a
+    // retry: it's still protecting a real race (two Owners deciding the same
+    // PR at once), just not a ref-number one anymore, and a P2034 write
+    // conflict is retried while a genuine "already decided" business error
+    // is not (see withSerializableRetry's retry condition).
+    const poRefNo = decision.decision === "approve" ? await nextRefNo(prisma, "PO") : undefined;
+
+    const result = await withSerializableRetry(() =>
       prisma.$transaction(
         async (tx) => {
           const pr = await tx.purchaseRequest.findUnique({
@@ -66,7 +82,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           const supplier = await tx.supplier.findUnique({ where: { id: supplierId } });
           if (!supplier) throw new Error("Supplier not found");
 
-          const poRefNo = await nextRefNo(tx, "purchaseOrder", "PO");
+          // A product referenced on this PR may have been archived after the
+          // request was filed but before it's decided — re-check at approval
+          // time, same guard the direct PO-create route already applies.
+          const productIds = pr.items.map((item) => item.productId);
+          const products = await tx.product.findMany({ where: { id: { in: productIds } } });
+          if (products.length !== productIds.length) {
+            throw new Error("One or more requested products no longer exist");
+          }
+          const notRequestable = products.find((p) => !isProductRequestable(p.archivedAt));
+          if (notRequestable) {
+            throw new Error(`${notRequestable.name} is archived and can't be ordered`);
+          }
+
+          if (!poRefNo) throw new Error("Missing ref number for approval — please retry");
           const po = await tx.purchaseOrder.create({
             data: {
               refNo: poRefNo,

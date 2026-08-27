@@ -3,7 +3,7 @@ import { requireModuleAccess } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { isProductRequestable } from "@/lib/mrfLifecycle";
 import { notifyWarehouseMrfFiled } from "@/lib/notifications";
-import { isUniqueRefNoError, nextRefNo, withRefNoRetry } from "@/lib/refNo";
+import { nextRefNo } from "@/lib/refNo";
 import { getTechnicianForUser } from "@/lib/data/mrf";
 import { parseBody } from "@/lib/validate";
 import { z } from "zod";
@@ -60,51 +60,44 @@ export async function POST(req: Request) {
   }
 
   try {
-    const refNo = await withRefNoRetry(() =>
-      prisma.$transaction(
-        async (tx) => {
-          const ref = await nextRefNo(tx, "mrf", "MRF");
-          const mrf = await tx.mrf.create({
-            data: {
-              refNo: ref,
-              technicianId: technician.id,
-              project,
-              externalRefNo: externalRefNo || null,
-              description: description || null,
-              status: "PENDING",
-              items: {
-                create: items.map((item) => ({
-                  productId: item.productId,
-                  qtyRequested: item.qty,
-                  qtyFulfilled: 0,
-                })),
-              },
-            },
-            include: { items: true },
-          });
-
-          const totalQty = mrf.items.reduce((sum, item) => sum + item.qtyRequested, 0);
-          const itemsSummary =
-            mrf.items.length === 1
-              ? `${products[0]?.name ?? "1 item"} (${totalQty})`
-              : `${mrf.items.length} items (${totalQty} total qty)`;
-
-          await tx.activityLog.create({
-            data: {
-              userId: auth.session.user.id,
-              action: `Filed MRF for ${itemsSummary}`,
-              refNo: ref,
-            },
-          });
-
-          return ref;
+    // Ref number comes from the atomic RefCounter, outside this transaction —
+    // see the comment in src/app/api/mrf/route.ts for why it must not run
+    // inside a Serializable-isolation transaction.
+    const refNo = await nextRefNo(prisma, "MRF");
+    await prisma.$transaction(async (tx) => {
+      const mrf = await tx.mrf.create({
+        data: {
+          refNo,
+          technicianId: technician.id,
+          project,
+          externalRefNo: externalRefNo || null,
+          description: description || null,
+          status: "PENDING",
+          items: {
+            create: items.map((item) => ({
+              productId: item.productId,
+              qtyRequested: item.qty,
+              qtyFulfilled: 0,
+            })),
+          },
         },
-        // Serializable + withRefNoRetry, like other ref-number routes: nextRefNo's
-        // read-max-then-insert races under ReadCommitted when two requests file
-        // at once. This route was the one write path missing the guard.
-        { isolationLevel: "Serializable", maxWait: 10000, timeout: 15000 }
-      )
-    );
+        include: { items: true },
+      });
+
+      const totalQty = mrf.items.reduce((sum, item) => sum + item.qtyRequested, 0);
+      const itemsSummary =
+        mrf.items.length === 1
+          ? `${products[0]?.name ?? "1 item"} (${totalQty})`
+          : `${mrf.items.length} items (${totalQty} total qty)`;
+
+      await tx.activityLog.create({
+        data: {
+          userId: auth.session.user.id,
+          action: `Filed MRF for ${itemsSummary}`,
+          refNo,
+        },
+      });
+    });
 
     revalidateAfterMutation(["mrf"], [`mrf-tech-${technician.id}`]);
 
@@ -117,13 +110,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ refNo }, { status: 201 });
   } catch (e) {
-    if (isUniqueRefNoError(e)) {
-      return NextResponse.json(
-        { error: "Could not assign an MRF reference number. Please try again." },
-        { status: 409 }
-      );
-    }
-
     const message = e instanceof Error ? e.message : "Failed to file MRF";
     return NextResponse.json({ error: message }, { status: 500 });
   }

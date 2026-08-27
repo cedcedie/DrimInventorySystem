@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
+import { Box, ButtonBase, Tooltip, Typography, useMediaQuery } from "@mui/material";
 import { EntityModal } from "@/components/EntityModal";
 import { fetchJson } from "@/lib/api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
@@ -220,6 +220,7 @@ function OpenMrfsTab({
         createdAt: mrf.createdAt,
         firstItem: mrf.items[0],
         extraItemCount: mrf.items.length - 1,
+        allItems: mrf.items,
         totalRemaining,
         unit: mrf.items[0]?.unit ?? "",
         anyShort,
@@ -282,15 +283,30 @@ function OpenMrfsTab({
                 )}
               </TableCell>
               <TableCell label="Item">
-                {row.firstItem?.productName}
-                {row.extraItemCount > 0 && (
-                  <Box component="span" sx={{ ml: 0.5, fontSize: 10, color: t.muted, fontWeight: 600 }}>
-                    (+{row.extraItemCount} more)
+                <Tooltip
+                  arrow
+                  title={
+                    <Box component="span" sx={{ display: "block" }}>
+                      {row.allItems.map((it) => (
+                        <Box key={it.id} component="span" sx={{ display: "block" }}>
+                          {it.productName} ({it.productCode}) — {it.qtyRemaining} {it.unit}
+                        </Box>
+                      ))}
+                    </Box>
+                  }
+                >
+                  <Box component="span" sx={{ cursor: "default" }}>
+                    {row.firstItem?.productName}
+                    {row.extraItemCount > 0 && (
+                      <Box component="span" sx={{ ml: 0.5, fontSize: 10, color: t.muted, fontWeight: 600 }}>
+                        (+{row.extraItemCount} more)
+                      </Box>
+                    )}
+                    <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
+                      {row.firstItem?.productCode}
+                    </Box>
                   </Box>
-                )}
-                <Box component="span" sx={{ display: "block", fontSize: 10, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {row.firstItem?.productCode}
-                </Box>
+                </Tooltip>
               </TableCell>
               <TableCell label="Need" bold>
                 {row.totalRemaining} {row.unit}

@@ -65,25 +65,13 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
 
   return (
     <>
-      <Box
-        sx={{
-          mb: 1.5,
-          px: 1.5,
-          py: 1.25,
-          bgcolor: t.surface,
-          border: "1px solid",
-          borderColor: t.line,
-          borderRadius: "12px",
-        }}
-      >
-        <SearchByPanel
-          fields={[
-            { key: "user", label: "User", value: user, onChange: setUser },
-            { key: "action", label: "Action", value: action, onChange: setAction },
-            { key: "ref", label: "Reference", value: ref, onChange: setRef },
-          ]}
-        />
-      </Box>
+      <SearchByPanel
+        fields={[
+          { key: "user", label: "User", value: user, onChange: setUser },
+          { key: "action", label: "Action", value: action, onChange: setAction },
+          { key: "ref", label: "Reference", value: ref, onChange: setRef },
+        ]}
+      />
 
       {!data ? (
         <TableSkeleton label="Loading activity log…" columns={5} rows={9} />

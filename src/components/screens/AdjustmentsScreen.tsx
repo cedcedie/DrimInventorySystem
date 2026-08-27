@@ -49,26 +49,14 @@ export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustme
   return (
     <Box>
       <PageChrome title="Stock Adjustments" />
-      <Box
-        sx={{
-          mb: 1.5,
-          px: 1.5,
-          py: 1.25,
-          bgcolor: t.surface,
-          border: "1px solid",
-          borderColor: t.line,
-          borderRadius: "12px",
-        }}
-      >
-        <SearchByPanel
-          fields={[
-            { key: "refNo", label: "Adj. #", value: refNo, onChange: setRefNo },
-            { key: "product", label: "Product", value: product, onChange: setProduct },
-            { key: "note", label: "Note", value: note, onChange: setNote },
-            { key: "user", label: "By", value: user, onChange: setUser },
-          ]}
-        />
-      </Box>
+      <SearchByPanel
+        fields={[
+          { key: "refNo", label: "Adj. #", value: refNo, onChange: setRefNo },
+          { key: "product", label: "Product", value: product, onChange: setProduct },
+          { key: "note", label: "Note", value: note, onChange: setNote },
+          { key: "user", label: "By", value: user, onChange: setUser },
+        ]}
+      />
 
       {!data ? (
         <TableSkeleton label="Loading stock adjustments…" columns={8} rows={8} />

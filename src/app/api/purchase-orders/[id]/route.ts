@@ -3,6 +3,7 @@ import { requireModuleAccess } from "@/lib/apiAuth";
 import { getPurchaseOrderDetail } from "@/lib/data/purchaseOrders";
 import { prisma } from "@/lib/prisma";
 import { revalidateAfterMutation } from "@/lib/revalidate";
+import { isSerializationConflictError } from "@/lib/refNo";
 import { parseBody } from "@/lib/validate";
 import { purchaseOrderStatusSchema } from "@/lib/schemas";
 
@@ -79,6 +80,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     revalidateAfterMutation(["purchase-orders"]);
     return NextResponse.json({ id: updated.id, status: updated.status });
   } catch (e) {
+    // Genuine simultaneous contention on the same PO aborts the updateMany
+    // itself with a raw Serializable write-conflict — verified live with 5
+    // concurrent cancel requests (exactly 1 succeeds, the rest land here).
+    // Same real-world meaning as the "changed concurrently" guard above, so
+    // give it the same friendly message instead of leaking the Prisma error.
+    if (isSerializationConflictError(e)) {
+      return NextResponse.json(
+        { error: "Purchase Order status changed concurrently — please retry" },
+        { status: 409 }
+      );
+    }
     const message = e instanceof Error ? e.message : "Could not update Purchase Order";
     return NextResponse.json({ error: message }, { status: 400 });
   }

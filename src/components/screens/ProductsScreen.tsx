@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, Suspense } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Box, ButtonBase, InputBase, Typography } from "@mui/material";
+import { Box, InputBase, Select, MenuItem, Typography } from "@mui/material";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
@@ -25,7 +25,6 @@ import { useToast } from "@/components/Toast";
 import { ProductModal, type ProductFormRow } from "@/components/modals/ProductModal";
 import { useCan } from "@/components/PermissionsProvider";
 import type { ProductsData } from "@/lib/data/products";
-import { motion } from "@/theme/tokens";
 
 function thumbSrc(imageKey: string | null | undefined) {
   if (!imageKey) return null;
@@ -177,31 +176,24 @@ function ProductsScreenInner({
             bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
           }}
         />
-        <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
-          {categories.slice(0, 8).map((c) => {
-            const active = category === c;
-            return (
-              <ButtonBase
-                key={c}
-                onClick={() => setCategory(c)}
-                sx={{
-                  border: "1px solid",
-                  borderColor: active ? t.primary.main : t.border,
-                  bgcolor: active ? t.primary.main : t.surface,
-                  color: active ? "#fff" : t.text2,
-                  borderRadius: "8px",
-                  px: 1.25,
-                  py: 0.625,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, border-color ${motion.duration.color}ms ${motion.easing.standard}`,
-                }}
-              >
-                {c}
-              </ButtonBase>
-            );
-          })}
-        </Box>
+        <Select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          size="small"
+          sx={{
+            minWidth: 160,
+            fontSize: 13,
+            fontWeight: 700,
+            bgcolor: t.surface,
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: t.border },
+          }}
+        >
+          {categories.map((c) => (
+            <MenuItem key={c} value={c} sx={{ fontSize: 13 }}>
+              {c}
+            </MenuItem>
+          ))}
+        </Select>
       </Box>
 
       {!data ? (

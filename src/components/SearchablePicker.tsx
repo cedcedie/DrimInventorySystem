@@ -1,19 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Box, Typography } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
-import { fieldInputSx } from "@/components/EntityModal";
+import { useMemo } from "react";
+import { Autocomplete, TextField } from "@mui/material";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens } from "@/theme/tokens";
 
 const RESULT_CAP = 8;
 
 /**
- * Generic search-filtered dropdown, replacing a raw `<Select>` for lists that
- * can grow past a screenful (products, suppliers, MRF line items). Typing
- * narrows by whatever `matches` checks; closed/empty-query view shows the
- * "recent" items first (if given), then the rest capped at RESULT_CAP.
+ * Generic search-filtered dropdown (MUI `Autocomplete`), replacing a raw
+ * `<Select>` for lists that can grow past a screenful (products, suppliers,
+ * MRF line items). Typing narrows by whatever `matches` checks; the
+ * closed/empty-query view shows "recent" items first (if given), grouped
+ * apart from the rest, capped at RESULT_CAP.
  *
  * Same interaction model as ItemCartEditor's product picker (search-first,
  * not every option mounted) — factored out here so modals that only need a
@@ -50,151 +49,69 @@ export function SearchablePicker<T>({
 }) {
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
-  const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+  const recentIds = useMemo(() => new Set((recent ?? []).map(getKey)), [recent, getKey]);
 
-  // Once a value is picked, show its label in the box instead of the raw query.
-  useEffect(() => {
-    if (!value || !options) return;
-    const picked = options.find((o) => getKey(o) === value);
-    if (picked) setQuery(renderLabel(picked));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-sync when the picked value itself changes, not on every render
-  }, [value]);
+  // Recent items first (their own group), then the rest — same ordering the
+  // hand-rolled version showed for an empty query, now via Autocomplete's groupBy.
+  const orderedOptions = useMemo(() => {
+    const rest = (options ?? []).filter((o) => !recentIds.has(getKey(o)));
+    return [...(recent ?? []), ...rest];
+  }, [options, recent, recentIds, getKey]);
 
-  const searchResults = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle || !options) return null;
-    return options.filter((o) => matches(o, needle)).slice(0, RESULT_CAP);
-  }, [options, query, matches]);
-
-  const recentIds = new Set((recent ?? []).map(getKey));
-  const browseList = options?.filter((o) => !recentIds.has(getKey(o))).slice(0, RESULT_CAP) ?? [];
-
-  const pick = (item: T) => {
-    onChange(item);
-    setQuery(renderLabel(item));
-    setOpen(false);
-  };
+  const selected = value ? (options?.find((o) => getKey(o) === value) ?? null) : null;
 
   return (
-    <Box ref={ref} sx={{ position: "relative" }}>
-      <Box sx={{ position: "relative" }}>
-        <SearchIcon
-          sx={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 16, color: t.muted2 }}
-        />
-        <Box
-          component="input"
-          value={query}
-          onFocus={() => setOpen(true)}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
+    <Autocomplete<T>
+      value={selected}
+      onChange={(_, next) => {
+        if (next) onChange(next);
+      }}
+      options={orderedOptions}
+      loading={!options}
+      loadingText={loadingMessage}
+      noOptionsText={emptyMessage}
+      getOptionLabel={renderLabel}
+      isOptionEqualToValue={(option, val) => getKey(option) === getKey(val)}
+      groupBy={recent && recent.length > 0 ? (option) => (recentIds.has(getKey(option)) ? "Recent" : "All") : undefined}
+      filterOptions={(opts, state) => {
+        const needle = state.inputValue.trim().toLowerCase();
+        const filtered = needle ? opts.filter((o) => matches(o, needle)) : opts;
+        return filtered.slice(0, RESULT_CAP);
+      }}
+      renderOption={(props, option) => {
+        const { key, ...optionProps } = props;
+        return (
+          <li key={key} {...optionProps} style={{ padding: 0 }}>
+            {renderOption(option)}
+          </li>
+        );
+      }}
+      renderInput={(params) => (
+        <TextField
+          {...params}
           placeholder={placeholder}
-          sx={{ ...fieldInputSx(t), pl: 4 }}
-        />
-      </Box>
-
-      {open && (
-        <Box
-          className="scroll-hidden"
+          size="small"
           sx={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            zIndex: 20,
-            maxHeight: 280,
-            overflowY: "auto",
+            "& .MuiOutlinedInput-root": {
+              bgcolor: t.surface,
+              borderRadius: "8px",
+              fontSize: 12.5,
+            },
+          }}
+        />
+      )}
+      slotProps={{
+        paper: {
+          sx: {
             bgcolor: t.surface,
             border: "1px solid",
             borderColor: t.line,
-            borderRadius: "8px",
             boxShadow: "0 4px 12px rgba(16,24,40,0.10)",
-          }}
-        >
-          {!options ? (
-            <Typography sx={{ fontSize: 12.5, color: t.muted, px: 1.5, py: 1.25 }}>{loadingMessage}</Typography>
-          ) : searchResults ? (
-            searchResults.length === 0 ? (
-              <Typography sx={{ fontSize: 12.5, color: t.muted, px: 1.5, py: 1.25 }}>
-                {emptyMessage}
-              </Typography>
-            ) : (
-              searchResults.map((o) => (
-                <Box key={getKey(o)} onClick={() => pick(o)}>
-                  {renderOption(o)}
-                </Box>
-              ))
-            )
-          ) : (
-            <>
-              {recent && recent.length > 0 && (
-                <Box>
-                  <Typography
-                    sx={{
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                      color: t.muted2,
-                      px: 1.5,
-                      pt: 1,
-                      pb: 0.5,
-                    }}
-                  >
-                    Recent
-                  </Typography>
-                  {recent.map((o) => (
-                    <Box key={getKey(o)} onClick={() => pick(o)}>
-                      {renderOption(o)}
-                    </Box>
-                  ))}
-                </Box>
-              )}
-              {browseList.length > 0 && (
-                <Box>
-                  {recent && recent.length > 0 && (
-                    <Typography
-                      sx={{
-                        fontSize: 10.5,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.5px",
-                        color: t.muted2,
-                        px: 1.5,
-                        pt: 1,
-                        pb: 0.5,
-                      }}
-                    >
-                      All
-                    </Typography>
-                  )}
-                  {browseList.map((o) => (
-                    <Box key={getKey(o)} onClick={() => pick(o)}>
-                      {renderOption(o)}
-                    </Box>
-                  ))}
-                </Box>
-              )}
-              {browseList.length === 0 && (!recent || recent.length === 0) && (
-                <Typography sx={{ fontSize: 12.5, color: t.muted, px: 1.5, py: 1.25 }}>
-                  {emptyMessage}
-                </Typography>
-              )}
-            </>
-          )}
-        </Box>
-      )}
-    </Box>
+          },
+        },
+        listbox: { className: "scroll-hidden", sx: { maxHeight: 280 } },
+      }}
+    />
   );
 }

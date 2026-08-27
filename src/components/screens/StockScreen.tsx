@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
+import { Box, ButtonBase, Tab, Tabs, Typography, useMediaQuery } from "@mui/material";
 import { RichTooltip } from "@/components/RichTooltip";
 import { EntityModal } from "@/components/EntityModal";
 import { fetchJson } from "@/lib/api";
@@ -96,15 +96,33 @@ function StockScreenInner({ initialTab }: { initialTab?: string }) {
   return (
     <Box>
       <PageChrome title="Stock & Material Requests" />
-      <Box
-        role="tablist"
+      <Tabs
+        value={tab}
+        onChange={(_, next: StockTab) => setTab(next)}
         aria-label="Stock sections"
-        sx={{ display: "flex", gap: 0.25, mb: 1.75, borderBottom: "1px solid", borderColor: t.line }}
+        sx={{
+          mb: 1.75,
+          minHeight: "auto",
+          borderBottom: "1px solid",
+          borderColor: t.line,
+          "& .MuiTab-root": {
+            minHeight: "auto",
+            px: 2,
+            py: 1,
+            fontSize: 13,
+            fontWeight: 600,
+            textTransform: "none",
+            color: t.muted,
+            "&.Mui-selected": { color: t.primary.main },
+            "&:focus-visible": { outline: `2px solid ${t.primary.main}`, outlineOffset: 2 },
+          },
+          "& .MuiTabs-indicator": { bgcolor: t.primary.main, height: 2 },
+        }}
       >
-        <TabButton label="Open MRFs" active={tab === "requests"} onClick={() => setTab("requests")} />
-        <TabButton label="Stock In (SI)" active={tab === "in"} onClick={() => setTab("in")} />
-        <TabButton label="Stock Out (SO)" active={tab === "out"} onClick={() => setTab("out")} />
-      </Box>
+        <Tab label="Open MRFs" value="requests" />
+        <Tab label="Stock In (SI)" value="in" />
+        <Tab label="Stock Out (SO)" value="out" />
+      </Tabs>
 
       {tab === "requests" ? (
         <OpenMrfsTab canStock={canStock} viewOnly={viewOnly} onOpenDetail={setDetailMrfId} />
@@ -128,35 +146,6 @@ function StockScreenInner({ initialTab }: { initialTab?: string }) {
   );
 }
 
-function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  const t = useTheme().palette;
-
-  return (
-    <ButtonBase
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      sx={{
-        border: "none",
-        bgcolor: "transparent",
-        px: 2,
-        py: 1,
-        fontSize: 13,
-        fontWeight: 600,
-        color: active ? t.primary.main : t.muted,
-        borderBottom: "2px solid",
-        borderColor: active ? t.primary.main : "transparent",
-        mb: "-1px",
-        "&:focus-visible": {
-          outline: `2px solid ${t.primary.main}`,
-          outlineOffset: 2,
-        },
-      }}
-    >
-      {label}
-    </ButtonBase>
-  );
-}
 
 
 function OpenMrfsTab({

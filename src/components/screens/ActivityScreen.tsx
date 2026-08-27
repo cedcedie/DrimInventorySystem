@@ -104,8 +104,7 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
             } of ${data.total} · Page ${page} of ${data.totalPages}`}
             page={page}
             totalPages={data.totalPages}
-            onPrev={() => setPage((p) => Math.max(1, p - 1))}
-            onNext={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+            onChange={setPage}
           />
         )}
       </TableShell>

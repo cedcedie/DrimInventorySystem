@@ -1,6 +1,6 @@
 "use client";
 
-import { Box } from "@mui/material";
+import { Chip } from "@mui/material";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightChips, darkChips } from "@/theme/tokens";
 
@@ -41,21 +41,18 @@ export function StatusChip({ label, tone }: { label: string; tone?: ChipTone }) 
   const [, bg, fg] = chips[resolvedTone];
 
   return (
-    <Box
-      component="span"
+    <Chip
+      label={label}
+      size="small"
       sx={{
-        display: "inline-block",
+        height: "auto",
         fontSize: 11,
         fontWeight: 700,
-        padding: "3px 10px",
-        borderRadius: "999px",
+        letterSpacing: "0.2px",
         bgcolor: bg,
         color: fg,
-        whiteSpace: "nowrap",
-        letterSpacing: "0.2px",
+        "& .MuiChip-label": { px: 1.25, py: "3px" },
       }}
-    >
-      {label}
-    </Box>
+    />
   );
 }

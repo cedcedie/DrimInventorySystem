@@ -161,8 +161,7 @@ export function TechniciansScreen({
                 info={`${data.total} technician${data.total === 1 ? "" : "s"}`}
                 page={data.page}
                 totalPages={data.totalPages}
-                onPrev={() => setPage((p) => Math.max(1, p - 1))}
-                onNext={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+                onChange={setPage}
               />
             )}
           </TableShell>

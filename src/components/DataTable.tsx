@@ -1,9 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { Box, ButtonBase, Tooltip, Typography } from "@mui/material";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import { Box, ButtonBase, Pagination as MuiPagination, Tooltip, Typography } from "@mui/material";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
@@ -301,29 +299,15 @@ export function Pagination({
   info,
   page,
   totalPages,
-  onPrev,
-  onNext,
+  onChange,
 }: {
   info: string;
   page: number;
   totalPages: number;
-  onPrev: () => void;
-  onNext: () => void;
+  onChange: (page: number) => void;
 }) {
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
-
-  const navButtonSx = (enabled: boolean) =>
-    ({
-      width: 30,
-      height: 30,
-      borderRadius: "50%",
-      border: "1px solid",
-      borderColor: t.line,
-      bgcolor: t.surface,
-      color: enabled ? t.text2 : t.muted3,
-      "&:hover": enabled ? { borderColor: ACCENT, color: ACCENT } : undefined,
-    }) as const;
 
   return (
     <Box
@@ -341,35 +325,29 @@ export function Pagination({
       }}
     >
       <Typography sx={{ fontSize: 12.5, color: t.muted }}>{info}</Typography>
-      <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1 }}>
-        <ButtonBase aria-label="Previous page" onClick={onPrev} disabled={page <= 1} sx={navButtonSx(page > 1)}>
-          <ChevronLeftIcon sx={{ fontSize: 18 }} />
-        </ButtonBase>
-        <Box
-          sx={{
-            width: 30,
-            height: 30,
-            borderRadius: "50%",
-            bgcolor: ACCENT,
-            color: "#fff",
-            display: "grid",
-            placeItems: "center",
+      <MuiPagination
+        page={page}
+        count={totalPages}
+        onChange={(_, next) => onChange(next)}
+        siblingCount={0}
+        boundaryCount={1}
+        size="small"
+        shape="rounded"
+        sx={{
+          ml: "auto",
+          "& .MuiPaginationItem-root": {
             fontSize: 12.5,
             fontWeight: 700,
-          }}
-        >
-          {page}
-        </Box>
-        <Typography sx={{ fontSize: 12.5, color: t.muted }}>of {totalPages}</Typography>
-        <ButtonBase
-          aria-label="Next page"
-          onClick={onNext}
-          disabled={page >= totalPages}
-          sx={navButtonSx(page < totalPages)}
-        >
-          <ChevronRightIcon sx={{ fontSize: 18 }} />
-        </ButtonBase>
-      </Box>
+            color: t.text2,
+            borderColor: t.line,
+          },
+          "& .MuiPaginationItem-root.Mui-selected": {
+            bgcolor: ACCENT,
+            color: "#fff",
+            "&:hover": { bgcolor: ACCENT },
+          },
+        }}
+      />
     </Box>
   );
 }

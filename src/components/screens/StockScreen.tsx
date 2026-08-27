@@ -378,8 +378,7 @@ function OpenMrfsTab({
               info={`${data.total} open request${data.total === 1 ? "" : "s"}`}
               page={data.page}
               totalPages={data.totalPages}
-              onPrev={() => setPage((p) => Math.max(1, p - 1))}
-              onNext={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+              onChange={setPage}
             />
           )}
         </TableShell>
@@ -526,8 +525,7 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
               } of ${data.total} · Page ${page} of ${data.totalPages}`}
               page={page}
               totalPages={data.totalPages}
-              onPrev={() => setPage((p) => Math.max(1, p - 1))}
-              onNext={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+              onChange={setPage}
             />
           )}
         </TableShell>
@@ -692,8 +690,7 @@ function StockOutTab({
                 } of ${data.total} · Page ${page} of ${data.totalPages}`}
                 page={page}
                 totalPages={data.totalPages}
-                onPrev={() => setPage((p) => Math.max(1, p - 1))}
-                onNext={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+                onChange={setPage}
               />
             )}
           </TableShell>

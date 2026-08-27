@@ -9,29 +9,25 @@ function isPrivileged(role: Role) {
   return role === "OWNER" || role === "ADMIN";
 }
 
+export type ActivityFilters = { user?: string; action?: string; ref?: string };
+
 /** One table, one page, filtered by who's asking — Owner/Admin see every row
  * (including sensitive account/permission/config changes); everyone else sees
- * operational events only. */
+ * operational events only. Each filled-in field is its own AND'd condition —
+ * not one free-text box OR-ing across everything. */
 async function fetchActivityData(
   page: number,
   includeSensitive: boolean,
-  q = "",
+  filters: ActivityFilters = {},
   take = PAGE_SIZE
 ) {
-  const where = {
-    AND: [
-      includeSensitive ? {} : { sensitive: false },
-      q
-        ? {
-            OR: [
-              { action: { contains: q, mode: "insensitive" as const } },
-              { refNo: { contains: q, mode: "insensitive" as const } },
-              { user: { name: { contains: q, mode: "insensitive" as const } } },
-            ],
-          }
-        : {},
-    ],
-  };
+  const { user, action, ref } = filters;
+  const and: object[] = [includeSensitive ? {} : { sensitive: false }];
+  if (user) and.push({ user: { name: { contains: user, mode: "insensitive" as const } } });
+  if (action) and.push({ action: { contains: action, mode: "insensitive" as const } });
+  if (ref) and.push({ refNo: { contains: ref, mode: "insensitive" as const } });
+
+  const where = { AND: and };
 
   const [total, activities] = await Promise.all([
     prisma.activityLog.count({ where }),
@@ -66,18 +62,23 @@ async function loadFirstPageActivity(role: Role) {
   return fetchActivityData(1, isPrivileged(role));
 }
 
-export async function getActivityData(params: { page?: number; role: Role; q?: string }) {
+export async function getActivityData(params: { page?: number; role: Role } & ActivityFilters) {
   const page = Math.max(1, params.page ?? 1);
-  const q = params.q?.trim() ?? "";
-  if (page === 1 && !q) return loadFirstPageActivity(params.role);
-  return fetchActivityData(page, isPrivileged(params.role), q);
+  const filters: ActivityFilters = {
+    user: params.user?.trim() || undefined,
+    action: params.action?.trim() || undefined,
+    ref: params.ref?.trim() || undefined,
+  };
+  const hasFilter = Object.values(filters).some(Boolean);
+  if (page === 1 && !hasFilter) return loadFirstPageActivity(params.role);
+  return fetchActivityData(page, isPrivileged(params.role), filters);
 }
 
 async function loadActivityWidget() {
   "use cache";
   tagAndLife("activity", CACHE_SECONDS.dashboard);
   // Always filtered/non-sensitive, regardless of viewer role — this is a preview, not the audit surface.
-  return fetchActivityData(1, false, "", WIDGET_SIZE);
+  return fetchActivityData(1, false, {}, WIDGET_SIZE);
 }
 
 /** Compact last-10 rows for the Dashboard widget, non-sensitive view for every role. */

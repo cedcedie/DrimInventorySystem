@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, InputBase } from "@mui/material";
+import { Box } from "@mui/material";
+import { SearchByPanel } from "@/components/SearchByPanel";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
@@ -16,23 +17,32 @@ import type { StockAdjustmentsData } from "@/lib/data/adjustments";
 const COLS = "100px 130px minmax(0,1.2fr) 72px 72px 72px minmax(0,1fr) 96px";
 
 export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustmentsData }) {
-  const [q, setQ] = useState("");
-  // The input stays instant (local state) — only the actual server fetch
+  const [refNo, setRefNo] = useState("");
+  const [product, setProduct] = useState("");
+  const [note, setNote] = useState("");
+  const [user, setUser] = useState("");
+  // The inputs stay instant (local state) — only the actual server fetch
   // waits for typing to pause, so it's not a full request per keystroke.
-  const debouncedQ = useDebouncedValue(q, 300);
+  const debouncedRefNo = useDebouncedValue(refNo, 300);
+  const debouncedProduct = useDebouncedValue(product, 300);
+  const debouncedNote = useDebouncedValue(note, 300);
+  const debouncedUser = useDebouncedValue(user, 300);
+  const hasFilter = Boolean(debouncedRefNo || debouncedProduct || debouncedNote || debouncedUser);
   const { data, page, setPage } = usePaginatedQuery<StockAdjustmentsData>({
-    queryKey: (p) => queryKeys.adjustments({ page: p, q: debouncedQ }),
-    url: (p) => `/api/stock-adjustments?page=${p}&q=${encodeURIComponent(debouncedQ)}`,
+    queryKey: (p) =>
+      queryKeys.adjustments({ page: p, refNo: debouncedRefNo, product: debouncedProduct, note: debouncedNote, user: debouncedUser }),
+    url: (p) =>
+      `/api/stock-adjustments?page=${p}&refNo=${encodeURIComponent(debouncedRefNo)}&product=${encodeURIComponent(debouncedProduct)}&note=${encodeURIComponent(debouncedNote)}&user=${encodeURIComponent(debouncedUser)}`,
     initialData,
     live: liveCool,
   });
 
-  // Reset to page 1 once the search actually changes (i.e. once a new fetch
+  // Reset to page 1 once a filter actually changes (i.e. once a new fetch
   // is about to happen) — not on every keystroke.
   useEffect(() => {
     setPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real search change, not every render
-  }, [debouncedQ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real filter change, not every render
+  }, [debouncedRefNo, debouncedProduct, debouncedNote, debouncedUser]);
 
   const t = useTheme().palette;
 
@@ -41,8 +51,6 @@ export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustme
       <PageChrome title="Stock Adjustments" />
       <Box
         sx={{
-          display: "flex",
-          alignItems: "center",
           mb: 1.5,
           px: 1.5,
           py: 1.25,
@@ -52,21 +60,13 @@ export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustme
           borderRadius: "12px",
         }}
       >
-        <InputBase
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search product, adj. #, note, or who made it…"
-          sx={{
-            width: "100%",
-            maxWidth: 360,
-            border: "1px solid",
-            borderColor: t.border,
-            borderRadius: "8px",
-            px: 1.375,
-            py: 0.75,
-            fontSize: 13,
-            bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
-          }}
+        <SearchByPanel
+          fields={[
+            { key: "refNo", label: "Adj. #", value: refNo, onChange: setRefNo },
+            { key: "product", label: "Product", value: product, onChange: setProduct },
+            { key: "note", label: "Note", value: note, onChange: setNote },
+            { key: "user", label: "By", value: user, onChange: setUser },
+          ]}
         />
       </Box>
 
@@ -101,7 +101,7 @@ export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustme
           ))}
           {data.rows.length === 0 && (
             <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-              {q
+              {hasFilter
                 ? "No adjustments match your search."
                 : "No stock adjustments recorded yet. Use Adjust Stock on the Inventory screen when counts need correction."}
             </Box>

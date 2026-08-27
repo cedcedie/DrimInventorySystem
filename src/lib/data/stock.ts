@@ -16,33 +16,36 @@ function tryParseDateRange(q: string): { gte: Date; lt: Date } | null {
   return { gte: start, lt: end };
 }
 
-async function fetchStockInData(page: number, q = "") {
-  // Paginate on batches, then flatten to one row per item (table shows one row per product).
-  // Matches item name/code, supplier, receipt slip #, who received it, or the
-  // delivery date — not just the item.
-  const dateRange = tryParseDateRange(q);
-  const where = q
-    ? {
-        OR: [
-          { refNo: { contains: q, mode: "insensitive" as const } },
-          { supplier: { name: { contains: q, mode: "insensitive" as const } } },
-          { byUser: { name: { contains: q, mode: "insensitive" as const } } },
-          {
-            items: {
-              some: {
-                product: {
-                  OR: [
-                    { name: { contains: q, mode: "insensitive" as const } },
-                    { code: { contains: q, mode: "insensitive" as const } },
-                  ],
-                },
-              },
-            },
+export type StockInFilters = { item?: string; supplier?: string; refNo?: string; date?: string; receivedBy?: string };
+
+/** Each filled-in field is its own AND'd condition — not one free-text box
+ * OR-ing across everything. Filling "Item" + "Supplier" narrows to rows
+ * matching BOTH, not either. */
+async function fetchStockInData(page: number, filters: StockInFilters = {}) {
+  const { item, supplier, refNo, date, receivedBy } = filters;
+  const dateRange = date ? tryParseDateRange(date) : null;
+
+  const and: object[] = [];
+  if (refNo) and.push({ refNo: { contains: refNo, mode: "insensitive" as const } });
+  if (supplier) and.push({ supplier: { name: { contains: supplier, mode: "insensitive" as const } } });
+  if (receivedBy) and.push({ byUser: { name: { contains: receivedBy, mode: "insensitive" as const } } });
+  if (item) {
+    and.push({
+      items: {
+        some: {
+          product: {
+            OR: [
+              { name: { contains: item, mode: "insensitive" as const } },
+              { code: { contains: item, mode: "insensitive" as const } },
+            ],
           },
-          ...(dateRange ? [{ createdAt: dateRange }] : []),
-        ],
-      }
-    : {};
+        },
+      },
+    });
+  }
+  if (dateRange) and.push({ createdAt: dateRange });
+
+  const where = and.length ? { AND: and } : {};
 
   const [total, batches] = await Promise.all([
     prisma.stockInBatch.count({ where }),
@@ -82,33 +85,48 @@ async function loadFirstPageStockIn() {
   return fetchStockInData(1);
 }
 
-export async function getStockInData(params: { page?: number; q?: string }) {
+export async function getStockInData(params: { page?: number } & StockInFilters) {
   const page = Math.max(1, params.page ?? 1);
-  const q = params.q?.trim() ?? "";
-  if (page === 1 && !q) return loadFirstPageStockIn();
-  return fetchStockInData(page, q);
+  const filters: StockInFilters = {
+    item: params.item?.trim() || undefined,
+    supplier: params.supplier?.trim() || undefined,
+    refNo: params.refNo?.trim() || undefined,
+    date: params.date?.trim() || undefined,
+    receivedBy: params.receivedBy?.trim() || undefined,
+  };
+  const hasFilter = Object.values(filters).some(Boolean);
+  if (page === 1 && !hasFilter) return loadFirstPageStockIn();
+  return fetchStockInData(page, filters);
 }
 
 export type StockInData = Awaited<ReturnType<typeof getStockInData>>;
 
-async function fetchStockOutData(page: number, q = "") {
-  // Matches item name/code, the requesting technician, the MRF's project,
-  // the MRF number, or the release date — not just the product, so "who
-  // asked for this" or "which project" or "what shipped on the 30th" all
-  // find the same release history as searching the item would.
-  const dateRange = tryParseDateRange(q);
-  const where = q
-    ? {
+export type StockOutFilters = { mrfNumber?: string; date?: string; item?: string; project?: string; technician?: string };
+
+/** Each filled-in field is its own AND'd condition — not one free-text box
+ * OR-ing across everything. Filling "Item" + "Technician" narrows to rows
+ * matching BOTH, not either. */
+async function fetchStockOutData(page: number, filters: StockOutFilters = {}) {
+  const { mrfNumber, date, item, project, technician } = filters;
+  const dateRange = date ? tryParseDateRange(date) : null;
+
+  const and: object[] = [];
+  if (mrfNumber) and.push({ mrf: { refNo: { contains: mrfNumber, mode: "insensitive" as const } } });
+  if (project) and.push({ mrf: { project: { contains: project, mode: "insensitive" as const } } });
+  if (technician) and.push({ technician: { name: { contains: technician, mode: "insensitive" as const } } });
+  if (item) {
+    and.push({
+      product: {
         OR: [
-          { product: { name: { contains: q, mode: "insensitive" as const } } },
-          { product: { code: { contains: q, mode: "insensitive" as const } } },
-          { technician: { name: { contains: q, mode: "insensitive" as const } } },
-          { mrf: { project: { contains: q, mode: "insensitive" as const } } },
-          { mrf: { refNo: { contains: q, mode: "insensitive" as const } } },
-          ...(dateRange ? [{ createdAt: dateRange }] : []),
+          { name: { contains: item, mode: "insensitive" as const } },
+          { code: { contains: item, mode: "insensitive" as const } },
         ],
-      }
-    : {};
+      },
+    });
+  }
+  if (dateRange) and.push({ createdAt: dateRange });
+
+  const where = and.length ? { AND: and } : {};
 
   const [total, rows] = await Promise.all([
     prisma.stockOut.count({ where }),
@@ -150,11 +168,18 @@ async function loadFirstPageStockOut() {
   return fetchStockOutData(1);
 }
 
-export async function getStockOutData(params: { page?: number; q?: string }) {
+export async function getStockOutData(params: { page?: number } & StockOutFilters) {
   const page = Math.max(1, params.page ?? 1);
-  const q = params.q?.trim() ?? "";
-  if (page === 1 && !q) return loadFirstPageStockOut();
-  return fetchStockOutData(page, q);
+  const filters: StockOutFilters = {
+    mrfNumber: params.mrfNumber?.trim() || undefined,
+    date: params.date?.trim() || undefined,
+    item: params.item?.trim() || undefined,
+    project: params.project?.trim() || undefined,
+    technician: params.technician?.trim() || undefined,
+  };
+  const hasFilter = Object.values(filters).some(Boolean);
+  if (page === 1 && !hasFilter) return loadFirstPageStockOut();
+  return fetchStockOutData(page, filters);
 }
 
 export type StockOutData = Awaited<ReturnType<typeof getStockOutData>>;

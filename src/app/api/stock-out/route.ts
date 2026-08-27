@@ -16,7 +16,11 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const data = await getStockOutData({
     page: Number(searchParams.get("page") ?? "1"),
-    q: searchParams.get("q") ?? undefined,
+    mrfNumber: searchParams.get("mrfNumber") ?? undefined,
+    date: searchParams.get("date") ?? undefined,
+    item: searchParams.get("item") ?? undefined,
+    project: searchParams.get("project") ?? undefined,
+    technician: searchParams.get("technician") ?? undefined,
   });
 
   return NextResponse.json(data);

@@ -12,20 +12,25 @@ export const REASON_LABELS: Record<string, string> = {
   CORRECTION: "Data correction",
 };
 
-async function fetchStockAdjustmentsData(page: number, q = "") {
-  // Matches the product, the adjustment slip #, who made the correction, or
-  // its note — not just the product.
-  const where = q
-    ? {
-        OR: [
-          { refNo: { contains: q, mode: "insensitive" as const } },
-          { note: { contains: q, mode: "insensitive" as const } },
-          { byUser: { name: { contains: q, mode: "insensitive" as const } } },
-          { product: { name: { contains: q, mode: "insensitive" as const } } },
-          { product: { code: { contains: q, mode: "insensitive" as const } } },
-        ],
-      }
-    : {};
+export type AdjustmentsFilters = { refNo?: string; product?: string; note?: string; user?: string };
+
+/** Each filled-in field is its own AND'd condition — not one free-text box
+ * OR-ing across everything. */
+async function fetchStockAdjustmentsData(page: number, filters: AdjustmentsFilters = {}) {
+  const { refNo, product, note, user } = filters;
+  const and: object[] = [];
+  if (refNo) and.push({ refNo: { contains: refNo, mode: "insensitive" as const } });
+  if (note) and.push({ note: { contains: note, mode: "insensitive" as const } });
+  if (user) and.push({ byUser: { name: { contains: user, mode: "insensitive" as const } } });
+  if (product) {
+    and.push({
+      OR: [
+        { product: { name: { contains: product, mode: "insensitive" as const } } },
+        { product: { code: { contains: product, mode: "insensitive" as const } } },
+      ],
+    });
+  }
+  const where = and.length ? { AND: and } : {};
 
   const [total, rows] = await Promise.all([
     prisma.stockAdjustment.count({ where }),
@@ -68,11 +73,17 @@ async function loadFirstPageAdjustments() {
   return fetchStockAdjustmentsData(1);
 }
 
-export async function getStockAdjustmentsData(params: { page?: number; q?: string }) {
+export async function getStockAdjustmentsData(params: { page?: number } & AdjustmentsFilters) {
   const page = Math.max(1, params.page ?? 1);
-  const q = params.q?.trim() ?? "";
-  if (page === 1 && !q) return loadFirstPageAdjustments();
-  return fetchStockAdjustmentsData(page, q);
+  const filters: AdjustmentsFilters = {
+    refNo: params.refNo?.trim() || undefined,
+    product: params.product?.trim() || undefined,
+    note: params.note?.trim() || undefined,
+    user: params.user?.trim() || undefined,
+  };
+  const hasFilter = Object.values(filters).some(Boolean);
+  if (page === 1 && !hasFilter) return loadFirstPageAdjustments();
+  return fetchStockAdjustmentsData(page, filters);
 }
 
 export type StockAdjustmentsData = Awaited<ReturnType<typeof getStockAdjustmentsData>>;

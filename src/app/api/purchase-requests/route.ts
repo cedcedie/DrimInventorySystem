@@ -16,7 +16,10 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const data = await getPurchaseRequestsData({
     page: Number(searchParams.get("page") ?? "1"),
-    q: searchParams.get("q") ?? undefined,
+    refNo: searchParams.get("refNo") ?? undefined,
+    supplier: searchParams.get("supplier") ?? undefined,
+    item: searchParams.get("item") ?? undefined,
+    filedBy: searchParams.get("filedBy") ?? undefined,
   });
 
   return NextResponse.json(data);

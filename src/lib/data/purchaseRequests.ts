@@ -3,30 +3,31 @@ import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const PAGE_SIZE = 15;
 
-async function fetchPurchaseRequests(page: number, q = "") {
-  // Matches the PR #, supplier, who filed it, or a requested item — not just
-  // the supplier.
-  const where = q
-    ? {
-        OR: [
-          { refNo: { contains: q, mode: "insensitive" as const } },
-          { supplier: { name: { contains: q, mode: "insensitive" as const } } },
-          { byUser: { name: { contains: q, mode: "insensitive" as const } } },
-          {
-            items: {
-              some: {
-                product: {
-                  OR: [
-                    { name: { contains: q, mode: "insensitive" as const } },
-                    { code: { contains: q, mode: "insensitive" as const } },
-                  ],
-                },
-              },
-            },
+export type PurchaseRequestsFilters = { refNo?: string; supplier?: string; item?: string; filedBy?: string };
+
+/** Each filled-in field is its own AND'd condition — not one free-text box
+ * OR-ing across everything. */
+async function fetchPurchaseRequests(page: number, filters: PurchaseRequestsFilters = {}) {
+  const { refNo, supplier, item, filedBy } = filters;
+  const and: object[] = [];
+  if (refNo) and.push({ refNo: { contains: refNo, mode: "insensitive" as const } });
+  if (supplier) and.push({ supplier: { name: { contains: supplier, mode: "insensitive" as const } } });
+  if (filedBy) and.push({ byUser: { name: { contains: filedBy, mode: "insensitive" as const } } });
+  if (item) {
+    and.push({
+      items: {
+        some: {
+          product: {
+            OR: [
+              { name: { contains: item, mode: "insensitive" as const } },
+              { code: { contains: item, mode: "insensitive" as const } },
+            ],
           },
-        ],
-      }
-    : {};
+        },
+      },
+    });
+  }
+  const where = and.length ? { AND: and } : {};
 
   const [total, rows] = await Promise.all([
     prisma.purchaseRequest.count({ where }),
@@ -71,11 +72,17 @@ async function loadFirstPagePurchaseRequests() {
   return fetchPurchaseRequests(1);
 }
 
-export async function getPurchaseRequestsData(params: { page?: number; q?: string }) {
+export async function getPurchaseRequestsData(params: { page?: number } & PurchaseRequestsFilters) {
   const page = Math.max(1, params.page ?? 1);
-  const q = params.q?.trim() ?? "";
-  if (page === 1 && !q) return loadFirstPagePurchaseRequests();
-  return fetchPurchaseRequests(page, q);
+  const filters: PurchaseRequestsFilters = {
+    refNo: params.refNo?.trim() || undefined,
+    supplier: params.supplier?.trim() || undefined,
+    item: params.item?.trim() || undefined,
+    filedBy: params.filedBy?.trim() || undefined,
+  };
+  const hasFilter = Object.values(filters).some(Boolean);
+  if (page === 1 && !hasFilter) return loadFirstPagePurchaseRequests();
+  return fetchPurchaseRequests(page, filters);
 }
 
 export type PurchaseRequestsData = Awaited<ReturnType<typeof getPurchaseRequestsData>>;

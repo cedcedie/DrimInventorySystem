@@ -9,6 +9,12 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const page = Number(searchParams.get("page") ?? "1");
-  const q = searchParams.get("q") ?? "";
-  return NextResponse.json(await getOpenMrfsQueue(page, q));
+  return NextResponse.json(
+    await getOpenMrfsQueue(page, {
+      mrfNumber: searchParams.get("mrfNumber") ?? undefined,
+      project: searchParams.get("project") ?? undefined,
+      item: searchParams.get("item") ?? undefined,
+      technician: searchParams.get("technician") ?? undefined,
+    })
+  );
 }

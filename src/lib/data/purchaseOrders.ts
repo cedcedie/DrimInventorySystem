@@ -14,30 +14,31 @@ function deriveStatus(
   return "SENT";
 }
 
-async function fetchPurchaseOrders(page: number, q = "") {
-  // Matches the PO #, supplier, who filed it, or an ordered item — not just
-  // the supplier.
-  const where = q
-    ? {
-        OR: [
-          { refNo: { contains: q, mode: "insensitive" as const } },
-          { supplier: { name: { contains: q, mode: "insensitive" as const } } },
-          { byUser: { name: { contains: q, mode: "insensitive" as const } } },
-          {
-            items: {
-              some: {
-                product: {
-                  OR: [
-                    { name: { contains: q, mode: "insensitive" as const } },
-                    { code: { contains: q, mode: "insensitive" as const } },
-                  ],
-                },
-              },
-            },
+export type PurchaseOrdersFilters = { refNo?: string; supplier?: string; item?: string; filedBy?: string };
+
+/** Each filled-in field is its own AND'd condition — not one free-text box
+ * OR-ing across everything. */
+async function fetchPurchaseOrders(page: number, filters: PurchaseOrdersFilters = {}) {
+  const { refNo, supplier, item, filedBy } = filters;
+  const and: object[] = [];
+  if (refNo) and.push({ refNo: { contains: refNo, mode: "insensitive" as const } });
+  if (supplier) and.push({ supplier: { name: { contains: supplier, mode: "insensitive" as const } } });
+  if (filedBy) and.push({ byUser: { name: { contains: filedBy, mode: "insensitive" as const } } });
+  if (item) {
+    and.push({
+      items: {
+        some: {
+          product: {
+            OR: [
+              { name: { contains: item, mode: "insensitive" as const } },
+              { code: { contains: item, mode: "insensitive" as const } },
+            ],
           },
-        ],
-      }
-    : {};
+        },
+      },
+    });
+  }
+  const where = and.length ? { AND: and } : {};
 
   const [total, rows] = await Promise.all([
     prisma.purchaseOrder.count({ where }),
@@ -82,11 +83,17 @@ async function loadFirstPagePurchaseOrders() {
   return fetchPurchaseOrders(1);
 }
 
-export async function getPurchaseOrdersData(params: { page?: number; q?: string }) {
+export async function getPurchaseOrdersData(params: { page?: number } & PurchaseOrdersFilters) {
   const page = Math.max(1, params.page ?? 1);
-  const q = params.q?.trim() ?? "";
-  if (page === 1 && !q) return loadFirstPagePurchaseOrders();
-  return fetchPurchaseOrders(page, q);
+  const filters: PurchaseOrdersFilters = {
+    refNo: params.refNo?.trim() || undefined,
+    supplier: params.supplier?.trim() || undefined,
+    item: params.item?.trim() || undefined,
+    filedBy: params.filedBy?.trim() || undefined,
+  };
+  const hasFilter = Object.values(filters).some(Boolean);
+  if (page === 1 && !hasFilter) return loadFirstPagePurchaseOrders();
+  return fetchPurchaseOrders(page, filters);
 }
 
 export type PurchaseOrdersData = Awaited<ReturnType<typeof getPurchaseOrdersData>>;

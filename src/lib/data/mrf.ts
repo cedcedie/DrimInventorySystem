@@ -142,10 +142,14 @@ async function loadMrfsForTechnician(technicianId: string, page: number) {
 
 const OPEN_MRF_PAGE_SIZE = 15;
 
+export type OpenMrfsFilters = { mrfNumber?: string; project?: string; item?: string; technician?: string };
+
 /** Pending/partial MRFs with remaining line items, for the warehouse queue.
  * Not cached: paginated and polled by liveHot, so a stale "use cache" entry
  * would fight the client's own 10s refetch. */
-async function loadOpenMrfsQueue(page: number, q = "") {
+async function loadOpenMrfsQueue(page: number, filters: OpenMrfsFilters = {}) {
+  const { mrfNumber, project, item, technician } = filters;
+
   // Status PENDING/PARTIAL should always imply at least one item still open —
   // fulfillMrfItemInTx keeps the two in sync on every write. But the count
   // must match this exactly, or pagination goes stale the moment that
@@ -153,30 +157,29 @@ async function loadOpenMrfsQueue(page: number, q = "") {
   // or a trailing page going unreachable). Filtering at the DB level via a
   // field-to-field comparison (same pattern as stock.ts's pending-MRF query)
   // keeps `total`/`totalPages` truthful no matter what.
+  const and: Prisma.MrfWhereInput[] = [];
+  if (mrfNumber) and.push({ refNo: { contains: mrfNumber, mode: "insensitive" } });
+  if (project) and.push({ project: { contains: project, mode: "insensitive" } });
+  if (technician) and.push({ technician: { name: { contains: technician, mode: "insensitive" } } });
+  if (item) {
+    and.push({
+      items: {
+        some: {
+          product: {
+            OR: [
+              { name: { contains: item, mode: "insensitive" } },
+              { code: { contains: item, mode: "insensitive" } },
+            ],
+          },
+        },
+      },
+    });
+  }
+
   const where: Prisma.MrfWhereInput = {
     status: { in: ["PENDING", "PARTIAL"] },
     items: { some: { qtyFulfilled: { lt: prisma.mrfItem.fields.qtyRequested } } },
-    ...(q
-      ? {
-          OR: [
-            { project: { contains: q, mode: "insensitive" } },
-            { refNo: { contains: q, mode: "insensitive" } },
-            { technician: { name: { contains: q, mode: "insensitive" } } },
-            {
-              items: {
-                some: {
-                  product: {
-                    OR: [
-                      { name: { contains: q, mode: "insensitive" } },
-                      { code: { contains: q, mode: "insensitive" } },
-                    ],
-                  },
-                },
-              },
-            },
-          ],
-        }
-      : {}),
+    ...(and.length ? { AND: and } : {}),
   };
 
   const [total, mrfs] = await Promise.all([
@@ -253,8 +256,14 @@ export async function getMrfsForTechnician(technicianId: string, page = 1) {
   return loadMrfsForTechnician(technicianId, page);
 }
 
-export async function getOpenMrfsQueue(page = 1, q = "") {
-  return loadOpenMrfsQueue(page, q.trim());
+export async function getOpenMrfsQueue(page = 1, filters: OpenMrfsFilters = {}) {
+  const trimmed: OpenMrfsFilters = {
+    mrfNumber: filters.mrfNumber?.trim() || undefined,
+    project: filters.project?.trim() || undefined,
+    item: filters.item?.trim() || undefined,
+    technician: filters.technician?.trim() || undefined,
+  };
+  return loadOpenMrfsQueue(page, trimmed);
 }
 
 export type MrfListData = Awaited<ReturnType<typeof getMrfsForTechnician>>;

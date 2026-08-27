@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Typography, ButtonBase, InputBase } from "@mui/material";
+import { Box, Typography, ButtonBase } from "@mui/material";
+import { SearchByPanel } from "@/components/SearchByPanel";
 import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -36,23 +37,29 @@ function activityLinkFor(ref: string): string | null {
 export function ActivityScreen({ initialData }: { initialData?: ActivityData }) {
   const router = useRouter();
   const [selected, setSelected] = useState<ActivityRow | null>(null);
-  const [q, setQ] = useState("");
-  // The input stays instant (local state) — only the actual server fetch
+  const [user, setUser] = useState("");
+  const [action, setAction] = useState("");
+  const [ref, setRef] = useState("");
+  // The inputs stay instant (local state) — only the actual server fetch
   // waits for typing to pause, so it's not a full request per keystroke.
-  const debouncedQ = useDebouncedValue(q, 300);
+  const debouncedUser = useDebouncedValue(user, 300);
+  const debouncedAction = useDebouncedValue(action, 300);
+  const debouncedRef = useDebouncedValue(ref, 300);
+  const hasFilter = Boolean(debouncedUser || debouncedAction || debouncedRef);
   const { data, page, setPage } = usePaginatedQuery<ActivityData>({
-    queryKey: (p) => queryKeys.activity({ page: p, q: debouncedQ }),
-    url: (p) => `/api/activity?page=${p}&q=${encodeURIComponent(debouncedQ)}`,
+    queryKey: (p) => queryKeys.activity({ page: p, user: debouncedUser, action: debouncedAction, ref: debouncedRef }),
+    url: (p) =>
+      `/api/activity?page=${p}&user=${encodeURIComponent(debouncedUser)}&action=${encodeURIComponent(debouncedAction)}&ref=${encodeURIComponent(debouncedRef)}`,
     initialData,
     live: liveCool,
   });
 
-  // Reset to page 1 once the search actually changes (i.e. once a new fetch
+  // Reset to page 1 once a filter actually changes (i.e. once a new fetch
   // is about to happen) — not on every keystroke.
   useEffect(() => {
     setPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real search change, not every render
-  }, [debouncedQ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real filter change, not every render
+  }, [debouncedUser, debouncedAction, debouncedRef]);
 
   const t = useTheme().palette;
 
@@ -60,8 +67,6 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
     <>
       <Box
         sx={{
-          display: "flex",
-          alignItems: "center",
           mb: 1.5,
           px: 1.5,
           py: 1.25,
@@ -71,21 +76,12 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
           borderRadius: "12px",
         }}
       >
-        <InputBase
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search user, action, or reference…"
-          sx={{
-            width: "100%",
-            maxWidth: 360,
-            border: "1px solid",
-            borderColor: t.border,
-            borderRadius: "8px",
-            px: 1.375,
-            py: 0.75,
-            fontSize: 13,
-            bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
-          }}
+        <SearchByPanel
+          fields={[
+            { key: "user", label: "User", value: user, onChange: setUser },
+            { key: "action", label: "Action", value: action, onChange: setAction },
+            { key: "ref", label: "Reference", value: ref, onChange: setRef },
+          ]}
         />
       </Box>
 
@@ -110,7 +106,7 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
         ))}
         {data.rows.length === 0 && (
           <Box sx={{ px: 1.75, py: 3, fontSize: 12.5, color: t.muted, textAlign: "center" }}>
-            {q ? "No activity matches your search." : "No activity recorded yet."}
+            {hasFilter ? "No activity matches your search." : "No activity recorded yet."}
           </Box>
         )}
         {data.totalPages > 1 && (

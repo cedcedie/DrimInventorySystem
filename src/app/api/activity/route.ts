@@ -10,7 +10,9 @@ export async function GET(req: Request) {
   const data = await getActivityData({
     page: Number(searchParams.get("page") ?? "1"),
     role: auth.role,
-    q: searchParams.get("q") ?? undefined,
+    user: searchParams.get("user") ?? undefined,
+    action: searchParams.get("action") ?? undefined,
+    ref: searchParams.get("ref") ?? undefined,
   });
 
   return NextResponse.json(data);

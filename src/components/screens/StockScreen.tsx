@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Box, ButtonBase, InputBase, Typography, useMediaQuery } from "@mui/material";
+import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
 import { EntityModal } from "@/components/EntityModal";
 import { fetchJson } from "@/lib/api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
@@ -22,6 +22,7 @@ import { MrfDetailModal } from "@/components/modals/MrfDetailModal";
 import { AdjustStockModal, type AdjustableProduct } from "@/components/modals/AdjustStockModal";
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
+import { SearchByPanel } from "@/components/SearchByPanel";
 import { ViewOnlyBanner } from "@/components/ViewOnlyBanner";
 import { LastUpdated } from "@/components/LastUpdated";
 import { useCan } from "@/components/PermissionsProvider";
@@ -168,22 +169,37 @@ function OpenMrfsTab({
   onOpenDetail: (mrfId: string) => void;
 }) {
   const t = useTheme().palette;
-  const [q, setQ] = useState("");
-  // The input stays instant (local state) — only the actual server fetch
+  const [mrfNumber, setMrfNumber] = useState("");
+  const [project, setProject] = useState("");
+  const [item, setItem] = useState("");
+  const [technician, setTechnician] = useState("");
+  // The inputs stay instant (local state) — only the actual server fetch
   // waits for typing to pause, so it's not a full request per keystroke.
-  const debouncedQ = useDebouncedValue(q, 300);
+  const debouncedMrfNumber = useDebouncedValue(mrfNumber, 300);
+  const debouncedProject = useDebouncedValue(project, 300);
+  const debouncedItem = useDebouncedValue(item, 300);
+  const debouncedTechnician = useDebouncedValue(technician, 300);
+  const hasFilter = Boolean(debouncedMrfNumber || debouncedProject || debouncedItem || debouncedTechnician);
   const { data, dataUpdatedAt, setPage } = usePaginatedQuery<OpenMrfsQueueData>({
-    queryKey: (p) => queryKeys.openMrfs({ page: p, q: debouncedQ }),
-    url: (p) => `/api/mrf/open?page=${p}&q=${encodeURIComponent(debouncedQ)}`,
+    queryKey: (p) =>
+      queryKeys.openMrfs({
+        page: p,
+        mrfNumber: debouncedMrfNumber,
+        project: debouncedProject,
+        item: debouncedItem,
+        technician: debouncedTechnician,
+      }),
+    url: (p) =>
+      `/api/mrf/open?page=${p}&mrfNumber=${encodeURIComponent(debouncedMrfNumber)}&project=${encodeURIComponent(debouncedProject)}&item=${encodeURIComponent(debouncedItem)}&technician=${encodeURIComponent(debouncedTechnician)}`,
     live: liveHot,
   });
 
-  // Reset to page 1 once the search actually changes (i.e. once a new fetch
+  // Reset to page 1 once a filter actually changes (i.e. once a new fetch
   // is about to happen) — not on every keystroke.
   useEffect(() => {
     setPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real search change, not every render
-  }, [debouncedQ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real filter change, not every render
+  }, [debouncedMrfNumber, debouncedProject, debouncedItem, debouncedTechnician]);
 
   // One row per MRF, not per line item, so multi-item MRFs don't repeat as duplicate-looking rows.
   const mrfRows =
@@ -224,22 +240,13 @@ function OpenMrfsTab({
           <LastUpdated dataUpdatedAt={dataUpdatedAt} />
         </Box>
       </Box>
-      <InputBase
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search item, project, technician, or MRF #…"
-        sx={{
-          width: "100%",
-          maxWidth: 360,
-          mb: 1.5,
-          border: "1px solid",
-          borderColor: t.border,
-          borderRadius: "8px",
-          px: 1.375,
-          py: 0.75,
-          fontSize: 13,
-          bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
-        }}
+      <SearchByPanel
+        fields={[
+          { key: "mrfNumber", label: "MRF #", value: mrfNumber, onChange: setMrfNumber },
+          { key: "item", label: "Item", value: item, onChange: setItem },
+          { key: "project", label: "Project Name", value: project, onChange: setProject },
+          { key: "technician", label: "Technician", value: technician, onChange: setTechnician },
+        ]}
       />
 
       {!data ? (
@@ -321,7 +328,7 @@ function OpenMrfsTab({
           ))}
           {mrfRows.length === 0 && (
             <EmptyState
-              message={q ? "No open requests match your search." : "No open material requests — all caught up."}
+              message={hasFilter ? "No open requests match your search." : "No open material requests — all caught up."}
             />
           )}
           {data && mrfRows.length > 0 && (
@@ -344,23 +351,40 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
   const [correcting, setCorrecting] = useState<{ product: AdjustableProduct; note: string } | null>(null);
   const canCorrect = useCan("inventory", "canEdit");
   const t = useTheme().palette;
-  const [q, setQ] = useState("");
-  // The input stays instant (local state) — only the actual server fetch
+  const [item, setItem] = useState("");
+  const [supplier, setSupplier] = useState("");
+  const [refNo, setRefNo] = useState("");
+  const [date, setDate] = useState("");
+  const [receivedBy, setReceivedBy] = useState("");
+  // The inputs stay instant (local state) — only the actual server fetch
   // waits for typing to pause, so it's not a full request per keystroke.
-  const debouncedQ = useDebouncedValue(q, 300);
+  const debouncedItem = useDebouncedValue(item, 300);
+  const debouncedSupplier = useDebouncedValue(supplier, 300);
+  const debouncedRefNo = useDebouncedValue(refNo, 300);
+  const debouncedDate = useDebouncedValue(date, 300);
+  const debouncedReceivedBy = useDebouncedValue(receivedBy, 300);
+  const filters = {
+    item: debouncedItem,
+    supplier: debouncedSupplier,
+    refNo: debouncedRefNo,
+    date: debouncedDate,
+    receivedBy: debouncedReceivedBy,
+  };
+  const hasFilter = Object.values(filters).some(Boolean);
 
   const { data, page, setPage } = usePaginatedQuery<StockInData>({
-    queryKey: (p) => queryKeys.stockIn({ page: p, q: debouncedQ }),
-    url: (p) => `/api/stock-in?page=${p}&q=${encodeURIComponent(debouncedQ)}`,
+    queryKey: (p) => queryKeys.stockIn({ page: p, ...filters }),
+    url: (p) =>
+      `/api/stock-in?page=${p}&item=${encodeURIComponent(debouncedItem)}&supplier=${encodeURIComponent(debouncedSupplier)}&refNo=${encodeURIComponent(debouncedRefNo)}&date=${encodeURIComponent(debouncedDate)}&receivedBy=${encodeURIComponent(debouncedReceivedBy)}`,
     live: liveWarm,
   });
 
-  // Reset to page 1 once the search actually changes (i.e. once a new fetch
+  // Reset to page 1 once a filter actually changes (i.e. once a new fetch
   // is about to happen) — not on every keystroke.
   useEffect(() => {
     setPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real search change, not every render
-  }, [debouncedQ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real filter change, not every render
+  }, [debouncedItem, debouncedSupplier, debouncedRefNo, debouncedDate, debouncedReceivedBy]);
 
   const cols = canCorrect ? SI_COLS : "110px 106px minmax(0,1.2fr) minmax(0,1.2fr) 80px";
 
@@ -393,22 +417,14 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
           </ButtonBase>
         )}
       </Box>
-      <InputBase
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search item, supplier, receipt #, or date…"
-        sx={{
-          width: "100%",
-          maxWidth: 360,
-          mb: 1.5,
-          border: "1px solid",
-          borderColor: t.border,
-          borderRadius: "8px",
-          px: 1.375,
-          py: 0.75,
-          fontSize: 13,
-          bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
-        }}
+      <SearchByPanel
+        fields={[
+          { key: "refNo", label: "Receipt #", value: refNo, onChange: setRefNo },
+          { key: "date", label: "Date", value: date, onChange: setDate },
+          { key: "supplier", label: "Supplier", value: supplier, onChange: setSupplier },
+          { key: "item", label: "Item", value: item, onChange: setItem },
+          { key: "receivedBy", label: "Received By", value: receivedBy, onChange: setReceivedBy },
+        ]}
       />
 
       {!data ? (
@@ -456,8 +472,8 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
           ))}
           {data.rows.length === 0 && (
             <EmptyState
-              message={q ? "No deliveries match your search." : "No stock-in deliveries recorded yet."}
-              actionLabel={canStock && !q ? "Record Stock In" : undefined}
+              message={hasFilter ? "No deliveries match your search." : "No stock-in deliveries recorded yet."}
+              actionLabel={canStock && !hasFilter ? "Record Stock In" : undefined}
               onAction={canStock ? () => setModalOpen(true) : undefined}
             />
           )}
@@ -498,10 +514,18 @@ function StockOutTab({
 }) {
   const [pickedIdx, setPickedIdx] = useState(0);
   const [correcting, setCorrecting] = useState<{ product: AdjustableProduct; note: string } | null>(null);
-  const [q, setQ] = useState("");
-  // The input stays instant (local state) — only the actual server fetch
+  const [mrfNumber, setMrfNumber] = useState("");
+  const [date, setDate] = useState("");
+  const [item, setItem] = useState("");
+  const [project, setProject] = useState("");
+  const [technician, setTechnician] = useState("");
+  // The inputs stay instant (local state) — only the actual server fetch
   // waits for typing to pause, so it's not a full request per keystroke.
-  const debouncedQ = useDebouncedValue(q, 300);
+  const debouncedMrfNumber = useDebouncedValue(mrfNumber, 300);
+  const debouncedDate = useDebouncedValue(date, 300);
+  const debouncedItem = useDebouncedValue(item, 300);
+  const debouncedProject = useDebouncedValue(project, 300);
+  const debouncedTechnician = useDebouncedValue(technician, 300);
   const canCorrect = useCan("inventory", "canEdit");
   const theme = useTheme();
   const t = theme.palette;
@@ -510,17 +534,26 @@ function StockOutTab({
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   const { data, page, setPage } = usePaginatedQuery<StockOutData>({
-    queryKey: (p) => queryKeys.stockOut({ page: p, q: debouncedQ }),
-    url: (p) => `/api/stock-out?page=${p}&q=${encodeURIComponent(debouncedQ)}`,
+    queryKey: (p) =>
+      queryKeys.stockOut({
+        page: p,
+        mrfNumber: debouncedMrfNumber,
+        date: debouncedDate,
+        item: debouncedItem,
+        project: debouncedProject,
+        technician: debouncedTechnician,
+      }),
+    url: (p) =>
+      `/api/stock-out?page=${p}&mrfNumber=${encodeURIComponent(debouncedMrfNumber)}&date=${encodeURIComponent(debouncedDate)}&item=${encodeURIComponent(debouncedItem)}&project=${encodeURIComponent(debouncedProject)}&technician=${encodeURIComponent(debouncedTechnician)}`,
     live: liveWarm,
   });
 
-  // Reset to page 1 once the debounced search actually changes (i.e. once a
-  // new fetch is about to happen) — not on every keystroke.
+  // Reset to page 1 once a filter actually changes (i.e. once a new fetch
+  // is about to happen) — not on every keystroke.
   useEffect(() => {
     setPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real search change, not every render
-  }, [debouncedQ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real filter change, not every render
+  }, [debouncedMrfNumber, debouncedDate, debouncedItem, debouncedProject, debouncedTechnician]);
 
   const picked = data?.rows[pickedIdx] ?? data?.rows[0];
 
@@ -556,21 +589,14 @@ function StockOutTab({
         {/* Filters every release down to one item — e.g. "Copper Pipe 1/2" — so
            its full history (MRF, slip, requester, project, qty) is visible
            together instead of scattered across pages of unrelated releases. */}
-        <InputBase
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search item, project, technician, MRF #, or date…"
-          fullWidth
-          sx={{
-            mb: 1.5,
-            border: "1px solid",
-            borderColor: t.border,
-            borderRadius: "8px",
-            px: 1.375,
-            py: 0.75,
-            fontSize: 13,
-            bgcolor: theme.palette.mode === "dark" ? "background.default" : "#F9FAFB",
-          }}
+        <SearchByPanel
+          fields={[
+            { key: "mrfNumber", label: "MRF #", value: mrfNumber, onChange: setMrfNumber },
+            { key: "date", label: "Date", value: date, onChange: setDate },
+            { key: "item", label: "Item", value: item, onChange: setItem },
+            { key: "project", label: "Project Name", value: project, onChange: setProject },
+            { key: "technician", label: "Technician", value: technician, onChange: setTechnician },
+          ]}
         />
 
         {!data ? (

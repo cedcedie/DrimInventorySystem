@@ -501,7 +501,7 @@ function StockOutTab({
         <InputBase
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by item name or code…"
+          placeholder="Search item, project, technician, MRF #, or date…"
           fullWidth
           sx={{
             mb: 1.5,

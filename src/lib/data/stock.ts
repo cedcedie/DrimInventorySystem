@@ -16,11 +16,38 @@ function tryParseDateRange(q: string): { gte: Date; lt: Date } | null {
   return { gte: start, lt: end };
 }
 
-async function fetchStockInData(page: number) {
+async function fetchStockInData(page: number, q = "") {
   // Paginate on batches, then flatten to one row per item (table shows one row per product).
+  // Matches item name/code, supplier, receipt slip #, who received it, or the
+  // delivery date — not just the item.
+  const dateRange = tryParseDateRange(q);
+  const where = q
+    ? {
+        OR: [
+          { refNo: { contains: q, mode: "insensitive" as const } },
+          { supplier: { name: { contains: q, mode: "insensitive" as const } } },
+          { byUser: { name: { contains: q, mode: "insensitive" as const } } },
+          {
+            items: {
+              some: {
+                product: {
+                  OR: [
+                    { name: { contains: q, mode: "insensitive" as const } },
+                    { code: { contains: q, mode: "insensitive" as const } },
+                  ],
+                },
+              },
+            },
+          },
+          ...(dateRange ? [{ createdAt: dateRange }] : []),
+        ],
+      }
+    : {};
+
   const [total, batches] = await Promise.all([
-    prisma.stockInBatch.count(),
+    prisma.stockInBatch.count({ where }),
     prisma.stockInBatch.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -55,10 +82,11 @@ async function loadFirstPageStockIn() {
   return fetchStockInData(1);
 }
 
-export async function getStockInData(params: { page?: number }) {
+export async function getStockInData(params: { page?: number; q?: string }) {
   const page = Math.max(1, params.page ?? 1);
-  if (page === 1) return loadFirstPageStockIn();
-  return fetchStockInData(page);
+  const q = params.q?.trim() ?? "";
+  if (page === 1 && !q) return loadFirstPageStockIn();
+  return fetchStockInData(page, q);
 }
 
 export type StockInData = Awaited<ReturnType<typeof getStockInData>>;

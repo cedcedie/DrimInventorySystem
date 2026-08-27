@@ -25,6 +25,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const data = await getStockAdjustmentsData({
     page: Number(searchParams.get("page") ?? "1"),
+    q: searchParams.get("q") ?? undefined,
   });
 
   return NextResponse.json(data);

@@ -168,11 +168,22 @@ function OpenMrfsTab({
   onOpenDetail: (mrfId: string) => void;
 }) {
   const t = useTheme().palette;
+  const [q, setQ] = useState("");
+  // The input stays instant (local state) — only the actual server fetch
+  // waits for typing to pause, so it's not a full request per keystroke.
+  const debouncedQ = useDebouncedValue(q, 300);
   const { data, dataUpdatedAt, setPage } = usePaginatedQuery<OpenMrfsQueueData>({
-    queryKey: (p) => queryKeys.openMrfs({ page: p }),
-    url: (p) => `/api/mrf/open?page=${p}`,
+    queryKey: (p) => queryKeys.openMrfs({ page: p, q: debouncedQ }),
+    url: (p) => `/api/mrf/open?page=${p}&q=${encodeURIComponent(debouncedQ)}`,
     live: liveHot,
   });
+
+  // Reset to page 1 once the search actually changes (i.e. once a new fetch
+  // is about to happen) — not on every keystroke.
+  useEffect(() => {
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real search change, not every render
+  }, [debouncedQ]);
 
   // One row per MRF, not per line item, so multi-item MRFs don't repeat as duplicate-looking rows.
   const mrfRows =
@@ -205,7 +216,7 @@ function OpenMrfsTab({
       {viewOnly && (
         <ViewOnlyBanner text="View only — fulfilling material requests requires Stock Out permission" />
       )}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 1.5, gap: 1.5 }}>
+      <Box sx={{ display: "flex", alignItems: "center", mb: 1.5, gap: 1.5, flexWrap: "wrap" }}>
         <Typography sx={{ fontSize: 12, color: t.muted }}>
           Material requests awaiting warehouse release — fulfill against the request # (MRF)
         </Typography>
@@ -213,6 +224,23 @@ function OpenMrfsTab({
           <LastUpdated dataUpdatedAt={dataUpdatedAt} />
         </Box>
       </Box>
+      <InputBase
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Search item, project, technician, or MRF #…"
+        sx={{
+          width: "100%",
+          maxWidth: 360,
+          mb: 1.5,
+          border: "1px solid",
+          borderColor: t.border,
+          borderRadius: "8px",
+          px: 1.375,
+          py: 0.75,
+          fontSize: 13,
+          bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
+        }}
+      />
 
       {!data ? (
         <TableSkeleton label="Loading open material requests…" columns={8} rows={6} />
@@ -292,7 +320,9 @@ function OpenMrfsTab({
             </TableRow>
           ))}
           {mrfRows.length === 0 && (
-            <EmptyState message="No open material requests — all caught up." />
+            <EmptyState
+              message={q ? "No open requests match your search." : "No open material requests — all caught up."}
+            />
           )}
           {data && mrfRows.length > 0 && (
             <Pagination
@@ -314,19 +344,30 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
   const [correcting, setCorrecting] = useState<{ product: AdjustableProduct; note: string } | null>(null);
   const canCorrect = useCan("inventory", "canEdit");
   const t = useTheme().palette;
+  const [q, setQ] = useState("");
+  // The input stays instant (local state) — only the actual server fetch
+  // waits for typing to pause, so it's not a full request per keystroke.
+  const debouncedQ = useDebouncedValue(q, 300);
 
   const { data, page, setPage } = usePaginatedQuery<StockInData>({
-    queryKey: (p) => queryKeys.stockIn({ page: p }),
-    url: (p) => `/api/stock-in?page=${p}`,
+    queryKey: (p) => queryKeys.stockIn({ page: p, q: debouncedQ }),
+    url: (p) => `/api/stock-in?page=${p}&q=${encodeURIComponent(debouncedQ)}`,
     live: liveWarm,
   });
+
+  // Reset to page 1 once the search actually changes (i.e. once a new fetch
+  // is about to happen) — not on every keystroke.
+  useEffect(() => {
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real search change, not every render
+  }, [debouncedQ]);
 
   const cols = canCorrect ? SI_COLS : "110px 106px minmax(0,1.2fr) minmax(0,1.2fr) 80px";
 
   return (
     <Box>
       {viewOnly && <ViewOnlyBanner text="View only — recording Stock In requires create permission" />}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
+      <Box sx={{ display: "flex", alignItems: "center", mb: 1.5, flexWrap: "wrap" }}>
         <Typography sx={{ fontSize: 12, color: t.muted }}>
           Receipt slips (SI) — incoming stock from suppliers
         </Typography>
@@ -352,6 +393,23 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
           </ButtonBase>
         )}
       </Box>
+      <InputBase
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Search item, supplier, receipt #, or date…"
+        sx={{
+          width: "100%",
+          maxWidth: 360,
+          mb: 1.5,
+          border: "1px solid",
+          borderColor: t.border,
+          borderRadius: "8px",
+          px: 1.375,
+          py: 0.75,
+          fontSize: 13,
+          bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
+        }}
+      />
 
       {!data ? (
         <TableSkeleton label="Loading stock-in deliveries…" columns={5} rows={5} />
@@ -398,8 +456,8 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
           ))}
           {data.rows.length === 0 && (
             <EmptyState
-              message="No stock-in deliveries recorded yet."
-              actionLabel={canStock ? "Record Stock In" : undefined}
+              message={q ? "No deliveries match your search." : "No stock-in deliveries recorded yet."}
+              actionLabel={canStock && !q ? "Record Stock In" : undefined}
               onAction={canStock ? () => setModalOpen(true) : undefined}
             />
           )}

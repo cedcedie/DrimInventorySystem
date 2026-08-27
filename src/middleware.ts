@@ -28,6 +28,8 @@ const API_SEGMENT_TO_MODULE: Record<string, string> = {
   upload: "products",
   "stock-adjustments": "inventory",
   permissions: "users",
+  "purchase-orders": "purchaseOrders",
+  "purchase-requests": "purchaseRequests",
 };
 
 export default auth((req) => {

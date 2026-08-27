@@ -14,10 +14,35 @@ function deriveStatus(
   return "SENT";
 }
 
-async function fetchPurchaseOrders(page: number) {
+async function fetchPurchaseOrders(page: number, q = "") {
+  // Matches the PO #, supplier, who filed it, or an ordered item — not just
+  // the supplier.
+  const where = q
+    ? {
+        OR: [
+          { refNo: { contains: q, mode: "insensitive" as const } },
+          { supplier: { name: { contains: q, mode: "insensitive" as const } } },
+          { byUser: { name: { contains: q, mode: "insensitive" as const } } },
+          {
+            items: {
+              some: {
+                product: {
+                  OR: [
+                    { name: { contains: q, mode: "insensitive" as const } },
+                    { code: { contains: q, mode: "insensitive" as const } },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      }
+    : {};
+
   const [total, rows] = await Promise.all([
-    prisma.purchaseOrder.count(),
+    prisma.purchaseOrder.count({ where }),
     prisma.purchaseOrder.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -57,10 +82,11 @@ async function loadFirstPagePurchaseOrders() {
   return fetchPurchaseOrders(1);
 }
 
-export async function getPurchaseOrdersData(params: { page?: number }) {
+export async function getPurchaseOrdersData(params: { page?: number; q?: string }) {
   const page = Math.max(1, params.page ?? 1);
-  if (page === 1) return loadFirstPagePurchaseOrders();
-  return fetchPurchaseOrders(page);
+  const q = params.q?.trim() ?? "";
+  if (page === 1 && !q) return loadFirstPagePurchaseOrders();
+  return fetchPurchaseOrders(page, q);
 }
 
 export type PurchaseOrdersData = Awaited<ReturnType<typeof getPurchaseOrdersData>>;

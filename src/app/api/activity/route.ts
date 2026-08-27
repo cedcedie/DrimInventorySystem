@@ -10,6 +10,7 @@ export async function GET(req: Request) {
   const data = await getActivityData({
     page: Number(searchParams.get("page") ?? "1"),
     role: auth.role,
+    q: searchParams.get("q") ?? undefined,
   });
 
   return NextResponse.json(data);

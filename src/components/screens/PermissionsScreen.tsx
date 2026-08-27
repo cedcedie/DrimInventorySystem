@@ -74,6 +74,21 @@ const PERMISSIONS = [
   { id: "canExport", label: "Export", Icon: FileDownloadOutlinedIcon },
 ] as const;
 
+/** Create/Edit/Delete/Export are meaningless without View — both enforcement
+ * layers (the page-level redirect and the API's requireModuleAccess) check
+ * canView first and block everything else if it's off, so "Edit without
+ * View" would silently do nothing. Checking any of those also checks View,
+ * so the matrix can never save that dead combination in the first place. */
+function withViewImplied(perm: string, value: boolean, base: PermissionSet): PermissionSet {
+  return {
+    canView: perm === "canView" ? value : value || base.canView,
+    canCreate: perm === "canCreate" ? value : base.canCreate,
+    canEdit: perm === "canEdit" ? value : base.canEdit,
+    canDelete: perm === "canDelete" ? value : base.canDelete,
+    canExport: perm === "canExport" ? value : base.canExport,
+  };
+}
+
 const GRID = "minmax(150px, 200px) repeat(5, 1fr) 110px";
 const GRID_ROLE = "minmax(150px, 200px) repeat(5, 1fr)";
 
@@ -293,13 +308,7 @@ export function PermissionsScreen() {
               roleMutation.mutate({
                 roleId,
                 module,
-                permissions: {
-                  canView: perm === "canView" ? value : current.canView,
-                  canCreate: perm === "canCreate" ? value : current.canCreate,
-                  canEdit: perm === "canEdit" ? value : current.canEdit,
-                  canDelete: perm === "canDelete" ? value : current.canDelete,
-                  canExport: perm === "canExport" ? value : current.canExport,
-                },
+                permissions: withViewImplied(perm, value, current),
               });
             }}
           />
@@ -319,13 +328,7 @@ export function PermissionsScreen() {
             userMutation.mutate({
               userId: user.id,
               module,
-              permissions: {
-                canView: perm === "canView" ? value : effective.canView,
-                canCreate: perm === "canCreate" ? value : effective.canCreate,
-                canEdit: perm === "canEdit" ? value : effective.canEdit,
-                canDelete: perm === "canDelete" ? value : effective.canDelete,
-                canExport: perm === "canExport" ? value : effective.canExport,
-              },
+              permissions: withViewImplied(perm, value, effective),
             });
           }}
           onReset={(user, module) =>

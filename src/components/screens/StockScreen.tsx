@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Box, ButtonBase, Tooltip, Typography, useMediaQuery } from "@mui/material";
+import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
+import { RichTooltip } from "@/components/RichTooltip";
 import { EntityModal } from "@/components/EntityModal";
 import { fetchJson } from "@/lib/api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
@@ -283,15 +284,40 @@ function OpenMrfsTab({
                 )}
               </TableCell>
               <TableCell label="Item">
-                <Tooltip
+                <RichTooltip
                   arrow
                   title={
-                    <Box component="span" sx={{ display: "block" }}>
-                      {row.allItems.map((it) => (
-                        <Box key={it.id} component="span" sx={{ display: "block" }}>
-                          {it.productName} ({it.productCode}) — {it.qtyRemaining} {it.unit}
-                        </Box>
-                      ))}
+                    <Box sx={{ py: 1, px: 1.25 }}>
+                      <Box sx={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.4, color: t.muted, mb: 0.75 }}>
+                        {row.allItems.length} ITEM{row.allItems.length === 1 ? "" : "S"} ON THIS REQUEST
+                      </Box>
+                      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.625 }}>
+                        {row.allItems.map((it) => (
+                          <Box
+                            key={it.id}
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "baseline",
+                              gap: 1,
+                              pb: 0.625,
+                              borderBottom: "1px solid",
+                              borderColor: t.line2,
+                              "&:last-of-type": { borderBottom: "none", pb: 0 },
+                            }}
+                          >
+                            <Box sx={{ minWidth: 0 }}>
+                              <Box sx={{ fontSize: 12.5, fontWeight: 600 }}>{it.productName}</Box>
+                              <Box sx={{ fontSize: 10, color: t.muted2, fontFamily: "'IBM Plex Mono', monospace" }}>
+                                {it.productCode}
+                              </Box>
+                            </Box>
+                            <Box sx={{ fontSize: 12, fontWeight: 700, color: t.primary.main, whiteSpace: "nowrap" }}>
+                              {it.qtyRemaining} {it.unit}
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
                     </Box>
                   }
                 >
@@ -306,7 +332,7 @@ function OpenMrfsTab({
                       {row.firstItem?.productCode}
                     </Box>
                   </Box>
-                </Tooltip>
+                </RichTooltip>
               </TableCell>
               <TableCell label="Need" bold>
                 {row.totalRemaining} {row.unit}

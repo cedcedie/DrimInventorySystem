@@ -1,13 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
+import { formatDateForExport } from "@/lib/quickExport";
 
 const PAGE_SIZE = 15;
 
 export type PurchaseRequestsFilters = { refNo?: string; supplier?: string; item?: string; filedBy?: string };
 
 /** Each filled-in field is its own AND'd condition — not one free-text box
- * OR-ing across everything. */
-async function fetchPurchaseRequests(page: number, filters: PurchaseRequestsFilters = {}) {
+ * OR-ing across everything. Shared by the paginated list and the export
+ * route, so both apply exactly the same rows. */
+function buildPurchaseRequestsWhere(filters: PurchaseRequestsFilters = {}) {
   const { refNo, supplier, item, filedBy } = filters;
   const and: object[] = [];
   if (refNo) and.push({ refNo: { contains: refNo, mode: "insensitive" as const } });
@@ -27,7 +29,11 @@ async function fetchPurchaseRequests(page: number, filters: PurchaseRequestsFilt
       },
     });
   }
-  const where = and.length ? { AND: and } : {};
+  return and.length ? { AND: and } : {};
+}
+
+async function fetchPurchaseRequests(page: number, filters: PurchaseRequestsFilters = {}) {
+  const where = buildPurchaseRequestsWhere(filters);
 
   const [total, rows] = await Promise.all([
     prisma.purchaseRequest.count({ where }),
@@ -86,6 +92,46 @@ export async function getPurchaseRequestsData(params: { page?: number } & Purcha
 }
 
 export type PurchaseRequestsData = Awaited<ReturnType<typeof getPurchaseRequestsData>>;
+
+const EXPORT_CAP = 2000;
+
+/** Same filters as the paginated list, but every matching request's lines
+ * (capped) — feeds the screen's "download what I'm looking at" export button.
+ * One row per requested item, so quantities stay traceable per product. */
+export async function getPurchaseRequestsExportRows(filters: PurchaseRequestsFilters) {
+  const trimmed: PurchaseRequestsFilters = {
+    refNo: filters.refNo?.trim() || undefined,
+    supplier: filters.supplier?.trim() || undefined,
+    item: filters.item?.trim() || undefined,
+    filedBy: filters.filedBy?.trim() || undefined,
+  };
+  const where = buildPurchaseRequestsWhere(trimmed);
+  const requests = await prisma.purchaseRequest.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: EXPORT_CAP,
+    include: {
+      supplier: { select: { name: true } },
+      byUser: { select: { name: true } },
+      items: { include: { product: { select: { name: true, code: true } } } },
+    },
+  });
+
+  const headers = ["Request #", "Filed", "Supplier", "Item", "Code", "Qty", "Status", "Filed By"];
+  const rows = requests.flatMap((pr) =>
+    pr.items.map((item) => [
+      pr.refNo,
+      formatDateForExport(pr.createdAt),
+      pr.supplier?.name ?? "Not specified",
+      item.product.name,
+      item.product.code,
+      String(item.qtyRequested),
+      pr.status,
+      pr.byUser.name,
+    ])
+  );
+  return { headers, rows };
+}
 
 export async function getPurchaseRequestDetail(id: string) {
   const pr = await prisma.purchaseRequest.findUnique({

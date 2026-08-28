@@ -37,6 +37,7 @@ function PurchaseRequestsScreenInner({ initialData }: { initialData?: PurchaseRe
   const [modalOpen, setModalOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const canCreate = useCan("purchaseRequests", "canCreate");
+  const canExport = useCan("purchaseRequests", "canExport");
   const t = useTheme().palette;
   const [refNo, setRefNo] = useState("");
   const [supplier, setSupplier] = useState("");
@@ -81,6 +82,18 @@ function PurchaseRequestsScreenInner({ initialData }: { initialData?: PurchaseRe
         title="Purchase Requests"
         addLabel={canCreate ? "New Purchase Request" : undefined}
         onAdd={canCreate ? () => setModalOpen(true) : undefined}
+        onExportPdf={
+          canExport
+            ? () =>
+                (window.location.href = `/api/purchase-requests/export?format=pdf&refNo=${encodeURIComponent(debouncedRefNo)}&supplier=${encodeURIComponent(debouncedSupplier)}&item=${encodeURIComponent(debouncedItem)}&filedBy=${encodeURIComponent(debouncedFiledBy)}`)
+            : undefined
+        }
+        onExportExcel={
+          canExport
+            ? () =>
+                (window.location.href = `/api/purchase-requests/export?format=excel&refNo=${encodeURIComponent(debouncedRefNo)}&supplier=${encodeURIComponent(debouncedSupplier)}&item=${encodeURIComponent(debouncedItem)}&filedBy=${encodeURIComponent(debouncedFiledBy)}`)
+            : undefined
+        }
       />
       <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, mb: 1.5, flexWrap: "wrap" }}>
         <Box sx={{ flex: "1 1 480px" }}>

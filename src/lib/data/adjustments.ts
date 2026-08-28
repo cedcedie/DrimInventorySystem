@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
+import { formatDateForExport } from "@/lib/quickExport";
 
 const PAGE_SIZE = 15;
 
@@ -15,8 +16,9 @@ export const REASON_LABELS: Record<string, string> = {
 export type AdjustmentsFilters = { refNo?: string; product?: string; note?: string; user?: string };
 
 /** Each filled-in field is its own AND'd condition — not one free-text box
- * OR-ing across everything. */
-async function fetchStockAdjustmentsData(page: number, filters: AdjustmentsFilters = {}) {
+ * OR-ing across everything. Shared by the paginated list and the export
+ * route, so both apply exactly the same rows. */
+function buildAdjustmentsWhere(filters: AdjustmentsFilters = {}) {
   const { refNo, product, note, user } = filters;
   const and: object[] = [];
   if (refNo) and.push({ refNo: { contains: refNo, mode: "insensitive" as const } });
@@ -30,7 +32,11 @@ async function fetchStockAdjustmentsData(page: number, filters: AdjustmentsFilte
       ],
     });
   }
-  const where = and.length ? { AND: and } : {};
+  return and.length ? { AND: and } : {};
+}
+
+async function fetchStockAdjustmentsData(page: number, filters: AdjustmentsFilters = {}) {
+  const where = buildAdjustmentsWhere(filters);
 
   const [total, rows] = await Promise.all([
     prisma.stockAdjustment.count({ where }),
@@ -87,3 +93,43 @@ export async function getStockAdjustmentsData(params: { page?: number } & Adjust
 }
 
 export type StockAdjustmentsData = Awaited<ReturnType<typeof getStockAdjustmentsData>>;
+
+const EXPORT_CAP = 2000;
+
+/** Same filters as the paginated list, but every matching row (capped) —
+ * feeds the screen's "download what I'm looking at" export button. */
+export async function getAdjustmentsExportRows(filters: AdjustmentsFilters) {
+  const trimmed: AdjustmentsFilters = {
+    refNo: filters.refNo?.trim() || undefined,
+    product: filters.product?.trim() || undefined,
+    note: filters.note?.trim() || undefined,
+    user: filters.user?.trim() || undefined,
+  };
+  const where = buildAdjustmentsWhere(trimmed);
+  const rows = await prisma.stockAdjustment.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: EXPORT_CAP,
+    include: {
+      product: { select: { name: true, code: true, unit: true } },
+      byUser: { select: { name: true } },
+    },
+  });
+
+  const headers = ["Adj. #", "Date", "Product", "Code", "Before", "After", "Delta", "Reason", "Note", "By"];
+  return {
+    headers,
+    rows: rows.map((a) => [
+      a.refNo,
+      formatDateForExport(a.createdAt),
+      a.product.name,
+      a.product.code,
+      String(a.qtyBefore),
+      String(a.qtyAfter),
+      a.delta >= 0 ? `+${a.delta}` : String(a.delta),
+      REASON_LABELS[a.reason] ?? a.reason,
+      a.note ?? "",
+      a.byUser.name,
+    ]),
+  };
+}

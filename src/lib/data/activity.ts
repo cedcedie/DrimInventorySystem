@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
+import { formatDateForExport } from "@/lib/quickExport";
 import type { Role } from "@/generated/prisma";
 
 const PAGE_SIZE = 15;
@@ -11,23 +12,28 @@ function isPrivileged(role: Role) {
 
 export type ActivityFilters = { user?: string; action?: string; ref?: string };
 
+/** Each filled-in field is its own AND'd condition — not one free-text box
+ * OR-ing across everything. Shared by the paginated list and the export
+ * route, so both apply exactly the same rows. */
+function buildActivityWhere(includeSensitive: boolean, filters: ActivityFilters = {}) {
+  const { user, action, ref } = filters;
+  const and: object[] = [includeSensitive ? {} : { sensitive: false }];
+  if (user) and.push({ user: { name: { contains: user, mode: "insensitive" as const } } });
+  if (action) and.push({ action: { contains: action, mode: "insensitive" as const } });
+  if (ref) and.push({ refNo: { contains: ref, mode: "insensitive" as const } });
+  return { AND: and };
+}
+
 /** One table, one page, filtered by who's asking — Owner/Admin see every row
  * (including sensitive account/permission/config changes); everyone else sees
- * operational events only. Each filled-in field is its own AND'd condition —
- * not one free-text box OR-ing across everything. */
+ * operational events only. */
 async function fetchActivityData(
   page: number,
   includeSensitive: boolean,
   filters: ActivityFilters = {},
   take = PAGE_SIZE
 ) {
-  const { user, action, ref } = filters;
-  const and: object[] = [includeSensitive ? {} : { sensitive: false }];
-  if (user) and.push({ user: { name: { contains: user, mode: "insensitive" as const } } });
-  if (action) and.push({ action: { contains: action, mode: "insensitive" as const } });
-  if (ref) and.push({ refNo: { contains: ref, mode: "insensitive" as const } });
-
-  const where = { AND: and };
+  const where = buildActivityWhere(includeSensitive, filters);
 
   const [total, activities] = await Promise.all([
     prisma.activityLog.count({ where }),
@@ -87,3 +93,32 @@ export async function getActivityWidgetData() {
 }
 
 export type ActivityData = Awaited<ReturnType<typeof getActivityData>>;
+
+const EXPORT_CAP = 2000;
+
+/** Same filters/visibility rules as the paginated list, but every matching
+ * row (capped) — feeds the screen's "download what I'm looking at" export button. */
+export async function getActivityExportRows(role: Role, filters: ActivityFilters) {
+  const trimmed: ActivityFilters = {
+    user: filters.user?.trim() || undefined,
+    action: filters.action?.trim() || undefined,
+    ref: filters.ref?.trim() || undefined,
+  };
+  const where = buildActivityWhere(isPrivileged(role), trimmed);
+  const activities = await prisma.activityLog.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: EXPORT_CAP,
+    include: { user: { select: { name: true, role: true } } },
+  });
+
+  const headers = ["Date & Time", "User", "Role", "Action", "Reference"];
+  const rows = activities.map((a) => [
+    formatDateForExport(a.createdAt),
+    a.user.name,
+    a.user.role,
+    a.action,
+    a.refNo,
+  ]);
+  return { headers, rows };
+}

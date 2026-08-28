@@ -1,12 +1,13 @@
 import ExcelJS from "exceljs";
-import type { ReportType } from "./data/reports";
 
 const BRAND_ORANGE = "FFFE9F43";
 const HEADER_TEXT = "FFFFFFFF";
 const ZEBRA = "FFFAFBFE";
 
 interface ExcelReportInput {
-  type: ReportType;
+  /** Worksheet name + subtitle label — cosmetic only, any short title works
+   * (not constrained to the formal Reports feature's ReportType union). */
+  type: string;
   from: string;
   to: string;
   headers: string[];

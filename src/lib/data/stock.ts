@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
+import { formatDateForExport } from "@/lib/quickExport";
 
 const PAGE_SIZE = 15;
 
@@ -20,8 +21,9 @@ export type StockInFilters = { item?: string; supplier?: string; refNo?: string;
 
 /** Each filled-in field is its own AND'd condition — not one free-text box
  * OR-ing across everything. Filling "Item" + "Supplier" narrows to rows
- * matching BOTH, not either. */
-async function fetchStockInData(page: number, filters: StockInFilters = {}) {
+ * matching BOTH, not either. Shared by the paginated list and the export route,
+ * so both apply exactly the same rows. */
+function buildStockInWhere(filters: StockInFilters = {}) {
   const { item, supplier, refNo, date, receivedBy } = filters;
   const dateRange = date ? tryParseDateRange(date) : null;
 
@@ -45,7 +47,11 @@ async function fetchStockInData(page: number, filters: StockInFilters = {}) {
   }
   if (dateRange) and.push({ createdAt: dateRange });
 
-  const where = and.length ? { AND: and } : {};
+  return and.length ? { AND: and } : {};
+}
+
+async function fetchStockInData(page: number, filters: StockInFilters = {}) {
+  const where = buildStockInWhere(filters);
 
   const [total, batches] = await Promise.all([
     prisma.stockInBatch.count({ where }),
@@ -101,12 +107,41 @@ export async function getStockInData(params: { page?: number } & StockInFilters)
 
 export type StockInData = Awaited<ReturnType<typeof getStockInData>>;
 
+const EXPORT_CAP = 2000;
+
+/** Same filters as the paginated list, but every matching row (capped) —
+ * feeds the screen's "download what I'm looking at" export button. */
+export async function getStockInExportRows(filters: StockInFilters) {
+  const where = buildStockInWhere(filters);
+  const batches = await prisma.stockInBatch.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: EXPORT_CAP,
+    include: { supplier: true, byUser: true, items: { include: { product: true } } },
+  });
+
+  const headers = ["Receipt slip (SI)", "Date", "Supplier", "Item", "Code", "Quantity", "Received By"];
+  const rows = batches.flatMap((batch) =>
+    batch.items.map((item) => [
+      batch.refNo,
+      formatDateForExport(batch.createdAt),
+      batch.supplier.name,
+      item.product.name,
+      item.product.code,
+      String(item.qty),
+      batch.byUser.name,
+    ])
+  );
+  return { headers, rows };
+}
+
 export type StockOutFilters = { mrfNumber?: string; date?: string; item?: string; project?: string; technician?: string };
 
 /** Each filled-in field is its own AND'd condition — not one free-text box
  * OR-ing across everything. Filling "Item" + "Technician" narrows to rows
- * matching BOTH, not either. */
-async function fetchStockOutData(page: number, filters: StockOutFilters = {}) {
+ * matching BOTH, not either. Shared by the paginated list and the export
+ * route, so both apply exactly the same rows. */
+function buildStockOutWhere(filters: StockOutFilters = {}) {
   const { mrfNumber, date, item, project, technician } = filters;
   const dateRange = date ? tryParseDateRange(date) : null;
 
@@ -126,7 +161,11 @@ async function fetchStockOutData(page: number, filters: StockOutFilters = {}) {
   }
   if (dateRange) and.push({ createdAt: dateRange });
 
-  const where = and.length ? { AND: and } : {};
+  return and.length ? { AND: and } : {};
+}
+
+async function fetchStockOutData(page: number, filters: StockOutFilters = {}) {
+  const where = buildStockOutWhere(filters);
 
   const [total, rows] = await Promise.all([
     prisma.stockOut.count({ where }),
@@ -183,6 +222,34 @@ export async function getStockOutData(params: { page?: number } & StockOutFilter
 }
 
 export type StockOutData = Awaited<ReturnType<typeof getStockOutData>>;
+
+/** Same filters as the paginated list, but every matching row (capped) —
+ * feeds the screen's "download what I'm looking at" export button. */
+export async function getStockOutExportRows(filters: StockOutFilters) {
+  const where = buildStockOutWhere(filters);
+  const rows = await prisma.stockOut.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: EXPORT_CAP,
+    include: { product: true, technician: true, mrf: true, byUser: true },
+  });
+
+  const headers = ["Release slip (SO)", "Date", "Technician", "Item", "Code", "Qty", "Request # (MRF)", "Project", "Released By"];
+  return {
+    headers,
+    rows: rows.map((so) => [
+      so.refNo,
+      formatDateForExport(so.createdAt),
+      so.technician.name,
+      so.product.name,
+      so.product.code,
+      String(so.qty),
+      so.mrf?.refNo ?? "—",
+      so.mrf?.project ?? "—",
+      so.byUser.name,
+    ]),
+  };
+}
 
 async function loadStockFormOptions() {
   "use cache";

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
+import { formatDateForExport } from "@/lib/quickExport";
 import type { Prisma } from "@/generated/prisma";
 
 /** Resolves the Technician roster row linked to a logged-in TECHNICIAN user. */
@@ -147,16 +148,17 @@ export type OpenMrfsFilters = { mrfNumber?: string; project?: string; item?: str
 /** Pending/partial MRFs with remaining line items, for the warehouse queue.
  * Not cached: paginated and polled by liveHot, so a stale "use cache" entry
  * would fight the client's own 10s refetch. */
-async function loadOpenMrfsQueue(page: number, filters: OpenMrfsFilters = {}) {
+// Status PENDING/PARTIAL should always imply at least one item still open —
+// fulfillMrfItemInTx keeps the two in sync on every write. But the count
+// must match this exactly, or pagination goes stale the moment that
+// invariant ever slips (a page rendering fewer rows than the count implies,
+// or a trailing page going unreachable). Filtering at the DB level via a
+// field-to-field comparison (same pattern as stock.ts's pending-MRF query)
+// keeps `total`/`totalPages` truthful no matter what. Shared by the paginated
+// list and the export route, so both apply exactly the same rows.
+function buildOpenMrfsWhere(filters: OpenMrfsFilters = {}): Prisma.MrfWhereInput {
   const { mrfNumber, project, item, technician } = filters;
 
-  // Status PENDING/PARTIAL should always imply at least one item still open —
-  // fulfillMrfItemInTx keeps the two in sync on every write. But the count
-  // must match this exactly, or pagination goes stale the moment that
-  // invariant ever slips (a page rendering fewer rows than the count implies,
-  // or a trailing page going unreachable). Filtering at the DB level via a
-  // field-to-field comparison (same pattern as stock.ts's pending-MRF query)
-  // keeps `total`/`totalPages` truthful no matter what.
   const and: Prisma.MrfWhereInput[] = [];
   if (mrfNumber) and.push({ refNo: { contains: mrfNumber, mode: "insensitive" } });
   if (project) and.push({ project: { contains: project, mode: "insensitive" } });
@@ -176,11 +178,15 @@ async function loadOpenMrfsQueue(page: number, filters: OpenMrfsFilters = {}) {
     });
   }
 
-  const where: Prisma.MrfWhereInput = {
+  return {
     status: { in: ["PENDING", "PARTIAL"] },
     items: { some: { qtyFulfilled: { lt: prisma.mrfItem.fields.qtyRequested } } },
     ...(and.length ? { AND: and } : {}),
   };
+}
+
+async function loadOpenMrfsQueue(page: number, filters: OpenMrfsFilters = {}) {
+  const where = buildOpenMrfsWhere(filters);
 
   const [total, mrfs] = await Promise.all([
     prisma.mrf.count({ where }),
@@ -267,4 +273,45 @@ export async function getOpenMrfsQueue(page = 1, filters: OpenMrfsFilters = {}) 
 }
 
 export type MrfListData = Awaited<ReturnType<typeof getMrfsForTechnician>>;
+
+const OPEN_MRF_EXPORT_CAP = 2000;
+
+/** Same filters as the paginated queue, but every matching MRF's open lines
+ * (capped) — feeds the screen's "download what I'm looking at" export button.
+ * One row per line item, same as the Stock In/Out exports. */
+export async function getOpenMrfsExportRows(filters: OpenMrfsFilters) {
+  const trimmed: OpenMrfsFilters = {
+    mrfNumber: filters.mrfNumber?.trim() || undefined,
+    project: filters.project?.trim() || undefined,
+    item: filters.item?.trim() || undefined,
+    technician: filters.technician?.trim() || undefined,
+  };
+  const where = buildOpenMrfsWhere(trimmed);
+  const mrfs = await prisma.mrf.findMany({
+    where,
+    orderBy: { createdAt: "asc" },
+    take: OPEN_MRF_EXPORT_CAP,
+    include: {
+      technician: { select: { name: true } },
+      items: { include: { product: { select: { name: true, code: true, stocks: true, unit: true } } } },
+    },
+  });
+
+  const headers = ["Request # (MRF)", "Filed", "Technician", "Project", "Item", "Code", "Need", "In Stock"];
+  const rows = mrfs.flatMap((mrf) =>
+    mrf.items
+      .filter((item) => item.qtyFulfilled < item.qtyRequested)
+      .map((item) => [
+        mrf.refNo,
+        formatDateForExport(mrf.createdAt),
+        mrf.technician.name,
+        mrf.project,
+        item.product.name,
+        item.product.code,
+        `${item.qtyRequested - item.qtyFulfilled} ${item.product.unit}`,
+        `${item.product.stocks} ${item.product.unit}`,
+      ])
+  );
+  return { headers, rows };
+}
 export type OpenMrfsQueueData = Awaited<ReturnType<typeof getOpenMrfsQueue>>;

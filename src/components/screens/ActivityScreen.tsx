@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Typography, ButtonBase } from "@mui/material";
 import { SearchByPanel } from "@/components/SearchByPanel";
+import { ExportButton } from "@/components/ExportButton";
 import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -65,6 +66,13 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
 
   return (
     <>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+        <ExportButton
+          buildUrl={(format) =>
+            `/api/activity/export?format=${format}&user=${encodeURIComponent(debouncedUser)}&action=${encodeURIComponent(debouncedAction)}&ref=${encodeURIComponent(debouncedRef)}`
+          }
+        />
+      </Box>
       <SearchByPanel
         fields={[
           { key: "user", label: "User", value: user, onChange: setUser },

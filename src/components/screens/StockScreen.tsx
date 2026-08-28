@@ -24,6 +24,7 @@ import { AdjustStockModal, type AdjustableProduct } from "@/components/modals/Ad
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { SearchByPanel } from "@/components/SearchByPanel";
+import { ExportButton } from "@/components/ExportButton";
 import { ViewOnlyBanner } from "@/components/ViewOnlyBanner";
 import { LastUpdated } from "@/components/LastUpdated";
 import { useCan } from "@/components/PermissionsProvider";
@@ -159,6 +160,7 @@ function OpenMrfsTab({
   onOpenDetail: (mrfId: string) => void;
 }) {
   const t = useTheme().palette;
+  const canExportOpenMrfs = useCan("stock", "canExport");
   const [mrfNumber, setMrfNumber] = useState("");
   const [project, setProject] = useState("");
   const [item, setItem] = useState("");
@@ -227,8 +229,15 @@ function OpenMrfsTab({
         <Typography sx={{ fontSize: 12, color: t.muted }}>
           Material requests awaiting warehouse release — fulfill against the request # (MRF)
         </Typography>
-        <Box sx={{ ml: "auto" }}>
+        <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.25 }}>
           <LastUpdated dataUpdatedAt={dataUpdatedAt} />
+          {canExportOpenMrfs && (
+            <ExportButton
+              buildUrl={(format) =>
+                `/api/mrf/open/export?format=${format}&mrfNumber=${encodeURIComponent(debouncedMrfNumber)}&project=${encodeURIComponent(debouncedProject)}&item=${encodeURIComponent(debouncedItem)}&technician=${encodeURIComponent(debouncedTechnician)}`
+              }
+            />
+          )}
         </Box>
       </Box>
       <SearchByPanel
@@ -380,6 +389,7 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
   const [modalOpen, setModalOpen] = useState(false);
   const [correcting, setCorrecting] = useState<{ product: AdjustableProduct; note: string } | null>(null);
   const canCorrect = useCan("inventory", "canEdit");
+  const canExport = useCan("stock", "canExport");
   const t = useTheme().palette;
   const [item, setItem] = useState("");
   const [supplier, setSupplier] = useState("");
@@ -425,27 +435,35 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
         <Typography sx={{ fontSize: 12, color: t.muted }}>
           Receipt slips (SI) — incoming stock from suppliers
         </Typography>
-        {canStock && (
-          <ButtonBase
-            onClick={() => setModalOpen(true)}
-            sx={{
-              ml: "auto",
-              border: "none",
-              bgcolor: t.primary.main,
-              color: "#fff",
-              borderRadius: "8px",
-              px: 1.625,
-              py: 1,
-              fontSize: 12,
-              fontWeight: 600,
-              transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
-              "&:hover": { bgcolor: ACCENT_HOVER },
-              "&:active": { transform: "scale(0.98)" },
-            }}
-          >
-            + New Stock In
-          </ButtonBase>
-        )}
+        <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.25 }}>
+          {canExport && (
+            <ExportButton
+              buildUrl={(format) =>
+                `/api/stock-in/export?format=${format}&item=${encodeURIComponent(debouncedItem)}&supplier=${encodeURIComponent(debouncedSupplier)}&refNo=${encodeURIComponent(debouncedRefNo)}&date=${encodeURIComponent(debouncedDate)}&receivedBy=${encodeURIComponent(debouncedReceivedBy)}`
+              }
+            />
+          )}
+          {canStock && (
+            <ButtonBase
+              onClick={() => setModalOpen(true)}
+              sx={{
+                border: "none",
+                bgcolor: t.primary.main,
+                color: "#fff",
+                borderRadius: "8px",
+                px: 1.625,
+                py: 1,
+                fontSize: 12,
+                fontWeight: 600,
+                transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
+                "&:hover": { bgcolor: ACCENT_HOVER },
+                "&:active": { transform: "scale(0.98)" },
+              }}
+            >
+              + New Stock In
+            </ButtonBase>
+          )}
+        </Box>
       </Box>
       <SearchByPanel
         fields={[
@@ -556,6 +574,7 @@ function StockOutTab({
   const debouncedProject = useDebouncedValue(project, 300);
   const debouncedTechnician = useDebouncedValue(technician, 300);
   const canCorrect = useCan("inventory", "canEdit");
+  const canExport = useCan("stock", "canExport");
   const theme = useTheme();
   const t = theme.palette;
   // Below `sm` the side panel would render below the table instead of beside it, so use a modal instead.
@@ -595,24 +614,32 @@ function StockOutTab({
           <Typography sx={{ fontSize: 12, color: t.muted }}>
             Release slips (SO) — stock issued against material requests
           </Typography>
-          {canStock && (
-            <ButtonBase
-              onClick={onFulfill}
-              sx={{
-                ml: "auto",
-                border: "none",
-                bgcolor: t.primary.main,
-                color: "#fff",
-                borderRadius: "2px",
-                px: 1.625,
-                py: 1,
-                fontSize: 12,
-                fontWeight: 600,
-              }}
-            >
-              + Fulfill MRF
-            </ButtonBase>
-          )}
+          <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.25 }}>
+            {canExport && (
+              <ExportButton
+                buildUrl={(format) =>
+                  `/api/stock-out/export?format=${format}&mrfNumber=${encodeURIComponent(debouncedMrfNumber)}&date=${encodeURIComponent(debouncedDate)}&item=${encodeURIComponent(debouncedItem)}&project=${encodeURIComponent(debouncedProject)}&technician=${encodeURIComponent(debouncedTechnician)}`
+                }
+              />
+            )}
+            {canStock && (
+              <ButtonBase
+                onClick={onFulfill}
+                sx={{
+                  border: "none",
+                  bgcolor: t.primary.main,
+                  color: "#fff",
+                  borderRadius: "2px",
+                  px: 1.625,
+                  py: 1,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                + Fulfill MRF
+              </ButtonBase>
+            )}
+          </Box>
         </Box>
 
         {/* Filters every release down to one item — e.g. "Copper Pipe 1/2" — so

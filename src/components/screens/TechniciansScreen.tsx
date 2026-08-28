@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Box, ButtonBase, Typography, useMediaQuery } from "@mui/material";
+import { Box, ButtonBase, Tooltip, Typography, useMediaQuery } from "@mui/material";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
@@ -107,11 +107,15 @@ export function TechniciansScreen({
                 <TableCell label="Name" bold>{r.name}</TableCell>
                 <TableCell label="Employee No." mono>{r.empNo}</TableCell>
                 <TableCell label="Position" color={t.text2}>{r.position}</TableCell>
-                <TableCell label="Recent Transaction" color={t.muted} sx={{ whiteSpace: "normal" }}>
+                <TableCell label="Recent Transaction" color={t.muted}>
                   {r.recentMrfs.length === 0 ? (
                     "No recent activity"
                   ) : r.recentMrfs.length === 1 ? (
-                    `${r.recentMrfs[0].refNo} · ${r.recentMrfs[0].itemSummary} × ${r.recentMrfs[0].qty}`
+                    <Tooltip title={`${r.recentMrfs[0].refNo} · ${r.recentMrfs[0].itemSummary} × ${r.recentMrfs[0].qty}`}>
+                      <Box component="span" sx={{ cursor: "default" }}>
+                        {r.recentMrfs[0].refNo} · {r.recentMrfs[0].itemSummary} × {r.recentMrfs[0].qty}
+                      </Box>
+                    </Tooltip>
                   ) : (
                     <RichTooltip
                       arrow

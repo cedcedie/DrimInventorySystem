@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { Box, ButtonBase, Checkbox, CircularProgress, Typography } from "@mui/material";
+import { Box, ButtonBase, Checkbox, CircularProgress, Tooltip, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
@@ -153,8 +153,10 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
                 </Box>
               </TableCell>
               <TableCell label="Role" color={t.text2}>{ROLE_LABELS[r.role]}</TableCell>
-              <TableCell label="Recent Activity" color={t.muted} sx={{ whiteSpace: "normal" }}>
-                {r.recentActivity}
+              <TableCell label="Recent Activity" color={t.muted}>
+                <Tooltip title={r.recentActivity}>
+                  <Box component="span" sx={{ cursor: "default" }}>{r.recentActivity}</Box>
+                </Tooltip>
               </TableCell>
               <TableCell label="Status">
                 <StatusChip label={r.status === "ACTIVE" ? "Active" : "Inactive"} />
@@ -223,7 +225,11 @@ export function UsersScreen({ initialData }: { initialData?: UsersData }) {
               {historyData?.rows.map((h, i) => (
                 <TableRow key={i} columns={HIST_COLS}>
                   <TableCell label="Date & Time" color={t.text2}>{formatDateTime(new Date(h.dt))}</TableCell>
-                  <TableCell label="Action" sx={{ whiteSpace: "normal" }}>{h.action}</TableCell>
+                  <TableCell label="Action">
+                    <Tooltip title={h.action}>
+                      <Box component="span" sx={{ cursor: "default" }}>{h.action}</Box>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell label="Reference" mono>{h.ref}</TableCell>
                 </TableRow>
               ))}

@@ -222,7 +222,7 @@ function ProductsScreenInner({
                 <TableCell label="Code" mono color={t.text2}>
                   {r.code}
                 </TableCell>
-                <TableCell label="Product Name" bold sx={{ whiteSpace: "normal" }}>
+                <TableCell label="Product Name" bold>
                   {r.name}
                 </TableCell>
                 <TableCell label="Category" color={t.muted}>{r.category}</TableCell>

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import NextLink from "next/link";
 import dynamic from "next/dynamic";
-import { Box, Typography } from "@mui/material";
+import { Box, Tooltip, Typography } from "@mui/material";
 import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { liveWarm } from "@/lib/liveQuery";
@@ -250,7 +250,11 @@ export function DashboardScreen({
                   <TableCell label="Type">
                     <StatusChip label={tx.type} />
                   </TableCell>
-                  <TableCell label="Description" sx={{ whiteSpace: "normal", fontSize: 12.5 }}>{tx.desc}</TableCell>
+                  <TableCell label="Description" sx={{ fontSize: 12.5 }}>
+                    <Tooltip title={tx.desc}>
+                      <Box component="span" sx={{ cursor: "default" }}>{tx.desc}</Box>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell label="User" color={t.text2}>{tx.user}</TableCell>
                   <TableCell label="MRF# / Slip#" mono color={t.primary.main}>
                     {tx.link}

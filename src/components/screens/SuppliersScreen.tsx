@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Box } from "@mui/material";
+import { Box, Tooltip } from "@mui/material";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate } from "@/lib/format";
@@ -51,8 +51,10 @@ export function SuppliersScreen({
             <TableRow key={r.id} columns={COLS}>
               <TableCell label="Supplier" bold>{r.name}</TableCell>
               <TableCell label="Contact" color={t.text2}>{r.contact}</TableCell>
-              <TableCell label="Supplies" color={t.muted} sx={{ whiteSpace: "normal" }}>
-                {r.supplies}
+              <TableCell label="Supplies" color={t.muted}>
+                <Tooltip title={r.supplies}>
+                  <Box component="span" sx={{ cursor: "default" }}>{r.supplies}</Box>
+                </Tooltip>
               </TableCell>
               <TableCell label="Last Delivery" color={t.text2}>
                 {r.lastDelivery ? formatDate(new Date(r.lastDelivery)) : "—"}

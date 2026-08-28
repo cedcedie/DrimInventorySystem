@@ -75,14 +75,18 @@ export async function generateReportPdf(params: {
   const dMark = await embedDMark(pdfDoc);
 
   const pages: PDFPage[] = [];
+  // Every page gets its letterhead drawn immediately, before any content
+  // below it assumes a starting y — draw-then-lay-out, never lay-out-then-
+  // stamp-the-letterhead-on-top-afterward (that retroactive order used to
+  // overlap the table header/first row on any page after the first).
   const newPage = () => {
-    const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-    pages.push(page);
-    return page;
+    const p = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    pages.push(p);
+    const startY = drawLetterhead(p, { font, boldFont, dMark, companyName, company, reportType, refNo: params.refNo });
+    return { page: p, y: startY };
   };
 
-  let page = newPage();
-  let y = drawLetterhead(page, { font, boldFont, dMark, companyName, company, reportType, refNo: params.refNo });
+  let { page, y } = newPage();
 
   // Bounded to content width so a long caller-supplied title can't run past the margin.
   const contentWidth = PAGE_WIDTH - MARGIN * 2;
@@ -171,8 +175,7 @@ export async function generateReportPdf(params: {
   for (const section of sections) {
     if (section.title) {
       if (y < CONTENT_BOTTOM + ROW_HEIGHT * 2) {
-        page = newPage();
-        y = PAGE_HEIGHT - MARGIN;
+        ({ page, y } = newPage());
       }
       page.drawText(section.title, { x: MARGIN, y, size: 11, font: boldFont, color: INK });
       y -= 18;
@@ -223,8 +226,7 @@ export async function generateReportPdf(params: {
 
     for (const row of section.rows) {
       if (y < CONTENT_BOTTOM + ROW_HEIGHT) {
-        page = newPage();
-        y = PAGE_HEIGHT - MARGIN;
+        ({ page, y } = newPage());
         drawHeaderRow(y);
         y -= ROW_HEIGHT;
       }
@@ -265,22 +267,14 @@ export async function generateReportPdf(params: {
     y -= 10;
   }
 
-  let closingPageHasLetterhead = false;
-  if (y < CONTENT_BOTTOM + 70) {
-    page = newPage();
-    // Draw this new page's letterhead immediately — the disclaimer/signature
-    // block below shares this same page and must not be placed at the raw
-    // top-of-page y, or it lands under the letterhead once that's drawn in
-    // the loop below (they'd overlap: both start from PAGE_HEIGHT - MARGIN).
-    y = drawLetterhead(page, { font, boldFont, dMark, companyName, company, reportType, refNo: params.refNo });
-    closingPageHasLetterhead = true;
+  // Signature block always sits at the same fixed distance from the bottom
+  // of whichever page it lands on — not wherever the table happened to end,
+  // which used to leave it floating mid-page on a mostly-empty final page.
+  const SIGNATURE_Y = CONTENT_BOTTOM + 40;
+  if (y < SIGNATURE_Y) {
+    ({ page, y } = newPage());
   }
-  y -= 8;
-  page.drawText(
-    "This report reflects DRIM Inventory System records at the time of generation and is not a substitute for a physical stock count.",
-    { x: MARGIN, y, size: 9, font, color: MUTED }
-  );
-  y -= 34;
+  y = SIGNATURE_Y;
   const sigWidth = (PAGE_WIDTH - MARGIN * 2 - 40) / 3;
   ["Prepared by", "Checked by", "Approved by"].forEach((label, i) => {
     const x = MARGIN + i * (sigWidth + 20);
@@ -288,14 +282,10 @@ export async function generateReportPdf(params: {
     page.drawText(label, { x, y: y - 12, size: 8.5, font, color: MUTED });
   });
 
-  // Letterhead repeats on every page after the first — except the closing
-  // page above, if it already got one from the disclaimer's own page-break.
-  const lastPageIndex = pages.length - 1;
+  // Every page already got its letterhead drawn at creation time (see
+  // newPage() above) — only the footer is stamped in this final pass.
   pages.forEach((p, i) => {
-    if (i > 0 && !(i === lastPageIndex && closingPageHasLetterhead)) {
-      drawLetterhead(p, { font, boldFont, dMark, companyName, company, reportType, refNo: params.refNo });
-    }
-    drawFooter(p, font, generatedAt, i + 1, pages.length);
+    drawFooter(p, font, i + 1, pages.length);
   });
 
   return pdfDoc.save();
@@ -391,16 +381,9 @@ function drawLetterhead(
   return y;
 }
 
-function drawFooter(page: PDFPage, font: PDFFont, generatedAt: Date, pageNum: number, pageCount: number) {
+function drawFooter(page: PDFPage, font: PDFFont, pageNum: number, pageCount: number) {
   const y = MARGIN - 12;
   page.drawLine({ start: { x: MARGIN, y: y + 14 }, end: { x: PAGE_WIDTH - MARGIN, y: y + 14 }, thickness: 0.5, color: HAIRLINE });
-  page.drawText(`Generated ${generatedAt.toLocaleString("en-PH")} · Internal use only`, {
-    x: MARGIN,
-    y,
-    size: 8,
-    font,
-    color: MUTED2,
-  });
   const pageLabel = `Page ${pageNum} of ${pageCount}`;
   const pageLabelWidth = font.widthOfTextAtSize(pageLabel, 8);
   page.drawText(pageLabel, { x: PAGE_WIDTH - MARGIN - pageLabelWidth, y, size: 8, font, color: MUTED2 });

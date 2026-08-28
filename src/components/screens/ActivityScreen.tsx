@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Typography, ButtonBase } from "@mui/material";
+import { Box, Typography, ButtonBase, Tooltip } from "@mui/material";
 import { SearchByPanel } from "@/components/SearchByPanel";
 import { ExportButton } from "@/components/ExportButton";
 import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
@@ -94,7 +94,11 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
             <TableCell label="Date & Time" color={t.text2}>{formatDateTime(new Date(a.dt))}</TableCell>
             <TableCell label="User" bold>{a.user}</TableCell>
             <TableCell label="Role" color={t.muted}>{ROLE_LABELS[a.role]}</TableCell>
-            <TableCell label="Action" sx={{ whiteSpace: "normal" }}>{a.action}</TableCell>
+            <TableCell label="Action">
+              <Tooltip title={a.action}>
+                <Box component="span" sx={{ cursor: "default" }}>{a.action}</Box>
+              </Tooltip>
+            </TableCell>
             <TableCell label="Reference" mono color={t.primary.main}>
               {a.ref}
             </TableCell>

@@ -229,15 +229,8 @@ function OpenMrfsTab({
         <Typography sx={{ fontSize: 12, color: t.muted }}>
           Material requests awaiting warehouse release — fulfill against the request # (MRF)
         </Typography>
-        <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.25 }}>
+        <Box sx={{ ml: "auto" }}>
           <LastUpdated dataUpdatedAt={dataUpdatedAt} />
-          {canExportOpenMrfs && (
-            <ExportButton
-              buildUrl={(format) =>
-                `/api/mrf/open/export?format=${format}&mrfNumber=${encodeURIComponent(debouncedMrfNumber)}&project=${encodeURIComponent(debouncedProject)}&item=${encodeURIComponent(debouncedItem)}&technician=${encodeURIComponent(debouncedTechnician)}`
-              }
-            />
-          )}
         </Box>
       </Box>
       <SearchByPanel
@@ -247,6 +240,15 @@ function OpenMrfsTab({
           { key: "project", label: "Project Name", value: project, onChange: setProject },
           { key: "technician", label: "Technician", value: technician, onChange: setTechnician },
         ]}
+        trailing={
+          canExportOpenMrfs && (
+            <ExportButton
+              buildUrl={(format) =>
+                `/api/mrf/open/export?format=${format}&mrfNumber=${encodeURIComponent(debouncedMrfNumber)}&project=${encodeURIComponent(debouncedProject)}&item=${encodeURIComponent(debouncedItem)}&technician=${encodeURIComponent(debouncedTechnician)}`
+              }
+            />
+          )
+        }
       />
 
       {!data ? (
@@ -435,35 +437,27 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
         <Typography sx={{ fontSize: 12, color: t.muted }}>
           Receipt slips (SI) — incoming stock from suppliers
         </Typography>
-        <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.25 }}>
-          {canExport && (
-            <ExportButton
-              buildUrl={(format) =>
-                `/api/stock-in/export?format=${format}&item=${encodeURIComponent(debouncedItem)}&supplier=${encodeURIComponent(debouncedSupplier)}&refNo=${encodeURIComponent(debouncedRefNo)}&date=${encodeURIComponent(debouncedDate)}&receivedBy=${encodeURIComponent(debouncedReceivedBy)}`
-              }
-            />
-          )}
-          {canStock && (
-            <ButtonBase
-              onClick={() => setModalOpen(true)}
-              sx={{
-                border: "none",
-                bgcolor: t.primary.main,
-                color: "#fff",
-                borderRadius: "8px",
-                px: 1.625,
-                py: 1,
-                fontSize: 12,
-                fontWeight: 600,
-                transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
-                "&:hover": { bgcolor: ACCENT_HOVER },
-                "&:active": { transform: "scale(0.98)" },
-              }}
-            >
-              + New Stock In
-            </ButtonBase>
-          )}
-        </Box>
+        {canStock && (
+          <ButtonBase
+            onClick={() => setModalOpen(true)}
+            sx={{
+              ml: "auto",
+              border: "none",
+              bgcolor: t.primary.main,
+              color: "#fff",
+              borderRadius: "8px",
+              px: 1.625,
+              py: 1,
+              fontSize: 12,
+              fontWeight: 600,
+              transition: `background-color ${motion.duration.color}ms ${motion.easing.standard}, transform ${motion.duration.press}ms ${motion.easing.standard}`,
+              "&:hover": { bgcolor: ACCENT_HOVER },
+              "&:active": { transform: "scale(0.98)" },
+            }}
+          >
+            + New Stock In
+          </ButtonBase>
+        )}
       </Box>
       <SearchByPanel
         fields={[
@@ -473,6 +467,15 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
           { key: "item", label: "Item", value: item, onChange: setItem },
           { key: "receivedBy", label: "Received By", value: receivedBy, onChange: setReceivedBy },
         ]}
+        trailing={
+          canExport && (
+            <ExportButton
+              buildUrl={(format) =>
+                `/api/stock-in/export?format=${format}&item=${encodeURIComponent(debouncedItem)}&supplier=${encodeURIComponent(debouncedSupplier)}&refNo=${encodeURIComponent(debouncedRefNo)}&date=${encodeURIComponent(debouncedDate)}&receivedBy=${encodeURIComponent(debouncedReceivedBy)}`
+              }
+            />
+          )
+        }
       />
 
       {!data ? (

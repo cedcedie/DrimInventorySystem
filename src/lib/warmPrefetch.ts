@@ -61,11 +61,8 @@ export function warmShellRoutes(
     if (accessSegments.includes("products")) {
       window.setTimeout(() => {
         void queryClient.prefetchQuery({
-          queryKey: queryKeys.products({ page: 1, q: "", category: "All" }),
-          queryFn: () =>
-            fetchJson<ProductsData>(
-              `/api/products?page=1&q=${encodeURIComponent("")}&category=${encodeURIComponent("All")}`
-            ),
+          queryKey: queryKeys.products({ page: 1, category: "All" }),
+          queryFn: () => fetchJson<ProductsData>(`/api/products?page=1&category=${encodeURIComponent("All")}`),
           staleTime: 8_000,
         });
       }, 1800);

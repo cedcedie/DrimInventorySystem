@@ -11,6 +11,7 @@ import { formatDateTime } from "@/lib/format";
 import { TableShell, TableHeaderRow, TableRow, TableCell, Pagination } from "@/components/DataTable";
 import { TableSkeleton } from "@/components/Skeleton";
 import { PageChrome } from "@/components/PageChrome";
+import { ExportButton } from "@/components/ExportButton";
 import { useCan } from "@/components/PermissionsProvider";
 import { useTheme } from "@mui/material/styles";
 import type { StockAdjustmentsData } from "@/lib/data/adjustments";
@@ -48,16 +49,9 @@ export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustme
   const t = useTheme().palette;
   const canExport = useCan("inventory", "canExport");
 
-  const exportUrl = (format: "pdf" | "excel") =>
-    `/api/stock-adjustments/export?format=${format}&refNo=${encodeURIComponent(debouncedRefNo)}&product=${encodeURIComponent(debouncedProduct)}&note=${encodeURIComponent(debouncedNote)}&user=${encodeURIComponent(debouncedUser)}`;
-
   return (
     <Box>
-      <PageChrome
-        title="Stock Adjustments"
-        onExportPdf={canExport ? () => (window.location.href = exportUrl("pdf")) : undefined}
-        onExportExcel={canExport ? () => (window.location.href = exportUrl("excel")) : undefined}
-      />
+      <PageChrome title="Stock Adjustments" />
       <SearchByPanel
         fields={[
           { key: "refNo", label: "Adj. #", value: refNo, onChange: setRefNo },
@@ -65,6 +59,15 @@ export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustme
           { key: "note", label: "Note", value: note, onChange: setNote },
           { key: "user", label: "By", value: user, onChange: setUser },
         ]}
+        trailing={
+          canExport && (
+            <ExportButton
+              buildUrl={(format) =>
+                `/api/stock-adjustments/export?format=${format}&refNo=${encodeURIComponent(debouncedRefNo)}&product=${encodeURIComponent(debouncedProduct)}&note=${encodeURIComponent(debouncedNote)}&user=${encodeURIComponent(debouncedUser)}`
+              }
+            />
+          )
+        }
       />
 
       {!data ? (

@@ -66,19 +66,19 @@ export function ActivityScreen({ initialData }: { initialData?: ActivityData }) 
 
   return (
     <>
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
-        <ExportButton
-          buildUrl={(format) =>
-            `/api/activity/export?format=${format}&user=${encodeURIComponent(debouncedUser)}&action=${encodeURIComponent(debouncedAction)}&ref=${encodeURIComponent(debouncedRef)}`
-          }
-        />
-      </Box>
       <SearchByPanel
         fields={[
           { key: "user", label: "User", value: user, onChange: setUser },
           { key: "action", label: "Action", value: action, onChange: setAction },
           { key: "ref", label: "Reference", value: ref, onChange: setRef },
         ]}
+        trailing={
+          <ExportButton
+            buildUrl={(format) =>
+              `/api/activity/export?format=${format}&user=${encodeURIComponent(debouncedUser)}&action=${encodeURIComponent(debouncedAction)}&ref=${encodeURIComponent(debouncedRef)}`
+            }
+          />
+        }
       />
 
       {!data ? (

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, Suspense } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Box, InputBase, Select, MenuItem, Typography } from "@mui/material";
+import { Box, Select, MenuItem, Typography } from "@mui/material";
+import { SearchByPanel } from "@/components/SearchByPanel";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
@@ -48,11 +49,15 @@ function ProductsScreenInner({
 }: {
   initialData?: ProductsData;
 }) {
-  const [q, setQ] = useState("");
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [supplier, setSupplier] = useState("");
   const [category, setCategory] = useState("All");
-  // The input stays instant (local state) — only the actual server fetch
+  // The inputs stay instant (local state) — only the actual server fetch
   // waits for typing to pause, so it's not a full request per keystroke.
-  const debouncedQ = useDebouncedValue(q, 300);
+  const debouncedCode = useDebouncedValue(code, 300);
+  const debouncedName = useDebouncedValue(name, 300);
+  const debouncedSupplier = useDebouncedValue(supplier, 300);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductFormRow | null>(null);
   const canCreate = useCan("products", "canCreate");
@@ -79,9 +84,10 @@ function ProductsScreenInner({
   }, [canCreate]);
 
   const { data, page, setPage } = usePaginatedQuery<ProductsData>({
-    queryKey: (p) => queryKeys.products({ page: p, q: debouncedQ, category }),
+    queryKey: (p) =>
+      queryKeys.products({ page: p, code: debouncedCode, name: debouncedName, supplier: debouncedSupplier, category }),
     url: (p) =>
-      `/api/products?page=${p}&q=${encodeURIComponent(debouncedQ)}&category=${encodeURIComponent(category)}`,
+      `/api/products?page=${p}&code=${encodeURIComponent(debouncedCode)}&name=${encodeURIComponent(debouncedName)}&supplier=${encodeURIComponent(debouncedSupplier)}&category=${encodeURIComponent(category)}`,
     initialData,
     live: liveCool,
   });
@@ -91,7 +97,7 @@ function ProductsScreenInner({
   useEffect(() => {
     setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real filter change, not every render
-  }, [debouncedQ, category]);
+  }, [debouncedCode, debouncedName, debouncedSupplier, category]);
 
   const t = useTheme().palette;
 
@@ -146,55 +152,39 @@ function ProductsScreenInner({
         }
       />
 
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1.25,
-          flexWrap: "wrap",
-          mb: 1.5,
-          px: 1.5,
-          py: 1.25,
-          bgcolor: t.surface,
-          border: "1px solid",
-          borderColor: t.line,
-          borderRadius: "12px",
-        }}
-      >
-        <InputBase
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search code, name, supplier…"
-          sx={{
-            flex: "1 1 200px",
-            border: "1px solid",
-            borderColor: t.border,
-            borderRadius: "8px",
-            px: 1.375,
-            py: 0.75,
-            fontSize: 13,
-            bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
-          }}
-        />
-        <Select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          size="small"
-          sx={{
-            minWidth: 160,
-            fontSize: 13,
-            fontWeight: 700,
-            bgcolor: t.surface,
-            "& .MuiOutlinedInput-notchedOutline": { borderColor: t.border },
-          }}
-        >
-          {categories.map((c) => (
-            <MenuItem key={c} value={c} sx={{ fontSize: 13 }}>
-              {c}
-            </MenuItem>
-          ))}
-        </Select>
-      </Box>
+      <SearchByPanel
+        fields={[
+          { key: "code", label: "Code", value: code, onChange: setCode },
+          { key: "name", label: "Product Name", value: name, onChange: setName },
+          { key: "supplier", label: "Supplier", value: supplier, onChange: setSupplier },
+          {
+            key: "category",
+            label: "Category",
+            value: category,
+            onChange: setCategory,
+            render: () => (
+              <Select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                size="small"
+                fullWidth
+                sx={{
+                  fontSize: 13,
+                  bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
+                  "& .MuiSelect-select": { py: 0.8125 },
+                  "& .MuiOutlinedInput-notchedOutline": { borderColor: t.border },
+                }}
+              >
+                {categories.map((c) => (
+                  <MenuItem key={c} value={c} sx={{ fontSize: 13 }}>
+                    {c}
+                  </MenuItem>
+                ))}
+              </Select>
+            ),
+          },
+        ]}
+      />
 
       {!data ? (
         <TableSkeleton label="Loading product catalog…" columns={canManage ? 7 : 6} rows={8} />
@@ -267,11 +257,13 @@ function ProductsScreenInner({
           {rows.length === 0 && (
             <EmptyState
               message={
-                q || category !== "All"
+                code || name || supplier || category !== "All"
                   ? "No products match your filters."
                   : "No products yet — add the first catalog entry."
               }
-              actionLabel={canCreate && !q && category === "All" ? "Add Product" : undefined}
+              actionLabel={
+                canCreate && !code && !name && !supplier && category === "All" ? "Add Product" : undefined
+              }
               onAction={
                 canCreate
                   ? () => {

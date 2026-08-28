@@ -2,7 +2,8 @@ export const queryKeys = {
   dashboard: ["dashboard"] as const,
   inventory: (params: { code?: string; name?: string; category?: string; page?: number }) =>
     ["inventory", params] as const,
-  products: (params: { page?: number; q?: string; category?: string }) => ["products", params] as const,
+  products: (params: { page?: number; code?: string; name?: string; supplier?: string; category?: string }) =>
+    ["products", params] as const,
   suppliers: (params: { page?: number }) => ["suppliers", params] as const,
   technicians: (params: { page?: number }) => ["technicians", params] as const,
   users: (params: { page?: number }) => ["users", params] as const,

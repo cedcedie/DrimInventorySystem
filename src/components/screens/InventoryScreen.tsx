@@ -21,6 +21,7 @@ import { StockMeter } from "@/components/StockMeter";
 import { TableSkeleton } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { PageChrome } from "@/components/PageChrome";
+import { ExportButton } from "@/components/ExportButton";
 import { useTheme } from "@mui/material/styles";
 import { patchJson, deleteJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
@@ -132,8 +133,6 @@ export function InventoryScreen({
               }
             : undefined
         }
-        onExportPdf={canExport ? () => (window.location.href = exportUrl("pdf")) : undefined}
-        onExportExcel={canExport ? () => (window.location.href = exportUrl("excel")) : undefined}
       >
         {canCreateProduct && (
           <ButtonBase
@@ -186,6 +185,7 @@ export function InventoryScreen({
             ),
           },
         ]}
+        trailing={canExport && <ExportButton buildUrl={exportUrl} />}
       />
 
       {!data ? (

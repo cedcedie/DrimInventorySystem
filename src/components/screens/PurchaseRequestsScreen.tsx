@@ -16,6 +16,7 @@ import { useTheme } from "@mui/material/styles";
 import { PurchaseRequestModal } from "@/components/modals/PurchaseRequestModal";
 import { PurchaseRequestDetailModal } from "@/components/modals/PurchaseRequestDetailModal";
 import { PageChrome } from "@/components/PageChrome";
+import { ExportButton } from "@/components/ExportButton";
 import { EmptyState } from "@/components/EmptyState";
 import { LastUpdated } from "@/components/LastUpdated";
 import { useCan } from "@/components/PermissionsProvider";
@@ -82,34 +83,27 @@ function PurchaseRequestsScreenInner({ initialData }: { initialData?: PurchaseRe
         title="Purchase Requests"
         addLabel={canCreate ? "New Purchase Request" : undefined}
         onAdd={canCreate ? () => setModalOpen(true) : undefined}
-        onExportPdf={
-          canExport
-            ? () =>
-                (window.location.href = `/api/purchase-requests/export?format=pdf&refNo=${encodeURIComponent(debouncedRefNo)}&supplier=${encodeURIComponent(debouncedSupplier)}&item=${encodeURIComponent(debouncedItem)}&filedBy=${encodeURIComponent(debouncedFiledBy)}`)
-            : undefined
-        }
-        onExportExcel={
-          canExport
-            ? () =>
-                (window.location.href = `/api/purchase-requests/export?format=excel&refNo=${encodeURIComponent(debouncedRefNo)}&supplier=${encodeURIComponent(debouncedSupplier)}&item=${encodeURIComponent(debouncedItem)}&filedBy=${encodeURIComponent(debouncedFiledBy)}`)
-            : undefined
+      />
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 0.5 }}>
+        <LastUpdated dataUpdatedAt={dataUpdatedAt} />
+      </Box>
+      <SearchByPanel
+        fields={[
+          { key: "refNo", label: "Request #", value: refNo, onChange: setRefNo },
+          { key: "supplier", label: "Supplier", value: supplier, onChange: setSupplier },
+          { key: "item", label: "Item", value: item, onChange: setItem },
+          { key: "filedBy", label: "Filed By", value: filedBy, onChange: setFiledBy },
+        ]}
+        trailing={
+          canExport && (
+            <ExportButton
+              buildUrl={(format) =>
+                `/api/purchase-requests/export?format=${format}&refNo=${encodeURIComponent(debouncedRefNo)}&supplier=${encodeURIComponent(debouncedSupplier)}&item=${encodeURIComponent(debouncedItem)}&filedBy=${encodeURIComponent(debouncedFiledBy)}`
+              }
+            />
+          )
         }
       />
-      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, mb: 1.5, flexWrap: "wrap" }}>
-        <Box sx={{ flex: "1 1 480px" }}>
-          <SearchByPanel
-            fields={[
-              { key: "refNo", label: "Request #", value: refNo, onChange: setRefNo },
-              { key: "supplier", label: "Supplier", value: supplier, onChange: setSupplier },
-              { key: "item", label: "Item", value: item, onChange: setItem },
-              { key: "filedBy", label: "Filed By", value: filedBy, onChange: setFiledBy },
-            ]}
-          />
-        </Box>
-        <Box sx={{ ml: "auto" }}>
-          <LastUpdated dataUpdatedAt={dataUpdatedAt} />
-        </Box>
-      </Box>
 
       {!data ? (
         <TableSkeleton label="Loading purchase requests…" columns={7} rows={6} />

@@ -3,22 +3,23 @@ import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const PAGE_SIZE = 15;
 
-async function fetchProductsData(page: number, q: string, category: string) {
-  const where = {
-    AND: [
-      { archivedAt: null },
-      category !== "All" ? { category: { name: category } } : {},
-      q
-        ? {
-            OR: [
-              { code: { contains: q, mode: "insensitive" as const } },
-              { name: { contains: q, mode: "insensitive" as const } },
-              { supplier: { name: { contains: q, mode: "insensitive" as const } } },
-            ],
-          }
-        : {},
-    ],
-  };
+export type ProductsFilters = { code?: string; name?: string; supplier?: string; category?: string };
+
+/** Each filled-in field is its own AND'd condition — not one free-text box
+ * OR-ing across everything. Shared by the paginated list and the export
+ * route, so both apply exactly the same rows. */
+function buildProductsWhere(filters: ProductsFilters) {
+  const { code, name, supplier, category } = filters;
+  const and: object[] = [{ archivedAt: null }];
+  if (category && category !== "All") and.push({ category: { name: category } });
+  if (code) and.push({ code: { contains: code, mode: "insensitive" as const } });
+  if (name) and.push({ name: { contains: name, mode: "insensitive" as const } });
+  if (supplier) and.push({ supplier: { name: { contains: supplier, mode: "insensitive" as const } } });
+  return { AND: and };
+}
+
+async function fetchProductsData(page: number, filters: ProductsFilters) {
+  const where = buildProductsWhere(filters);
 
   const [total, products, categories, suppliers] = await Promise.all([
     prisma.product.count({ where }),
@@ -60,18 +61,23 @@ async function fetchProductsData(page: number, q: string, category: string) {
 async function loadDefaultProducts() {
   "use cache";
   tagAndLife("products", CACHE_SECONDS.list);
-  return fetchProductsData(1, "", "All");
+  return fetchProductsData(1, {});
 }
 
-export async function getProductsData(params: { page?: number; q?: string; category?: string }) {
+export async function getProductsData(params: { page?: number } & ProductsFilters) {
   const page = Math.max(1, params.page ?? 1);
-  const q = params.q?.trim() ?? "";
-  const category = params.category ?? "All";
+  const filters: ProductsFilters = {
+    code: params.code?.trim() || undefined,
+    name: params.name?.trim() || undefined,
+    supplier: params.supplier?.trim() || undefined,
+    category: params.category?.trim() || undefined,
+  };
+  const hasFilter = Object.values(filters).some((v) => v && v !== "All");
 
-  if (!q && category === "All" && page === 1) {
+  if (!hasFilter && page === 1) {
     return loadDefaultProducts();
   }
-  return fetchProductsData(page, q, category);
+  return fetchProductsData(page, filters);
 }
 
 export type ProductsData = Awaited<ReturnType<typeof getProductsData>>;

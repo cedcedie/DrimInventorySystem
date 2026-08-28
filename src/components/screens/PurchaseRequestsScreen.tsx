@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Box } from "@mui/material";
 import { SearchByPanel } from "@/components/SearchByPanel";
+import { ItemFilterField } from "@/components/ItemFilterField";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
@@ -91,7 +92,7 @@ function PurchaseRequestsScreenInner({ initialData }: { initialData?: PurchaseRe
         fields={[
           { key: "refNo", label: "Request #", value: refNo, onChange: setRefNo },
           { key: "supplier", label: "Supplier", value: supplier, onChange: setSupplier },
-          { key: "item", label: "Item", value: item, onChange: setItem },
+          { key: "item", label: "Item", value: item, onChange: setItem, render: () => <ItemFilterField value={item} onChange={setItem} /> },
           { key: "filedBy", label: "Filed By", value: filedBy, onChange: setFiledBy },
         ]}
         trailing={

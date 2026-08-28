@@ -24,6 +24,7 @@ import { AdjustStockModal, type AdjustableProduct } from "@/components/modals/Ad
 import { PageChrome } from "@/components/PageChrome";
 import { EmptyState } from "@/components/EmptyState";
 import { SearchByPanel } from "@/components/SearchByPanel";
+import { ItemFilterField } from "@/components/ItemFilterField";
 import { ExportButton } from "@/components/ExportButton";
 import { ViewOnlyBanner } from "@/components/ViewOnlyBanner";
 import { LastUpdated } from "@/components/LastUpdated";
@@ -236,7 +237,7 @@ function OpenMrfsTab({
       <SearchByPanel
         fields={[
           { key: "mrfNumber", label: "MRF #", value: mrfNumber, onChange: setMrfNumber },
-          { key: "item", label: "Item", value: item, onChange: setItem },
+          { key: "item", label: "Item", value: item, onChange: setItem, render: () => <ItemFilterField value={item} onChange={setItem} /> },
           { key: "project", label: "Project Name", value: project, onChange: setProject },
           { key: "technician", label: "Technician", value: technician, onChange: setTechnician },
         ]}
@@ -464,7 +465,7 @@ function StockInTab({ canStock, viewOnly }: { canStock: boolean; viewOnly: boole
           { key: "refNo", label: "Receipt #", value: refNo, onChange: setRefNo },
           { key: "date", label: "Date", value: date, onChange: setDate },
           { key: "supplier", label: "Supplier", value: supplier, onChange: setSupplier },
-          { key: "item", label: "Item", value: item, onChange: setItem },
+          { key: "item", label: "Item", value: item, onChange: setItem, render: () => <ItemFilterField value={item} onChange={setItem} /> },
           { key: "receivedBy", label: "Received By", value: receivedBy, onChange: setReceivedBy },
         ]}
         trailing={
@@ -656,7 +657,7 @@ function StockOutTab({
           fields={[
             { key: "mrfNumber", label: "MRF #", value: mrfNumber, onChange: setMrfNumber },
             { key: "date", label: "Date", value: date, onChange: setDate },
-            { key: "item", label: "Item", value: item, onChange: setItem },
+            { key: "item", label: "Item", value: item, onChange: setItem, render: () => <ItemFilterField value={item} onChange={setItem} /> },
             { key: "project", label: "Project Name", value: project, onChange: setProject },
             { key: "technician", label: "Technician", value: technician, onChange: setTechnician },
           ]}

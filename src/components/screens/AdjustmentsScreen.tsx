@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Box } from "@mui/material";
 import { SearchByPanel } from "@/components/SearchByPanel";
+import { ItemFilterField } from "@/components/ItemFilterField";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
@@ -55,7 +56,7 @@ export function AdjustmentsScreen({ initialData }: { initialData?: StockAdjustme
       <SearchByPanel
         fields={[
           { key: "refNo", label: "Adj. #", value: refNo, onChange: setRefNo },
-          { key: "product", label: "Product", value: product, onChange: setProduct },
+          { key: "product", label: "Product", value: product, onChange: setProduct, render: () => <ItemFilterField value={product} onChange={setProduct} /> },
           { key: "note", label: "Note", value: note, onChange: setNote },
           { key: "user", label: "By", value: user, onChange: setUser },
         ]}

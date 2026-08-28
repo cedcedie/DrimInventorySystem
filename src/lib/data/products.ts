@@ -108,3 +108,24 @@ export async function getProductsExportRows(filters: ProductsFilters) {
   const rows = products.map((p) => [p.code, p.name, p.category.name, p.unit, p.supplier?.name ?? "—"]);
   return { headers, rows, truncated: products.length < total };
 }
+
+/** Every active product's name/code/category, nothing else — feeds the
+ * "Item" filter dropdown so a technician can browse by category instead of
+ * needing to already know the exact name. Cached: same list for everyone,
+ * cheap to keep warm. */
+async function loadProductCatalog() {
+  "use cache";
+  tagAndLife(["products", "categories"], CACHE_SECONDS.list);
+  const products = await prisma.product.findMany({
+    where: { archivedAt: null },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, code: true, category: { select: { name: true } } },
+  });
+  return products.map((p) => ({ id: p.id, name: p.name, code: p.code, category: p.category.name }));
+}
+
+export async function getProductCatalog() {
+  return loadProductCatalog();
+}
+
+export type ProductCatalogItem = Awaited<ReturnType<typeof getProductCatalog>>[number];

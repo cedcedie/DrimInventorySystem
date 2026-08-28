@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Box, ButtonBase, InputBase, Select, MenuItem } from "@mui/material";
+import { Box, ButtonBase, Select, MenuItem } from "@mui/material";
+import { SearchByPanel } from "@/components/SearchByPanel";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
@@ -34,11 +35,13 @@ export function InventoryScreen({
 }: {
   initialData?: InventoryData;
 }) {
-  const [q, setQ] = useState("");
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
   const [category, setCategory] = useState("All");
-  // The input stays instant (local state) — only the actual server fetch
+  // The inputs stay instant (local state) — only the actual server fetch
   // waits for typing to pause, so it's not a full request per keystroke.
-  const debouncedQ = useDebouncedValue(q, 300);
+  const debouncedCode = useDebouncedValue(code, 300);
+  const debouncedName = useDebouncedValue(name, 300);
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductFormRow | null>(null);
@@ -47,25 +50,29 @@ export function InventoryScreen({
   const canEditProduct = useCan("products", "canEdit");
   const canDeleteProduct = useCan("products", "canDelete");
   const canEditInventory = useCan("inventory", "canEdit");
+  const canExport = useCan("inventory", "canExport");
   const canManage = canEditProduct || canDeleteProduct || canEditInventory;
   const showMinLevel = canEditInventory;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
   const { data, page, setPage } = usePaginatedQuery<InventoryData>({
-    queryKey: (p) => queryKeys.inventory({ q: debouncedQ, category, page: p }),
+    queryKey: (p) => queryKeys.inventory({ code: debouncedCode, name: debouncedName, category, page: p }),
     url: (p) =>
-      `/api/inventory?q=${encodeURIComponent(debouncedQ)}&category=${encodeURIComponent(category)}&page=${p}`,
+      `/api/inventory?code=${encodeURIComponent(debouncedCode)}&name=${encodeURIComponent(debouncedName)}&category=${encodeURIComponent(category)}&page=${p}`,
     initialData,
     live: liveCool,
   });
 
-  // Reset to page 1 once the search/category filter actually changes (i.e.
-  // once a new fetch is about to happen) — not on every keystroke.
+  // Reset to page 1 once a filter actually changes (i.e. once a new fetch
+  // is about to happen) — not on every keystroke.
   useEffect(() => {
     setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only page-reset on a real filter change, not every render
-  }, [debouncedQ, category]);
+  }, [debouncedCode, debouncedName, category]);
+
+  const exportUrl = (format: "pdf" | "excel") =>
+    `/api/inventory/export?format=${format}&code=${encodeURIComponent(debouncedCode)}&name=${encodeURIComponent(debouncedName)}&category=${encodeURIComponent(category)}`;
 
   const t = useTheme().palette;
 
@@ -125,6 +132,8 @@ export function InventoryScreen({
               }
             : undefined
         }
+        onExportPdf={canExport ? () => (window.location.href = exportUrl("pdf")) : undefined}
+        onExportExcel={canExport ? () => (window.location.href = exportUrl("excel")) : undefined}
       >
         {canCreateProduct && (
           <ButtonBase
@@ -146,55 +155,38 @@ export function InventoryScreen({
         )}
       </PageChrome>
 
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1.25,
-          mb: 1.5,
-          flexWrap: "wrap",
-          px: 1.5,
-          py: 1.25,
-          bgcolor: t.surface,
-          border: "1px solid",
-          borderColor: t.line,
-          borderRadius: "12px",
-        }}
-      >
-        <InputBase
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by Product Code or Name"
-          sx={{
-            flex: "1 1 200px",
-            border: "1px solid",
-            borderColor: t.border,
-            borderRadius: "8px",
-            px: 1.375,
-            py: 0.75,
-            fontSize: 13,
-            bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
-          }}
-        />
-        <Select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          size="small"
-          sx={{
-            minWidth: 160,
-            fontSize: 13,
-            fontWeight: 700,
-            bgcolor: t.surface,
-            "& .MuiOutlinedInput-notchedOutline": { borderColor: t.border },
-          }}
-        >
-          {["All", ...(data?.categories ?? [])].map((c) => (
-            <MenuItem key={c} value={c} sx={{ fontSize: 13 }}>
-              {c}
-            </MenuItem>
-          ))}
-        </Select>
-      </Box>
+      <SearchByPanel
+        fields={[
+          { key: "code", label: "Code", value: code, onChange: setCode },
+          { key: "name", label: "Product Name", value: name, onChange: setName },
+          {
+            key: "category",
+            label: "Category",
+            value: category,
+            onChange: setCategory,
+            render: () => (
+              <Select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                size="small"
+                fullWidth
+                sx={{
+                  fontSize: 13,
+                  bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
+                  "& .MuiSelect-select": { py: 0.8125 },
+                  "& .MuiOutlinedInput-notchedOutline": { borderColor: t.border },
+                }}
+              >
+                {["All", ...(data?.categories ?? [])].map((c) => (
+                  <MenuItem key={c} value={c} sx={{ fontSize: 13 }}>
+                    {c}
+                  </MenuItem>
+                ))}
+              </Select>
+            ),
+          },
+        ]}
+      />
 
       {!data ? (
         <TableSkeleton label="Loading inventory…" columns={canManage ? (showMinLevel ? 9 : 8) : 7} rows={8} />
@@ -315,11 +307,11 @@ export function InventoryScreen({
           {data.rows.length === 0 && (
             <EmptyState
               message={
-                q || category !== "All"
+                code || name || category !== "All"
                   ? "No products match your filters."
                   : "No products yet — add one to start tracking stock."
               }
-              actionLabel={canCreateProduct && !q && category === "All" ? "Add Product" : undefined}
+              actionLabel={canCreateProduct && !code && !name && category === "All" ? "Add Product" : undefined}
               onAction={
                 canCreateProduct
                   ? () => {

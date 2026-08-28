@@ -3,21 +3,22 @@ import { CACHE_SECONDS, tagAndLife } from "@/lib/cache";
 
 const PAGE_SIZE = 15;
 
-async function fetchInventoryData(q: string, category: string, page: number) {
-  const where = {
-    AND: [
-      { archivedAt: null },
-      category !== "All" ? { category: { name: category } } : {},
-      q
-        ? {
-            OR: [
-              { code: { contains: q, mode: "insensitive" as const } },
-              { name: { contains: q, mode: "insensitive" as const } },
-            ],
-          }
-        : {},
-    ],
-  };
+export type InventoryFilters = { code?: string; name?: string; category?: string };
+
+/** Each filled-in field is its own AND'd condition — not one free-text box
+ * OR-ing across everything. Shared by the paginated list and the export
+ * route, so both apply exactly the same rows. */
+function buildInventoryWhere(filters: InventoryFilters) {
+  const { code, name, category } = filters;
+  const and: object[] = [{ archivedAt: null }];
+  if (category && category !== "All") and.push({ category: { name: category } });
+  if (code) and.push({ code: { contains: code, mode: "insensitive" as const } });
+  if (name) and.push({ name: { contains: name, mode: "insensitive" as const } });
+  return { AND: and };
+}
+
+async function fetchInventoryData(filters: InventoryFilters, page: number) {
+  const where = buildInventoryWhere(filters);
 
   const [total, products, categories, suppliers] = await Promise.all([
     prisma.product.count({ where }),
@@ -61,18 +62,50 @@ async function fetchInventoryData(q: string, category: string, page: number) {
 async function loadDefaultInventory() {
   "use cache";
   tagAndLife("inventory", CACHE_SECONDS.list);
-  return fetchInventoryData("", "All", 1);
+  return fetchInventoryData({}, 1);
 }
 
-export async function getInventoryData(params: { q?: string; category?: string; page?: number }) {
-  const q = params.q?.trim() ?? "";
-  const category = params.category ?? "All";
+export async function getInventoryData(params: { page?: number } & InventoryFilters) {
   const page = Math.max(1, params.page ?? 1);
-
-  if (!q && category === "All" && page === 1) {
+  const filters: InventoryFilters = {
+    code: params.code?.trim() || undefined,
+    name: params.name?.trim() || undefined,
+    category: params.category?.trim() || undefined,
+  };
+  const hasFilter = Object.values(filters).some((v) => v && v !== "All");
+  if (!hasFilter && page === 1) {
     return loadDefaultInventory();
   }
-  return fetchInventoryData(q, category, page);
+  return fetchInventoryData(filters, page);
 }
 
 export type InventoryData = Awaited<ReturnType<typeof getInventoryData>>;
+
+const EXPORT_CAP = 2000;
+
+/** Same filters as the paginated list, but every matching row (capped) —
+ * feeds the screen's "download what I'm looking at" export button. Pricing
+ * columns are included here; the route strips them for non-Owner/Admin
+ * viewers, same as the list endpoint. */
+export async function getInventoryExportRows(filters: InventoryFilters, includePricing: boolean) {
+  const where = buildInventoryWhere(filters);
+  const [total, products] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.product.findMany({
+      where,
+      include: { category: true },
+      orderBy: { code: "asc" },
+      take: EXPORT_CAP,
+    }),
+  ]);
+
+  const headers = ["Code", "Product Name", "Category", "Stocks", "Unit", "Status", ...(includePricing ? ["Unit Cost", "Total Value"] : [])];
+  const rows = products.map((p) => {
+    const status = p.stocks === 0 ? "Unavailable" : p.stocks <= p.minLevel ? "Low Stock" : "In Stock";
+    const base = [p.code, p.name, p.category.name, String(p.stocks), p.unit, status];
+    if (!includePricing) return base;
+    const amount = Number(p.amount);
+    return [...base, amount.toFixed(2), (amount * p.stocks).toFixed(2)];
+  });
+  return { headers, rows, truncated: products.length < total };
+}

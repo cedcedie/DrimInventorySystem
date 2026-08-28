@@ -8,7 +8,8 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const data = await getInventoryData({
-    q: searchParams.get("q") ?? undefined,
+    code: searchParams.get("code") ?? undefined,
+    name: searchParams.get("name") ?? undefined,
     category: searchParams.get("category") ?? undefined,
     page: Number(searchParams.get("page") ?? "1"),
   });

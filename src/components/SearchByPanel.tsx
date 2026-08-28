@@ -9,6 +9,9 @@ export type SearchByField = {
   placeholder?: string;
   value: string;
   onChange: (value: string) => void;
+  /** Swaps the default text input for custom content (e.g. a category Select)
+   * while keeping the same label + grid-cell styling as every other field. */
+  render?: () => React.ReactNode;
 };
 
 /** "SEARCH BY" panel — one labeled, independently-optional input per field.
@@ -33,21 +36,25 @@ export function SearchByPanel({ fields }: { fields: SearchByField[] }) {
         {fields.map((f) => (
           <Box key={f.key}>
             <Typography sx={{ fontSize: 10.5, color: t.muted, mb: 0.375 }}>{f.label}</Typography>
-            <InputBase
-              value={f.value}
-              onChange={(e) => f.onChange(e.target.value)}
-              placeholder={f.placeholder ?? f.label}
-              fullWidth
-              sx={{
-                border: "1px solid",
-                borderColor: t.border,
-                borderRadius: "8px",
-                px: 1.125,
-                py: 0.625,
-                fontSize: 13,
-                bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
-              }}
-            />
+            {f.render ? (
+              f.render()
+            ) : (
+              <InputBase
+                value={f.value}
+                onChange={(e) => f.onChange(e.target.value)}
+                placeholder={f.placeholder ?? f.label}
+                fullWidth
+                sx={{
+                  border: "1px solid",
+                  borderColor: t.border,
+                  borderRadius: "8px",
+                  px: 1.125,
+                  py: 0.625,
+                  fontSize: 13,
+                  bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
+                }}
+              />
+            )}
           </Box>
         ))}
       </Box>

@@ -48,10 +48,10 @@ export function warmShellRoutes(
     if (accessSegments.includes("inventory")) {
       window.setTimeout(() => {
         void queryClient.prefetchQuery({
-          queryKey: queryKeys.inventory({ q: "", category: "All", page: 1 }),
+          queryKey: queryKeys.inventory({ code: "", name: "", category: "All", page: 1 }),
           queryFn: () =>
             fetchJson<InventoryData>(
-              `/api/inventory?q=${encodeURIComponent("")}&category=${encodeURIComponent("All")}&page=1`
+              `/api/inventory?code=&name=&category=${encodeURIComponent("All")}&page=1`
             ),
           staleTime: 8_000,
         });

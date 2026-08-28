@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState, Suspense } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Box, Select, MenuItem, Typography } from "@mui/material";
-import { SearchByPanel } from "@/components/SearchByPanel";
+import { SearchByPanel, SEARCH_FIELD_HEIGHT } from "@/components/SearchByPanel";
+import { ExportButton } from "@/components/ExportButton";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
@@ -63,6 +64,7 @@ function ProductsScreenInner({
   const canCreate = useCan("products", "canCreate");
   const canEdit = useCan("products", "canEdit");
   const canDelete = useCan("products", "canDelete");
+  const canExport = useCan("products", "canExport");
   const canManage = canEdit || canDelete;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -169,9 +171,10 @@ function ProductsScreenInner({
                 size="small"
                 fullWidth
                 sx={{
+                  height: SEARCH_FIELD_HEIGHT,
                   fontSize: 13,
                   bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
-                  "& .MuiSelect-select": { py: 0.8125 },
+                  "& .MuiSelect-select": { display: "flex", alignItems: "center", height: "100%", boxSizing: "border-box", py: 0 },
                   "& .MuiOutlinedInput-notchedOutline": { borderColor: t.border },
                 }}
               >
@@ -184,6 +187,15 @@ function ProductsScreenInner({
             ),
           },
         ]}
+        trailing={
+          canExport && (
+            <ExportButton
+              buildUrl={(format) =>
+                `/api/products/export?format=${format}&code=${encodeURIComponent(debouncedCode)}&name=${encodeURIComponent(debouncedName)}&supplier=${encodeURIComponent(debouncedSupplier)}&category=${encodeURIComponent(category)}`
+              }
+            />
+          )
+        }
       />
 
       {!data ? (

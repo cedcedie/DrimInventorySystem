@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Box, ButtonBase, Select, MenuItem } from "@mui/material";
-import { SearchByPanel } from "@/components/SearchByPanel";
+import { SearchByPanel, SEARCH_FIELD_HEIGHT } from "@/components/SearchByPanel";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { queryKeys } from "@/lib/queryKeys";
@@ -170,9 +170,10 @@ export function InventoryScreen({
                 size="small"
                 fullWidth
                 sx={{
+                  height: SEARCH_FIELD_HEIGHT,
                   fontSize: 13,
                   bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
-                  "& .MuiSelect-select": { py: 0.8125 },
+                  "& .MuiSelect-select": { display: "flex", alignItems: "center", height: "100%", boxSizing: "border-box", py: 0 },
                   "& .MuiOutlinedInput-notchedOutline": { borderColor: t.border },
                 }}
               >

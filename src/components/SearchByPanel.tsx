@@ -3,6 +3,12 @@
 import { Box, InputBase, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
+/** Every field's control (text box, Select, Download button) shares this exact
+ * height so the whole row lines up — MUI's Select and Button don't match a
+ * plain InputBase's height by default, which is what caused the visible
+ * misalignment (boxes/select/button all sitting at slightly different heights). */
+export const SEARCH_FIELD_HEIGHT = 36;
+
 export type SearchByField = {
   key: string;
   label: string;
@@ -48,11 +54,12 @@ export function SearchByPanel({ fields, trailing }: { fields: SearchByField[]; t
                   onChange={(e) => f.onChange(e.target.value)}
                   fullWidth
                   sx={{
+                    height: SEARCH_FIELD_HEIGHT,
+                    boxSizing: "border-box",
                     border: "1px solid",
                     borderColor: t.border,
                     borderRadius: "8px",
                     px: 1.125,
-                    py: 0.625,
                     fontSize: 13,
                     bgcolor: t.mode === "dark" ? "background.default" : "#F9FAFB",
                   }}

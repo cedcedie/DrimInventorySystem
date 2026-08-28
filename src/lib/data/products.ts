@@ -81,3 +81,30 @@ export async function getProductsData(params: { page?: number } & ProductsFilter
 }
 
 export type ProductsData = Awaited<ReturnType<typeof getProductsData>>;
+
+const EXPORT_CAP = 2000;
+
+/** Same filters as the paginated list, but every matching row (capped) —
+ * feeds the screen's "download what I'm looking at" export button. */
+export async function getProductsExportRows(filters: ProductsFilters) {
+  const trimmed: ProductsFilters = {
+    code: filters.code?.trim() || undefined,
+    name: filters.name?.trim() || undefined,
+    supplier: filters.supplier?.trim() || undefined,
+    category: filters.category?.trim() || undefined,
+  };
+  const where = buildProductsWhere(trimmed);
+  const [total, products] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.product.findMany({
+      where,
+      include: { category: true, supplier: true },
+      orderBy: { code: "asc" },
+      take: EXPORT_CAP,
+    }),
+  ]);
+
+  const headers = ["Code", "Product Name", "Category", "Unit", "Supplier"];
+  const rows = products.map((p) => [p.code, p.name, p.category.name, p.unit, p.supplier?.name ?? "—"]);
+  return { headers, rows, truncated: products.length < total };
+}

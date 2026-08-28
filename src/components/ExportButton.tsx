@@ -7,6 +7,7 @@ import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
 import GridOnOutlinedIcon from "@mui/icons-material/GridOnOutlined";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import { useTheme } from "@mui/material/styles";
+import { SEARCH_FIELD_HEIGHT } from "@/components/SearchByPanel";
 
 /** "Download what's currently showing" button — a PDF/Excel choice menu next
  * to a SEARCH BY panel. `buildUrl` gets the chosen format and returns the
@@ -32,6 +33,8 @@ export function ExportButton({ buildUrl }: { buildUrl: (format: "pdf" | "excel")
         endIcon={<ArrowDropDownIcon />}
         size="small"
         sx={{
+          height: SEARCH_FIELD_HEIGHT,
+          boxSizing: "border-box",
           textTransform: "none",
           fontSize: 12.5,
           fontWeight: 600,

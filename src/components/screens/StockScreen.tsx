@@ -606,42 +606,46 @@ function StockOutTab({
   const picked = data?.rows[pickedIdx] ?? data?.rows[0];
 
   return (
-    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-      {/* minWidth must match TableShell's minWidth={720} below, else the sibling panel squeezes the table and clips it instead of scrolling */}
-      <Box sx={{ flex: "2.4 1 460px", minWidth: { xs: "100%", sm: 720 } }}>
-        {viewOnly && <ViewOnlyBanner text="View only — releasing Stock Out requires create permission" />}
-        <Box sx={{ display: "flex", alignItems: "center", mb: 1.5, gap: 1.25, flexWrap: "wrap" }}>
-          <Typography sx={{ fontSize: 12, color: t.muted }}>
-            Release slips (SO) — stock issued against material requests
-          </Typography>
-          <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.25 }}>
-            {canExport && (
-              <ExportButton
-                buildUrl={(format) =>
-                  `/api/stock-out/export?format=${format}&mrfNumber=${encodeURIComponent(debouncedMrfNumber)}&date=${encodeURIComponent(debouncedDate)}&item=${encodeURIComponent(debouncedItem)}&project=${encodeURIComponent(debouncedProject)}&technician=${encodeURIComponent(debouncedTechnician)}`
-                }
-              />
-            )}
-            {canStock && (
-              <ButtonBase
-                onClick={onFulfill}
-                sx={{
-                  border: "none",
-                  bgcolor: t.primary.main,
-                  color: "#fff",
-                  borderRadius: "2px",
-                  px: 1.625,
-                  py: 1,
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                + Fulfill MRF
-              </ButtonBase>
-            )}
-          </Box>
+    <Box>
+      {viewOnly && <ViewOnlyBanner text="View only — releasing Stock Out requires create permission" />}
+      {/* Spans the full width of both columns below, so Download/Fulfill MRF land
+         flush with the right edge of the Release detail card, not just the
+         narrower table column. */}
+      <Box sx={{ display: "flex", alignItems: "center", mb: 1.5, gap: 1.25, flexWrap: "wrap" }}>
+        <Typography sx={{ fontSize: 12, color: t.muted }}>
+          Release slips (SO) — stock issued against material requests
+        </Typography>
+        <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.25 }}>
+          {canExport && (
+            <ExportButton
+              buildUrl={(format) =>
+                `/api/stock-out/export?format=${format}&mrfNumber=${encodeURIComponent(debouncedMrfNumber)}&date=${encodeURIComponent(debouncedDate)}&item=${encodeURIComponent(debouncedItem)}&project=${encodeURIComponent(debouncedProject)}&technician=${encodeURIComponent(debouncedTechnician)}`
+              }
+            />
+          )}
+          {canStock && (
+            <ButtonBase
+              onClick={onFulfill}
+              sx={{
+                border: "none",
+                bgcolor: t.primary.main,
+                color: "#fff",
+                borderRadius: "2px",
+                px: 1.625,
+                py: 1,
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              + Fulfill MRF
+            </ButtonBase>
+          )}
         </Box>
+      </Box>
 
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
+        {/* minWidth must match TableShell's minWidth={720} below, else the sibling panel squeezes the table and clips it instead of scrolling */}
+        <Box sx={{ flex: "2.4 1 460px", minWidth: { xs: "100%", sm: 720 } }}>
         {/* Filters every release down to one item — e.g. "Copper Pipe 1/2" — so
            its full history (MRF, slip, requester, project, qty) is visible
            together instead of scattered across pages of unrelated releases. */}
@@ -730,6 +734,7 @@ function StockOutTab({
           <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>Release detail</Typography>
         </Box>
         <ReleaseDetailBody picked={picked} canCorrect={canCorrect} onCorrect={setCorrecting} t={t} />
+      </Box>
       </Box>
 
       <EntityModal

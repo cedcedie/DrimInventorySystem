@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   };
 
   try {
-    const { headers, rows } = await getStockInExportRows(filters);
+    const { headers, rows, truncated } = await getStockInExportRows(filters);
     const { bytes, contentType, extension } = await generateQuickExport({
       title: "Stock In — Receipt Slips",
       headers,
@@ -32,6 +32,7 @@ export async function GET(req: Request) {
         ["Received By", filters.receivedBy],
       ]),
       generatedBy: auth.session.user.name ?? auth.session.user.username ?? "Unknown",
+      truncated,
     });
 
     return new NextResponse(Buffer.from(bytes), {

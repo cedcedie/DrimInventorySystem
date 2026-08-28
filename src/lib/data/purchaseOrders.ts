@@ -117,16 +117,21 @@ export async function getPurchaseOrdersExportRows(filters: PurchaseOrdersFilters
     filedBy: filters.filedBy?.trim() || undefined,
   };
   const where = buildPurchaseOrdersWhere(trimmed);
-  const orders = await prisma.purchaseOrder.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: EXPORT_CAP,
-    include: {
-      supplier: { select: { name: true } },
-      byUser: { select: { name: true } },
-      items: { include: { product: { select: { name: true, code: true } } } },
-    },
-  });
+  const [total, orders] = await Promise.all([
+    prisma.purchaseOrder.count({ where }),
+    prisma.purchaseOrder.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: EXPORT_CAP,
+      include: {
+        supplier: { select: { name: true } },
+        byUser: { select: { name: true } },
+        items: { include: { product: { select: { name: true, code: true } } } },
+      },
+    }),
+  ]);
+  // The cap applies at the order level, not the flattened line-item level.
+  const truncated = orders.length < total;
 
   const headers = ["Order #", "Date", "Supplier", "Item", "Code", "Ordered", "Received", "Status", "Filed By"];
   const rows = orders.flatMap((po) => {
@@ -145,7 +150,7 @@ export async function getPurchaseOrdersExportRows(filters: PurchaseOrdersFilters
       po.byUser.name,
     ]);
   });
-  return { headers, rows };
+  return { headers, rows, truncated };
 }
 
 export async function getPurchaseOrderDetail(id: string) {

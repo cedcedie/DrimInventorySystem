@@ -106,19 +106,23 @@ export async function getAdjustmentsExportRows(filters: AdjustmentsFilters) {
     user: filters.user?.trim() || undefined,
   };
   const where = buildAdjustmentsWhere(trimmed);
-  const rows = await prisma.stockAdjustment.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: EXPORT_CAP,
-    include: {
-      product: { select: { name: true, code: true, unit: true } },
-      byUser: { select: { name: true } },
-    },
-  });
+  const [total, rows] = await Promise.all([
+    prisma.stockAdjustment.count({ where }),
+    prisma.stockAdjustment.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: EXPORT_CAP,
+      include: {
+        product: { select: { name: true, code: true, unit: true } },
+        byUser: { select: { name: true } },
+      },
+    }),
+  ]);
 
   const headers = ["Adj. #", "Date", "Product", "Code", "Before", "After", "Delta", "Reason", "Note", "By"];
   return {
     headers,
+    truncated: rows.length < total,
     rows: rows.map((a) => [
       a.refNo,
       formatDateForExport(a.createdAt),

@@ -24,10 +24,16 @@ export async function generateQuickExport(params: {
   /** One-line description of the active filters, e.g. "Item: pipe" or "All records". */
   filterSummary: string;
   generatedBy: string;
+  /** True when the underlying query hit the export row cap — the file only has
+   * a partial result, so the summary says so instead of quietly implying
+   * `rows.length` is the whole match. */
+  truncated?: boolean;
 }): Promise<{ bytes: Buffer; contentType: string; extension: string }> {
-  const { title, headers, rows, format, filterSummary, generatedBy } = params;
+  const { title, headers, rows, format, filterSummary, generatedBy, truncated } = params;
   const company = await getCompanySettings();
-  const summary = `${rows.length} matching record${rows.length === 1 ? "" : "s"}`;
+  const summary = truncated
+    ? `Showing first ${rows.length.toLocaleString()} records — more match your search than fit in one file; narrow your search to get all of them`
+    : `${rows.length} matching record${rows.length === 1 ? "" : "s"}`;
 
   if (format === "excel") {
     const bytes = await generateExcelReport({

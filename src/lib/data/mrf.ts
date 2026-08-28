@@ -287,15 +287,20 @@ export async function getOpenMrfsExportRows(filters: OpenMrfsFilters) {
     technician: filters.technician?.trim() || undefined,
   };
   const where = buildOpenMrfsWhere(trimmed);
-  const mrfs = await prisma.mrf.findMany({
-    where,
-    orderBy: { createdAt: "asc" },
-    take: OPEN_MRF_EXPORT_CAP,
-    include: {
-      technician: { select: { name: true } },
-      items: { include: { product: { select: { name: true, code: true, stocks: true, unit: true } } } },
-    },
-  });
+  const [total, mrfs] = await Promise.all([
+    prisma.mrf.count({ where }),
+    prisma.mrf.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
+      take: OPEN_MRF_EXPORT_CAP,
+      include: {
+        technician: { select: { name: true } },
+        items: { include: { product: { select: { name: true, code: true, stocks: true, unit: true } } } },
+      },
+    }),
+  ]);
+  // The cap applies at the MRF level, not the flattened line-item level.
+  const truncated = mrfs.length < total;
 
   const headers = ["Request # (MRF)", "Filed", "Technician", "Project", "Item", "Code", "Need", "In Stock"];
   const rows = mrfs.flatMap((mrf) =>
@@ -312,6 +317,6 @@ export async function getOpenMrfsExportRows(filters: OpenMrfsFilters) {
         `${item.product.stocks} ${item.product.unit}`,
       ])
   );
-  return { headers, rows };
+  return { headers, rows, truncated };
 }
 export type OpenMrfsQueueData = Awaited<ReturnType<typeof getOpenMrfsQueue>>;

@@ -106,16 +106,21 @@ export async function getPurchaseRequestsExportRows(filters: PurchaseRequestsFil
     filedBy: filters.filedBy?.trim() || undefined,
   };
   const where = buildPurchaseRequestsWhere(trimmed);
-  const requests = await prisma.purchaseRequest.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: EXPORT_CAP,
-    include: {
-      supplier: { select: { name: true } },
-      byUser: { select: { name: true } },
-      items: { include: { product: { select: { name: true, code: true } } } },
-    },
-  });
+  const [total, requests] = await Promise.all([
+    prisma.purchaseRequest.count({ where }),
+    prisma.purchaseRequest.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: EXPORT_CAP,
+      include: {
+        supplier: { select: { name: true } },
+        byUser: { select: { name: true } },
+        items: { include: { product: { select: { name: true, code: true } } } },
+      },
+    }),
+  ]);
+  // The cap applies at the request level, not the flattened line-item level.
+  const truncated = requests.length < total;
 
   const headers = ["Request #", "Filed", "Supplier", "Item", "Code", "Qty", "Status", "Filed By"];
   const rows = requests.flatMap((pr) =>
@@ -130,7 +135,7 @@ export async function getPurchaseRequestsExportRows(filters: PurchaseRequestsFil
       pr.byUser.name,
     ])
   );
-  return { headers, rows };
+  return { headers, rows, truncated };
 }
 
 export async function getPurchaseRequestDetail(id: string) {

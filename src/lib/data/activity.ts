@@ -105,12 +105,15 @@ export async function getActivityExportRows(role: Role, filters: ActivityFilters
     ref: filters.ref?.trim() || undefined,
   };
   const where = buildActivityWhere(isPrivileged(role), trimmed);
-  const activities = await prisma.activityLog.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: EXPORT_CAP,
-    include: { user: { select: { name: true, role: true } } },
-  });
+  const [total, activities] = await Promise.all([
+    prisma.activityLog.count({ where }),
+    prisma.activityLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: EXPORT_CAP,
+      include: { user: { select: { name: true, role: true } } },
+    }),
+  ]);
 
   const headers = ["Date & Time", "User", "Role", "Action", "Reference"];
   const rows = activities.map((a) => [
@@ -120,5 +123,5 @@ export async function getActivityExportRows(role: Role, filters: ActivityFilters
     a.action,
     a.refNo,
   ]);
-  return { headers, rows };
+  return { headers, rows, truncated: rows.length < total };
 }

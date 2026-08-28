@@ -113,12 +113,15 @@ const EXPORT_CAP = 2000;
  * feeds the screen's "download what I'm looking at" export button. */
 export async function getStockInExportRows(filters: StockInFilters) {
   const where = buildStockInWhere(filters);
-  const batches = await prisma.stockInBatch.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: EXPORT_CAP,
-    include: { supplier: true, byUser: true, items: { include: { product: true } } },
-  });
+  const [totalBatches, batches] = await Promise.all([
+    prisma.stockInBatch.count({ where }),
+    prisma.stockInBatch.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: EXPORT_CAP,
+      include: { supplier: true, byUser: true, items: { include: { product: true } } },
+    }),
+  ]);
 
   const headers = ["Receipt slip (SI)", "Date", "Supplier", "Item", "Code", "Quantity", "Received By"];
   const rows = batches.flatMap((batch) =>
@@ -132,7 +135,10 @@ export async function getStockInExportRows(filters: StockInFilters) {
       batch.byUser.name,
     ])
   );
-  return { headers, rows };
+  // The cap applies at the batch level, not the flattened row level (one batch
+  // can have several items) — a batch-level shortfall means the export was cut
+  // short even though we can't say exactly how many rows that would've been.
+  return { headers, rows, truncated: batches.length < totalBatches };
 }
 
 export type StockOutFilters = { mrfNumber?: string; date?: string; item?: string; project?: string; technician?: string };
@@ -227,16 +233,20 @@ export type StockOutData = Awaited<ReturnType<typeof getStockOutData>>;
  * feeds the screen's "download what I'm looking at" export button. */
 export async function getStockOutExportRows(filters: StockOutFilters) {
   const where = buildStockOutWhere(filters);
-  const rows = await prisma.stockOut.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: EXPORT_CAP,
-    include: { product: true, technician: true, mrf: true, byUser: true },
-  });
+  const [total, rows] = await Promise.all([
+    prisma.stockOut.count({ where }),
+    prisma.stockOut.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: EXPORT_CAP,
+      include: { product: true, technician: true, mrf: true, byUser: true },
+    }),
+  ]);
 
   const headers = ["Release slip (SO)", "Date", "Technician", "Item", "Code", "Qty", "Request # (MRF)", "Project", "Released By"];
   return {
     headers,
+    truncated: rows.length < total,
     rows: rows.map((so) => [
       so.refNo,
       formatDateForExport(so.createdAt),

@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   };
 
   try {
-    const { headers, rows } = await getActivityExportRows(auth.role, filters);
+    const { headers, rows, truncated } = await getActivityExportRows(auth.role, filters);
     const { bytes, contentType, extension } = await generateQuickExport({
       title: "Activity Log",
       headers,
@@ -28,6 +28,7 @@ export async function GET(req: Request) {
         ["Reference", filters.ref],
       ]),
       generatedBy: auth.session.user.name ?? auth.session.user.username ?? "Unknown",
+      truncated,
     });
 
     return new NextResponse(Buffer.from(bytes), {

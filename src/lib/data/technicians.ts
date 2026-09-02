@@ -53,3 +53,23 @@ export async function getTechniciansData(params: { page?: number } = {}) {
 }
 
 export type TechniciansData = Awaited<ReturnType<typeof getTechniciansData>>;
+
+/** Lightweight name list for the "Technician" filter dropdowns across search
+ * screens — mirrors getProductCatalog's role for the "Item" filter. Any
+ * signed-in user can read it (just names, not the full roster/MRF history
+ * behind the gated Technicians module). */
+async function loadTechnicianCatalog() {
+  "use cache";
+  tagAndLife("technicians", CACHE_SECONDS.list);
+  const technicians = await prisma.technician.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+  return technicians;
+}
+
+export async function getTechnicianCatalog() {
+  return loadTechnicianCatalog();
+}
+
+export type TechnicianCatalogItem = Awaited<ReturnType<typeof getTechnicianCatalog>>[number];

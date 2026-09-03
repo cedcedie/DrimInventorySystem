@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const auth = await requireModuleAccess("users", "canCreate");
   if ("error" in auth) return auth.error;
 
-  const rl = checkRateLimit(`create-user:${getClientIp(req)}`, { limit: 10, windowMs: 60_000 });
+  const rl = await checkRateLimit(`create-user:${getClientIp(req)}`, { limit: 10, windowMs: 60_000 });
   if (!rl.allowed) {
     return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
   }

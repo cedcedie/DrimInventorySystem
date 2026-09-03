@@ -32,7 +32,7 @@ const API_SEGMENT_TO_MODULE: Record<string, string> = {
   "purchase-requests": "purchaseRequests",
 };
 
-export default auth((req) => {
+export default auth(async (req) => {
   const { pathname } = req.nextUrl;
 
   if (
@@ -59,7 +59,7 @@ export default auth((req) => {
   }
 
   if (isApiRoute && ["POST", "PATCH", "DELETE"].includes(req.method)) {
-    const rl = checkRateLimit(`mutate:${getClientIp(req)}`, { limit: 60, windowMs: 60_000 });
+    const rl = await checkRateLimit(`mutate:${getClientIp(req)}`, { limit: 60, windowMs: 60_000 });
     if (!rl.allowed) {
       return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
     }

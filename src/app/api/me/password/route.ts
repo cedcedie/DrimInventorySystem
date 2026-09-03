@@ -17,7 +17,7 @@ export async function PATCH(req: Request) {
 
   // Throttled harder than ordinary mutations: this endpoint verifies a
   // password, so it's an oracle for guessing the current one.
-  const rl = checkRateLimit(`change-password:${getClientIp(req)}`, {
+  const rl = await checkRateLimit(`change-password:${getClientIp(req)}`, {
     limit: 5,
     windowMs: 60_000,
   });

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { checkRateLimit, getClientIp } from "./rateLimit";
 
 // Buckets live in a module-level Map that persists across tests, so each test uses its own key.
+// No UPSTASH_* env vars are set in the test environment, so these all exercise the in-memory fallback.
 let keySeq = 0;
 const freshKey = () => `test-key-${keySeq++}`;
 
@@ -10,64 +11,64 @@ afterEach(() => {
 });
 
 describe("checkRateLimit", () => {
-  it("allows requests up to the limit", () => {
+  it("allows requests up to the limit", async () => {
     const key = freshKey();
     for (let i = 0; i < 5; i++) {
-      expect(checkRateLimit(key, { limit: 5, windowMs: 60_000 }).allowed).toBe(true);
+      expect((await checkRateLimit(key, { limit: 5, windowMs: 60_000 })).allowed).toBe(true);
     }
   });
 
-  it("blocks the request that exceeds the limit", () => {
+  it("blocks the request that exceeds the limit", async () => {
     const key = freshKey();
     for (let i = 0; i < 5; i++) {
-      checkRateLimit(key, { limit: 5, windowMs: 60_000 });
+      await checkRateLimit(key, { limit: 5, windowMs: 60_000 });
     }
-    expect(checkRateLimit(key, { limit: 5, windowMs: 60_000 }).allowed).toBe(false);
+    expect((await checkRateLimit(key, { limit: 5, windowMs: 60_000 })).allowed).toBe(false);
   });
 
-  it("reports how long to wait when blocked", () => {
+  it("reports how long to wait when blocked", async () => {
     const key = freshKey();
     for (let i = 0; i < 3; i++) {
-      checkRateLimit(key, { limit: 3, windowMs: 60_000 });
+      await checkRateLimit(key, { limit: 3, windowMs: 60_000 });
     }
-    const blocked = checkRateLimit(key, { limit: 3, windowMs: 60_000 });
+    const blocked = await checkRateLimit(key, { limit: 3, windowMs: 60_000 });
     expect(blocked.allowed).toBe(false);
     expect(blocked.retryAfterMs).toBeGreaterThan(0);
     expect(blocked.retryAfterMs).toBeLessThanOrEqual(60_000);
   });
 
-  it("keeps separate budgets per key, so one IP can't throttle another", () => {
+  it("keeps separate budgets per key, so one IP can't throttle another", async () => {
     const a = freshKey();
     const b = freshKey();
     for (let i = 0; i < 5; i++) {
-      checkRateLimit(a, { limit: 5, windowMs: 60_000 });
+      await checkRateLimit(a, { limit: 5, windowMs: 60_000 });
     }
-    expect(checkRateLimit(a, { limit: 5, windowMs: 60_000 }).allowed).toBe(false);
-    expect(checkRateLimit(b, { limit: 5, windowMs: 60_000 }).allowed).toBe(true);
+    expect((await checkRateLimit(a, { limit: 5, windowMs: 60_000 })).allowed).toBe(false);
+    expect((await checkRateLimit(b, { limit: 5, windowMs: 60_000 })).allowed).toBe(true);
   });
 
-  it("allows again once the window has passed", () => {
+  it("allows again once the window has passed", async () => {
     vi.useFakeTimers();
     const key = freshKey();
 
     for (let i = 0; i < 3; i++) {
-      checkRateLimit(key, { limit: 3, windowMs: 60_000 });
+      await checkRateLimit(key, { limit: 3, windowMs: 60_000 });
     }
-    expect(checkRateLimit(key, { limit: 3, windowMs: 60_000 }).allowed).toBe(false);
+    expect((await checkRateLimit(key, { limit: 3, windowMs: 60_000 })).allowed).toBe(false);
 
     vi.advanceTimersByTime(60_001);
-    expect(checkRateLimit(key, { limit: 3, windowMs: 60_000 }).allowed).toBe(true);
+    expect((await checkRateLimit(key, { limit: 3, windowMs: 60_000 })).allowed).toBe(true);
   });
 
-  it("still blocks partway through the window", () => {
+  it("still blocks partway through the window", async () => {
     vi.useFakeTimers();
     const key = freshKey();
 
     for (let i = 0; i < 3; i++) {
-      checkRateLimit(key, { limit: 3, windowMs: 60_000 });
+      await checkRateLimit(key, { limit: 3, windowMs: 60_000 });
     }
     vi.advanceTimersByTime(30_000);
-    expect(checkRateLimit(key, { limit: 3, windowMs: 60_000 }).allowed).toBe(false);
+    expect((await checkRateLimit(key, { limit: 3, windowMs: 60_000 })).allowed).toBe(false);
   });
 });
 

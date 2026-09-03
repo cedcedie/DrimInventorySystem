@@ -71,7 +71,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         // NextAuth v5 beta's authorize() has no `req` here, so key per-account not per-IP.
-        const rl = checkRateLimit(`login:${username}`, { limit: 5, windowMs: 60_000 });
+        const rl = await checkRateLimit(`login:${username}`, { limit: 5, windowMs: 60_000 });
         if (!rl.allowed) {
           throw new Error("Too many login attempts. Try again in a minute.");
         }

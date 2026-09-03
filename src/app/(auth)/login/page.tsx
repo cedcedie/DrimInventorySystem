@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { signIn } from "next-auth/react";
@@ -128,11 +129,13 @@ function LoginPageInner() {
           }}
         />
 
-        <Box
-          component="img"
+        <Image
           src="/images/drim-logo-white-text-transparent.png"
           alt="DRIM Refrigeration Equipment Corp."
-          sx={{ width: "76%", maxWidth: 480, height: "auto", position: "relative", zIndex: 1 }}
+          width={1024}
+          height={331}
+          priority
+          style={{ width: "76%", maxWidth: 480, height: "auto", position: "relative", zIndex: 1 }}
         />
 
         <Typography
@@ -206,12 +209,7 @@ function LoginPageInner() {
       >
         <Box component="form" onSubmit={handleSubmit} sx={{ width: 400, maxWidth: "100%" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 3.5 }}>
-            <Box
-              component="img"
-              src="/images/drim-d-transparent.png"
-              alt="DRIM"
-              sx={{ width: 42, height: 42 }}
-            />
+            <Image src="/images/drim-d-transparent.png" alt="DRIM" width={42} height={42} />
             <Typography sx={{ fontSize: 22, fontWeight: 800, color: TEXT }}>
               DRIM{" "}
               <Box component="span" sx={{ color: ACCENT }}>

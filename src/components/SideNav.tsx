@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Box, ButtonBase, Drawer, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
@@ -66,11 +67,12 @@ function Logo({ collapsed }: { collapsed: boolean }) {
         textDecoration: "none",
       }}
     >
-      <Box
-        component="img"
+      <Image
         src="/images/drim-d-transparent.png"
         alt="DRIM"
-        sx={{ width: 32, height: 32, flexShrink: 0 }}
+        width={32}
+        height={32}
+        style={{ flexShrink: 0 }}
       />
       {!collapsed && (
         <Typography sx={{ fontSize: 20, fontWeight: 800, color: "text.primary", letterSpacing: "-0.3px", whiteSpace: "nowrap" }}>

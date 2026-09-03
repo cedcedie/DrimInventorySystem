@@ -5,33 +5,31 @@ client's own GitHub / Vercel / Neon accounts, so they own their hosting,
 billing, and data going forward — and to reset the database from demo/mock
 data to a clean production start with one real login.
 
-Two paths, pick one for the meeting:
-
-- **Path A — Transfer what's already running (recommended).** The GitHub
-  repo, Vercel project, and Neon database that were just tested stay exactly
-  as they are — you just hand the keys to the client's own accounts. Fastest,
-  fewest moving parts, nothing to re-migrate live.
-- **Path B — Fresh setup from scratch.** Client's own brand-new GitHub repo,
-  Vercel project, and Neon database, all wired up from zero. More steps, more
-  that can go wrong live — only use this if Path A isn't possible for some
-  reason (e.g. you want to fully sever the current infra).
-
-This doc covers Path A in full, with a condensed note for Path B at the end
-reusing the same steps.
+**Code handoff method: clean export, no commit history.** The client gets a
+zip of the current code with a single fresh commit — not your actual git
+history (which may reference internal notes, iteration, things not meant for
+them to see). This means GitHub and Vercel are both set up fresh under the
+client's account rather than transferred — a transferred Vercel project would
+still show every past commit message/SHA in its Deployments tab even if
+GitHub itself were clean, so both have to be fresh together. Neon is still
+reused as-is (a database has no "commit history" to worry about, and reusing
+it means no live re-migration).
 
 ---
 
 ## 0. Before the meeting
 
-Confirm you (the developer) still have:
-- Push access to the current GitHub repo (`github.com/cedcedie/DrimInventorySystem`)
-- Owner access on the current Vercel project
-- Owner/Admin access on the current Neon project
+Confirm you (the developer) have:
 - This repo checked out locally with `master` up to date
+- Owner/Admin access on the current Neon project (still being reused)
+- The current `.env` values on hand — `DATABASE_URL`, `DIRECT_URL`,
+  `AUTH_SECRET` — you'll be pasting these into the client's new Vercel
+  project's env vars in step 3, not retyping them from scratch.
 
-And have on hand: the current `.env` values (`DATABASE_URL`, `DIRECT_URL`,
-`AUTH_SECRET`) — you'll need to confirm these still work after the Vercel
-transfer, not retype them (see step 3).
+You do **not** need push access preserved on the current GitHub repo or
+Vercel project afterward — both get left behind, untouched, under your own
+account, once the client's fresh copies are live. (Delete or archive them
+later if you want; not required.)
 
 ---
 
@@ -52,55 +50,74 @@ step, billed after upgrade — see 2b).
 
 ---
 
-## 2. Transfer the GitHub repo
+## 2. Package the code and push it fresh under the client's GitHub
 
-**a. Client creates their GitHub account** (if they don't have one already).
+**a. Client creates their GitHub account** (if they don't have one already),
+and a new **empty** repository (no README/license — literally empty) —
+e.g. `DrimInventorySystem`, visibility Private.
 
-**b. You transfer the repo to them:**
-
-1. Go to `github.com/cedcedie/DrimInventorySystem` → **Settings** → scroll to
-   **Danger Zone** → **Transfer ownership**.
-2. Enter the client's GitHub username, confirm.
-3. GitHub emails the client a transfer request — have them accept it from
-   their own account, right there in the meeting.
-
-The repo URL becomes `github.com/<client-username>/DrimInventorySystem` (or
-whatever they rename it to). Once accepted, on your own machine:
+**b. On your own machine, export the current code with no git history:**
 
 ```bash
-git remote set-url origin https://github.com/<client-username>/DrimInventorySystem.git
-git push origin master
+cd DrimInventorySystem
+git archive -o ../drim-ims-handover.zip HEAD
 ```
 
-*(Only needed if you plan to keep contributing from this local checkout —
-otherwise this remote no longer matters to you.)*
+`git archive` only includes files git actually tracks — `.gitignore`d stuff
+(`.env`, `node_modules`, `.next`, etc.) is never in the zip, and there's no
+`.git` folder in it at all, so no commit history travels with it.
+
+*(Optional: if you don't want the client to see `HANDOVER.md` or
+`scripts/reset-for-handover.ts` either — they're your internal notes, not
+end-user docs — exclude them from the archive instead of deleting them from
+your own copy:)*
+```bash
+git archive -o ../drim-ims-handover.zip HEAD -- . ':!HANDOVER.md' ':!scripts/reset-for-handover.ts'
+```
+
+**c. Turn that zip into the client's first commit, on their new repo:**
+
+```bash
+cd ..
+mkdir drim-ims-fresh && cd drim-ims-fresh
+unzip ../drim-ims-handover.zip
+git init
+git add -A
+git commit -m "Initial commit"
+git branch -M master
+git remote add origin https://github.com/<client-username>/DrimInventorySystem.git
+git push -u origin master
+```
+
+That's it — the client's repo now has exactly one commit, no trace of your
+development history. (Run this from your own machine, logged into the
+client's GitHub in the browser for the `git push` auth prompt — or do it
+directly on their laptop during the meeting, same commands.)
 
 ---
 
-## 3. Transfer the Vercel project
+## 3. Set up the Vercel project
 
-1. In the **current** Vercel project → **Settings** → **Transfer** (near the
-   bottom, "Transfer Project").
-2. Enter the client's Vercel account/team. This sends a transfer request.
-3. Client logs into their new Vercel account (sign up with GitHub in step 1
-   makes this one click) and accepts the transfer from their dashboard
-   notifications.
+**Not a transfer** — a transferred Vercel project would still show every past
+deployment's commit message/SHA in its Deployments tab, which defeats the
+point of giving them a clean repo. Instead, the client makes a **new**
+Vercel project pointed at their new (clean) repo:
 
-**Environment variables carry over automatically** — they belong to the
-project, not the account. After the transfer, sanity-check them:
-Vercel dashboard → the project → **Settings** → **Environment Variables** —
-confirm `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET` are still there.
+1. Client logs into Vercel (sign up with GitHub in step 1 makes this one
+   click) → **Add New** → **Project** → import
+   `<client-username>/DrimInventorySystem` (the repo from step 2).
+2. Before the first deploy, add the env vars — **Settings** →
+   **Environment Variables** (or the import screen offers this directly):
+   paste in `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET` (the values you
+   brought from step 0 — same Neon database as before, so these are
+   unchanged). Leave `R2_*`, Sentry, and Upstash vars blank for now — see
+   `.env.example` in the repo for what each does if you want them later.
+3. Deploy. First build takes a couple minutes.
 
 **b. Upgrade to Pro** (needed for real production use — better uptime,
 no execution timeouts on longer requests like PDF export):
 Project/Account → **Settings** → **Billing** → upgrade to **Pro**. This is
-where the client's card goes on file. Do this either just before or right
-after accepting the transfer — Vercel allows both orders.
-
-**c. Reconnect the Git integration** if it didn't carry over automatically:
-Project → **Settings** → **Git** → connect to the repo at its new location
-(`github.com/<client-username>/DrimInventorySystem`). A push to `master`
-should trigger a new deployment to confirm this works.
+where the client's card goes on file, before or after the first deploy.
 
 ---
 
@@ -210,32 +227,6 @@ Once logged in as the new Owner:
   `{"status":"ok"}` means the app and database are both reachable.
 - **Database looks wrong**: Neon console → project → **Tables** (or SQL
   Editor) to inspect data directly.
-
----
-
-## Path B — fresh setup from scratch (condensed)
-
-If reusing the existing infra (Path A) isn't an option:
-
-1. Client creates GitHub, Vercel, Neon accounts (section 1).
-2. You push a copy of this repo to a **new** repo under the client's GitHub
-   account (`git remote add client <new-repo-url> && git push client master`).
-3. Client imports that repo into a new Vercel project, upgrades to Pro.
-4. Client creates a new Neon project (Singapore region).
-5. Set env vars in Vercel (**Settings → Environment Variables**) — see
-   `.env.example` in the repo root for the full list and what each is for.
-   At minimum: `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET` (generate with
-   `npx auth secret`). Sentry/Upstash vars are optional — leave blank to skip.
-6. Run migrations against the new database:
-   ```bash
-   DATABASE_URL="<pooled url>" DIRECT_URL="<direct url>" pnpm prisma migrate deploy
-   ```
-7. Create the first Owner login (database is already empty, so this just
-   creates the account — nothing to wipe):
-   ```bash
-   DATABASE_URL="<pooled url>" DIRECT_URL="<direct url>" pnpm run reset-for-handover -- --yes --owner-username=<their-username> --owner-name="<Their Full Name>"
-   ```
-8. Continue from section 7 above.
 
 ---
 

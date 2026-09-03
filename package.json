@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify": "npm run typecheck && npm run lint && npm run test",
-    "verify:permissions": "prisma generate && tsx scripts/verify-permissions.ts"
+    "verify:permissions": "prisma generate && tsx scripts/verify-permissions.ts",
+    "reset-for-handover": "tsx scripts/reset-for-handover.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1090.0",

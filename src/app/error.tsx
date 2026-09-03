@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { Box, Typography, ButtonBase } from "@mui/material";
 import { ACCENT, ACCENT_HOVER } from "@/theme/tokens";
 
@@ -13,6 +14,7 @@ export default function GlobalErrorBoundary({
 }) {
   useEffect(() => {
     console.error(error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

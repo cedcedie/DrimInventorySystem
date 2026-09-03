@@ -15,6 +15,14 @@ GitHub itself were clean, so both have to be fresh together. Neon is still
 reused as-is (a database has no "commit history" to worry about, and reusing
 it means no live re-migration).
 
+**You stay on as a collaborator.** This isn't a clean break — you're doing
+this live, on their laptop, and you'll keep maintaining the app afterward. So
+the client adds you as a **Collaborator** on their new GitHub repo (step 2a)
+before the first push, rather than you walking away with no access. From
+then on you push updates from your own machine, under your own GitHub
+account, same as any normal repo you have write access to — no AnyDesk
+needed for future changes, just this one session to get everything stood up.
+
 ---
 
 ## 0. Before the meeting
@@ -25,11 +33,13 @@ Confirm you (the developer) have:
 - The current `.env` values on hand — `DATABASE_URL`, `DIRECT_URL`,
   `AUTH_SECRET` — you'll be pasting these into the client's new Vercel
   project's env vars in step 3, not retyping them from scratch.
+- Your own GitHub username handy, to give the client when they add you as a
+  collaborator (step 2a).
 
-You do **not** need push access preserved on the current GitHub repo or
-Vercel project afterward — both get left behind, untouched, under your own
-account, once the client's fresh copies are live. (Delete or archive them
-later if you want; not required.)
+The current GitHub repo and Vercel project (under your account) are left
+behind, untouched, once the client's fresh copies are live — nothing to
+clean up there, keep or delete later as you like. What *doesn't* get left
+behind is your access: you're staying on the new repo as a collaborator.
 
 ---
 
@@ -56,7 +66,19 @@ step, billed after upgrade — see 2b).
 and a new **empty** repository (no README/license — literally empty) —
 e.g. `DrimInventorySystem`, visibility Private.
 
-**b. On your own machine, export the current code with no git history:**
+**b. Client adds you as a Collaborator, right away** — repo → **Settings**
+→ **Collaborators and teams** → **Add people** → your GitHub username →
+send invite. Accept it from your own GitHub account (check your email or
+github.com/notifications — do this on your phone if you're deep in the
+AnyDesk session). This is what gives you write access going forward, not
+just for today's initial push.
+
+**c. Do the actual export + push from your own machine, not theirs** —
+you already have Node/git/this repo set up, no reason to install anything
+new just to run a `git push`. (The Appendix below covers installing Node/git
+on the client's laptop too, if you want them able to run the app locally
+later — that's a separate, optional thing you can do in the same session,
+not a requirement for this step.)
 
 ```bash
 cd DrimInventorySystem
@@ -75,7 +97,7 @@ your own copy:)*
 git archive -o ../drim-ims-handover.zip HEAD -- . ':!HANDOVER.md' ':!scripts/reset-for-handover.ts'
 ```
 
-**c. Turn that zip into the client's first commit, on their new repo:**
+Turn that zip into the client's first commit, on their new repo:
 
 ```bash
 cd ..
@@ -89,10 +111,10 @@ git remote add origin https://github.com/<client-username>/DrimInventorySystem.g
 git push -u origin master
 ```
 
-That's it — the client's repo now has exactly one commit, no trace of your
-development history. (Run this from your own machine, logged into the
-client's GitHub in the browser for the `git push` auth prompt — or do it
-directly on their laptop during the meeting, same commands.)
+Since you accepted the collaborator invite in step b, this push authenticates
+as **you** (your own GitHub login) — no need to borrow the client's session.
+The repo now has exactly one commit, no trace of your development history,
+and you have standing write access to keep pushing updates after today.
 
 ---
 

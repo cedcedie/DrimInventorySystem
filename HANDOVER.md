@@ -186,6 +186,27 @@ it immediately, it's shown nowhere else.
 
 ---
 
+## Part 10 — Custom domain (optional, if the client has one via Namecheap)
+
+**Who / Where: Client, their laptop — Vercel first, then Namecheap.**
+
+1. Vercel → the project → **Settings** → **Domains** → type the domain
+   (e.g. `driminventory.com`) → **Add**.
+2. Vercel displays the exact DNS record(s) needed — usually either its own
+   nameservers to point the whole domain at, or a specific A/CNAME record.
+   **Use whatever Vercel shows on screen at the time** — don't guess values.
+3. In Namecheap → **Domain List** → **Manage** → **Advanced DNS** → add
+   whichever record(s) Vercel gave you.
+4. Wait for it to go green in Vercel's Domains screen (minutes to a few
+   hours) — HTTPS is issued automatically once it does, no extra step.
+
+> **What this does:** Makes the app reachable at the client's own domain
+> instead of the default `<project>.vercel.app` address. Entirely optional
+> and can be done anytime after Part 5 — doesn't affect anything else in
+> this guide.
+
+---
+
 ## After today — where you keep developing from
 
 Your original folder (this one, full history) stays exactly as it is —

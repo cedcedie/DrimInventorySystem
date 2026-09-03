@@ -35,7 +35,13 @@ const API_SEGMENT_TO_MODULE: Record<string, string> = {
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p)) || pathname.startsWith("/api/auth")) {
+  if (
+    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
+    pathname.startsWith("/api/auth") ||
+    // Unauthenticated by design — uptime monitors and Vercel's own health
+    // checks have no session to send.
+    pathname === "/api/health"
+  ) {
     return NextResponse.next();
   }
 

@@ -222,8 +222,15 @@ function ProductsScreenInner({
                     }}
                   >
                     {src ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={src} alt="" width={36} height={36} style={{ objectFit: "cover" }} />
+                      <Box
+                        // eslint-disable-next-line @next/next/no-img-element
+                        component="img"
+                        src={src}
+                        alt=""
+                        width={36}
+                        height={36}
+                        sx={{ objectFit: "cover" }}
+                      />
                     ) : (
                       <Typography sx={{ fontSize: 10, fontWeight: 800, color: t.muted3 }}>
                         {r.code.slice(0, 2)}

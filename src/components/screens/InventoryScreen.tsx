@@ -211,13 +211,13 @@ export function InventoryScreen({
                   }}
                 >
                   {r.imageKey ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Box
+                      component="img"
                       src={`/api/blobs/${r.imageKey}`}
                       alt=""
                       width={34}
                       height={34}
-                      style={{ objectFit: "cover" }}
+                      sx={{ objectFit: "cover" }}
                     />
                   ) : (
                     <Box sx={{ fontSize: 9, fontWeight: 800, color: t.muted3 }}>{r.code.slice(0, 2)}</Box>

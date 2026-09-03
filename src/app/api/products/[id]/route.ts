@@ -5,6 +5,7 @@ import { revalidateAfterMutation } from "@/lib/revalidate";
 import { parseBody } from "@/lib/validate";
 import { productUpdateSchema } from "@/lib/schemas";
 import { uniqueConstraintResponse } from "@/lib/apiError";
+import { deleteOldBlob } from "@/lib/storage";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireModuleAccess("products", "canEdit");
@@ -16,6 +17,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { code, name, categoryId, unit, amount, minLevel, supplierId, imageKey } = parsed.data;
 
   try {
+    const before = await prisma.product.findUnique({ where: { id }, select: { imageKey: true } });
+    const nextImageKey = imageKey || null;
+
     const product = await prisma.$transaction(async (tx) => {
       // `stocks` is intentionally not written here — see productUpdateSchema.
       // Count changes go through Stock In/Out or POST /api/stock-adjustments.
@@ -29,7 +33,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           amount: amount ?? 0,
           minLevel: minLevel ?? 0,
           supplierId: supplierId || null,
-          imageKey: imageKey || null,
+          imageKey: nextImageKey,
         },
       });
       await tx.activityLog.create({
@@ -41,6 +45,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       });
       return updated;
     });
+
+    // Only after the transaction committing the new reference — see
+    // deleteOldBlob's own doc comment for why the ordering matters. Skipped
+    // entirely when the image didn't actually change.
+    if (before?.imageKey && before.imageKey !== nextImageKey) {
+      await deleteOldBlob(before.imageKey);
+    }
 
     revalidateAfterMutation(["products", "inventory"]);
     return NextResponse.json({ id: product.id });

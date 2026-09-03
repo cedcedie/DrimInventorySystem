@@ -60,7 +60,11 @@ export function StockMovementChart({
           />
           <Legend
             wrapperStyle={{ fontSize: 12 }}
-            formatter={(value) => <span style={{ color: t.muted }}>{value}</span>}
+            formatter={(value) => (
+              <Box component="span" sx={{ color: t.muted }}>
+                {value}
+              </Box>
+            )}
           />
           <Bar dataKey="stockIn" name="Received" fill={RECEIVED_COLOR} radius={[4, 4, 0, 0]} />
           <Bar dataKey="stockOut" name="Released" fill={RELEASED_COLOR} radius={[4, 4, 0, 0]} />

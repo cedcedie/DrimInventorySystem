@@ -287,12 +287,13 @@ function AvatarField({
           <UploadFileOutlinedIcon sx={{ fontSize: 16 }} />
           {upload.isPending ? "Uploading…" : avatarKey ? "Change picture" : "Upload picture"}
         </ButtonBase>
-        <input
+        <Box
+          component="input"
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
           onChange={handlePick}
-          style={{ display: "none" }}
+          sx={{ display: "none" }}
         />
       </Box>
     </Box>

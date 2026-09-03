@@ -10,7 +10,6 @@ import { lightTokens, darkTokens, ACCENT, motion } from "@/theme/tokens";
 import { queryKeys } from "@/lib/queryKeys";
 import { postJson, patchJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
-import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 
 export interface ProductFormRow {
   id: string;
@@ -92,7 +91,6 @@ export function ProductModal({
     minLevel !== String(product?.minLevel ?? 0) ||
     supplierId !== (product?.supplierId ?? "") ||
     imageFile !== null;
-  const confirmClose = useUnsavedChangesGuard(isDirty);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -150,10 +148,11 @@ export function ProductModal({
     <EntityModal
       open={open}
       onClose={onClose}
-      confirmClose={confirmClose}
+      isDirty={isDirty}
       title={isEdit ? `Edit Item — ${product!.name}` : "Add Product"}
       width={560}
     >
+      {(requestClose) => (
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
           <FormField label="Product Code">
@@ -310,13 +309,12 @@ export function ProductModal({
         )}
 
         <ModalFormActions
-          onCancel={() => {
-            if (confirmClose()) onClose();
-          }}
+          onCancel={requestClose}
           submitLabel={isEdit ? "Save Changes" : "Add Product"}
           disabled={mutation.isPending}
         />
       </Box>
+      )}
     </EntityModal>
   );
 }

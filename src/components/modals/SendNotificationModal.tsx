@@ -10,7 +10,6 @@ import { fetchJson } from "@/lib/api";
 import { postJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
 import { ROLE_LABELS } from "@/lib/navConfig";
-import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import type { Role } from "@/generated/prisma";
 
 const ROLES: Role[] = ["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"];
@@ -84,12 +83,6 @@ export function SendNotificationModal({
   };
 
   const isDirty = Boolean(title) || Boolean(body) || userIds.length > 0 || roles.length > 0;
-  const confirmClose = useUnsavedChangesGuard(isDirty, "Discard this notification? This can't be undone.");
-  const handleClose = () => {
-    const ok = confirmClose();
-    if (ok) resetForm();
-    return ok;
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,11 +103,16 @@ export function SendNotificationModal({
   return (
     <EntityModal
       open={open}
-      onClose={onClose}
-      confirmClose={handleClose}
+      onClose={() => {
+        resetForm();
+        onClose();
+      }}
+      isDirty={isDirty}
+      dirtyMessage="Discard this notification? This can't be undone."
       title="Send Notification"
       width={560}
     >
+      {(requestClose) => (
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
         <FormField label="Title">
           <Box
@@ -206,9 +204,7 @@ export function SendNotificationModal({
         <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end", mt: 3 }}>
           <ButtonBase
             type="button"
-            onClick={() => {
-              if (handleClose()) onClose();
-            }}
+            onClick={requestClose}
             sx={{
               px: 2.25,
               py: 1.125,
@@ -238,6 +234,7 @@ export function SendNotificationModal({
           </ButtonBase>
         </Box>
       </Box>
+      )}
     </EntityModal>
   );
 }

@@ -9,7 +9,6 @@ import { useColorMode } from "@/theme/ThemeRegistry";
 import { ACCENT, motion, lightTokens, darkTokens } from "@/theme/tokens";
 import { patchJson, postJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
-import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import type { Role, UserStatus } from "@/generated/prisma";
 
@@ -60,7 +59,6 @@ export function EditUserModal({
   const isDirty =
     Boolean(user) &&
     (name !== user!.name || role !== user!.role || status !== user!.status || newPassword !== "");
-  const confirmClose = useUnsavedChangesGuard(isDirty);
 
   const mutation = useMutation({
     mutationFn: () => patchJson(`/api/users/${user!.id}`, { name, role, status }),
@@ -104,7 +102,8 @@ export function EditUserModal({
   };
 
   return (
-    <EntityModal open={!!user} onClose={onClose} confirmClose={confirmClose} title="Edit Account" width={420}>
+    <EntityModal open={!!user} onClose={onClose} isDirty={isDirty} title="Edit Account" width={420}>
+      {(requestClose) => (
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
           <FormField label="Name">
@@ -226,13 +225,12 @@ export function EditUserModal({
         )}
 
         <ModalFormActions
-          onCancel={() => {
-            if (confirmClose()) onClose();
-          }}
+          onCancel={requestClose}
           submitLabel="Save changes"
           disabled={mutation.isPending}
         />
       </Box>
+      )}
     </EntityModal>
   );
 }

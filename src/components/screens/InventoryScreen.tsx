@@ -261,6 +261,13 @@ export function InventoryScreen({
                       fontSize: 12,
                       bgcolor: t.surface,
                       color: t.text.primary,
+                      // Hide the browser's native number-input spinner — see
+                      // fieldInputSx in EntityModal.tsx for the same fix.
+                      "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button": {
+                        WebkitAppearance: "none",
+                        margin: 0,
+                      },
+                      MozAppearance: "textfield",
                     }}
                   />
                 </TableCell>

@@ -8,7 +8,6 @@ import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens } from "@/theme/tokens";
 import { postJson, patchJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
-import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 
 export interface TechnicianFormRow {
   id: string;
@@ -50,7 +49,6 @@ export function TechnicianModal({
     empNo !== (technician?.empNo ?? "") ||
     name !== (technician?.name ?? "") ||
     position !== (technician?.position ?? "");
-  const confirmClose = useUnsavedChangesGuard(isDirty);
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -81,10 +79,11 @@ export function TechnicianModal({
     <EntityModal
       open={open}
       onClose={onClose}
-      confirmClose={confirmClose}
+      isDirty={isDirty}
       title={isEdit ? `Edit Technician — ${technician!.name}` : "Add Technician"}
       width={560}
     >
+      {(requestClose) => (
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
           <FormField label="Employee Number">
@@ -123,13 +122,12 @@ export function TechnicianModal({
         )}
 
         <ModalFormActions
-          onCancel={() => {
-            if (confirmClose()) onClose();
-          }}
+          onCancel={requestClose}
           submitLabel={isEdit ? "Save Changes" : "Add Technician"}
           disabled={mutation.isPending}
         />
       </Box>
+      )}
     </EntityModal>
   );
 }

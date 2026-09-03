@@ -10,7 +10,6 @@ import { postJson } from "@/lib/mutate";
 import { fetchJson } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { ItemCartEditor, type CartItem } from "@/components/ItemCartEditor";
-import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import type { StockFormOptions } from "@/lib/data/stock";
 
 export function PurchaseRequestModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -56,12 +55,6 @@ export function PurchaseRequestModal({ open, onClose }: { open: boolean; onClose
   };
 
   const isDirty = items.length > 0 || Boolean(supplierId) || Boolean(notes);
-  const confirmClose = useUnsavedChangesGuard(isDirty, "Discard this Purchase Request? This can't be undone.");
-  const handleClose = () => {
-    const ok = confirmClose();
-    if (ok) resetForm();
-    return ok;
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,11 +71,16 @@ export function PurchaseRequestModal({ open, onClose }: { open: boolean; onClose
   return (
     <EntityModal
       open={open}
-      onClose={onClose}
-      confirmClose={handleClose}
+      onClose={() => {
+        resetForm();
+        onClose();
+      }}
+      isDirty={isDirty}
+      dirtyMessage="Discard this Purchase Request? This can't be undone."
       title="New Purchase Request"
       width={660}
     >
+      {(requestClose) => (
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
         <FormField label="Supplier (Optional)" span2>
           <Select
@@ -132,13 +130,12 @@ export function PurchaseRequestModal({ open, onClose }: { open: boolean; onClose
         )}
 
         <ModalFormActions
-          onCancel={() => {
-            if (handleClose()) onClose();
-          }}
+          onCancel={requestClose}
           submitLabel={mutation.isPending ? "Filing…" : `File Request (${items.length} items)`}
           disabled={mutation.isPending || items.length === 0}
         />
       </Box>
+      )}
     </EntityModal>
   );
 }

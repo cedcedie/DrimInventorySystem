@@ -8,7 +8,6 @@ import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens } from "@/theme/tokens";
 import { postJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
-import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 
 export function SupplierModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { mode } = useColorMode();
@@ -19,7 +18,7 @@ export function SupplierModal({ open, onClose }: { open: boolean; onClose: () =>
   const [contact, setContact] = useState("");
   const [supplies, setSupplies] = useState("");
   const [error, setError] = useState("");
-  const confirmClose = useUnsavedChangesGuard(Boolean(name || contact || supplies));
+  const isDirty = Boolean(name || contact || supplies);
 
   const mutation = useMutation({
     mutationFn: () => postJson("/api/suppliers", { name, contact, supplies }),
@@ -47,7 +46,8 @@ export function SupplierModal({ open, onClose }: { open: boolean; onClose: () =>
   };
 
   return (
-    <EntityModal open={open} onClose={onClose} confirmClose={confirmClose} title="Add Supplier" width={560}>
+    <EntityModal open={open} onClose={onClose} isDirty={isDirty} title="Add Supplier" width={560}>
+      {(requestClose) => (
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
           <FormField label="Supplier Name">
@@ -86,13 +86,12 @@ export function SupplierModal({ open, onClose }: { open: boolean; onClose: () =>
         )}
 
         <ModalFormActions
-          onCancel={() => {
-            if (confirmClose()) onClose();
-          }}
+          onCancel={requestClose}
           submitLabel="Save Supplier"
           disabled={mutation.isPending}
         />
       </Box>
+      )}
     </EntityModal>
   );
 }

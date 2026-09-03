@@ -11,7 +11,6 @@ import { fetchJson } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { useToast } from "@/components/Toast";
 import { useFormDraft } from "@/lib/useFormDraft";
-import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { ItemCartEditor, type CartItem, type CartProductOption } from "@/components/ItemCartEditor";
 
 export function MultiItemMrfModal({
@@ -106,18 +105,6 @@ export function MultiItemMrfModal({
   };
 
   const isDirty = items.length > 0 || Boolean(project) || Boolean(externalRefNo) || Boolean(description);
-  const confirmClose = useUnsavedChangesGuard(
-    isDirty,
-    "Discard this material request? This can't be undone."
-  );
-  const handleClose = () => {
-    const ok = confirmClose();
-    if (ok) {
-      draft.clear();
-      resetForm();
-    }
-    return ok;
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,11 +126,17 @@ export function MultiItemMrfModal({
   return (
     <EntityModal
       open={open}
-      onClose={onClose}
-      confirmClose={handleClose}
+      onClose={() => {
+        draft.clear();
+        resetForm();
+        onClose();
+      }}
+      isDirty={isDirty}
+      dirtyMessage="Discard this material request? This can't be undone."
       title="File Material Request Form (MRF)"
       width={660}
     >
+      {(requestClose) => (
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
         <Typography sx={{ fontSize: 12.5, color: t.muted, mb: 2, lineHeight: 1.6 }}>
           Filed under <strong>{technicianLabel}</strong>. Add multiple items to this request — warehouse
@@ -203,13 +196,12 @@ export function MultiItemMrfModal({
         )}
 
         <ModalFormActions
-          onCancel={() => {
-            if (handleClose()) onClose();
-          }}
+          onCancel={requestClose}
           submitLabel={mutation.isPending ? "Filing MRF…" : `File MRF (${items.length} items)`}
           disabled={mutation.isPending || items.length === 0}
         />
       </Box>
+      )}
     </EntityModal>
   );
 }

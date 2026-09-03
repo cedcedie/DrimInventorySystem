@@ -9,7 +9,6 @@ import { lightTokens, darkTokens } from "@/theme/tokens";
 import { postJson } from "@/lib/mutate";
 import { queryKeys } from "@/lib/queryKeys";
 import { useToast } from "@/components/Toast";
-import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 
 const REASONS = [
   { value: "MISCOUNT", label: "Miscount — physical count differs" },
@@ -62,7 +61,6 @@ export function AdjustStockModal({
     (qtyAfter !== String(product!.stocks) ||
       reason !== (initialNote ? "CORRECTION" : "MISCOUNT") ||
       note !== (initialNote ?? ""));
-  const confirmClose = useUnsavedChangesGuard(isDirty);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -103,7 +101,8 @@ export function AdjustStockModal({
   const deltaValid = Number.isFinite(delta) && delta !== 0;
 
   return (
-    <EntityModal open={!!product} onClose={onClose} confirmClose={confirmClose} title="Adjust Stock" width={420}>
+    <EntityModal open={!!product} onClose={onClose} isDirty={isDirty} title="Adjust Stock" width={420}>
+      {(requestClose) => (
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
         {product && (
           <Box
@@ -188,13 +187,12 @@ export function AdjustStockModal({
         )}
 
         <ModalFormActions
-          onCancel={() => {
-            if (confirmClose()) onClose();
-          }}
+          onCancel={requestClose}
           submitLabel="Record adjustment"
           disabled={mutation.isPending}
         />
       </Box>
+      )}
     </EntityModal>
   );
 }

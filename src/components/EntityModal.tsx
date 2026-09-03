@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Dialog, DialogTitle, IconButton, Box, ButtonBase, Typography } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens, ACCENT, motion } from "@/theme/tokens";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export type ModalWidth = 420 | 560 | 660;
 
@@ -13,21 +15,31 @@ export function EntityModal({
   title,
   width,
   children,
-  confirmClose,
+  isDirty,
+  dirtyMessage = "Discard your changes? This can't be undone.",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   width: ModalWidth;
-  children: React.ReactNode;
-  /** Gates every close attempt — return true to allow, false to block (e.g. unsaved-changes prompt). */
-  confirmClose?: () => boolean;
+  /** Plain content, or a render function receiving `requestClose` — the same
+   * guarded-close handler the X button/backdrop/Esc use — for a form's own
+   * footer Cancel button to route through instead of calling onClose directly. */
+  children: React.ReactNode | ((requestClose: () => void) => React.ReactNode);
+  /** True whenever the form has unsaved edits — every close attempt (X, backdrop, Esc) prompts first instead of closing immediately. */
+  isDirty?: boolean;
+  /** Custom wording for that prompt, e.g. "Discard this Purchase Order? This can't be undone." */
+  dirtyMessage?: string;
 }) {
   const { mode } = useColorMode();
   const t = mode === "dark" ? darkTokens : lightTokens;
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleClose = () => {
-    if (confirmClose && !confirmClose()) return;
+    if (isDirty) {
+      setConfirmOpen(true);
+      return;
+    }
     onClose();
   };
 
@@ -82,8 +94,17 @@ export function EntityModal({
         </IconButton>
       </DialogTitle>
       <Box className="scroll-hidden" sx={{ overflowY: "auto", minHeight: 0 }}>
-        {children}
+        {typeof children === "function" ? children(handleClose) : children}
       </Box>
+      <ConfirmDialog
+        open={confirmOpen}
+        message={dirtyMessage}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          onClose();
+        }}
+      />
     </Dialog>
   );
 }
@@ -189,4 +210,15 @@ export const fieldInputSx = (t: typeof lightTokens | typeof darkTokens, mono?: b
   boxSizing: "border-box" as const,
   transition: `border-color ${motion.duration.color}ms ${motion.easing.standard}`,
   "&:focus": { outline: "none", borderColor: ACCENT },
+  // Browsers draw their own up/down spinner on type="number" inputs —
+  // inconsistent across browsers and visually out of place next to every
+  // other MUI-styled control in the app. Hidden here so every field using
+  // this shared sx (text or number) gets consistent, spinner-free styling.
+  "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button": {
+    WebkitAppearance: "none",
+    margin: 0,
+  },
+  '&[type="number"]': {
+    MozAppearance: "textfield",
+  },
 });

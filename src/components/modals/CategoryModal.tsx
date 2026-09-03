@@ -8,7 +8,6 @@ import { useColorMode } from "@/theme/ThemeRegistry";
 import { lightTokens, darkTokens } from "@/theme/tokens";
 import { postJson } from "@/lib/mutate";
 import { useToast } from "@/components/Toast";
-import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 
 export function CategoryModal({
   open,
@@ -25,7 +24,7 @@ export function CategoryModal({
   const { showToast } = useToast();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
-  const confirmClose = useUnsavedChangesGuard(name.trim() !== "");
+  const isDirty = name.trim() !== "";
 
   const mutation = useMutation({
     mutationFn: () => postJson<{ name: string }>("/api/categories", { name }),
@@ -51,7 +50,8 @@ export function CategoryModal({
   };
 
   return (
-    <EntityModal open={open} onClose={onClose} confirmClose={confirmClose} title="Choose / Add Category" width={420}>
+    <EntityModal open={open} onClose={onClose} isDirty={isDirty} title="Choose / Add Category" width={420}>
+      {(requestClose) => (
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 2.25 }}>
         <Typography sx={{ fontSize: 12, color: t.muted, mb: 1.25 }}>
           Existing: {existingNames.join(" · ")}
@@ -73,13 +73,12 @@ export function CategoryModal({
         )}
 
         <ModalFormActions
-          onCancel={() => {
-            if (confirmClose()) onClose();
-          }}
+          onCancel={requestClose}
           submitLabel="Add Category"
           disabled={mutation.isPending}
         />
       </Box>
+      )}
     </EntityModal>
   );
 }

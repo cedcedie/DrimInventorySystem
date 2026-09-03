@@ -10,7 +10,6 @@ import { postJson } from "@/lib/mutate";
 import { fetchJson } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { ItemCartEditor, type CartItem } from "@/components/ItemCartEditor";
-import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import type { StockFormOptions } from "@/lib/data/stock";
 
 interface OpenPurchaseOrder {
@@ -101,12 +100,6 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
   };
 
   const isDirty = items.length > 0 || Boolean(supplierId);
-  const confirmClose = useUnsavedChangesGuard(isDirty, "Discard this delivery? This can't be undone.");
-  const handleClose = () => {
-    const ok = confirmClose();
-    if (ok) resetForm();
-    return ok;
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +118,18 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
   };
 
   return (
-    <EntityModal open={open} onClose={onClose} confirmClose={handleClose} title="New Stock In" width={660}>
+    <EntityModal
+      open={open}
+      onClose={() => {
+        resetForm();
+        onClose();
+      }}
+      isDirty={isDirty}
+      dirtyMessage="Discard this delivery? This can't be undone."
+      title="New Stock In"
+      width={660}
+    >
+      {(requestClose) => (
       <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
         <FormField label="Supplier" span2>
           <Select
@@ -222,13 +226,12 @@ export function StockInModal({ open, onClose }: { open: boolean; onClose: () => 
         )}
 
         <ModalFormActions
-          onCancel={() => {
-            if (handleClose()) onClose();
-          }}
+          onCancel={requestClose}
           submitLabel={mutation.isPending ? "Saving…" : `Save Stock In (${items.length} items)`}
           disabled={mutation.isPending || items.length === 0}
         />
       </Box>
+      )}
     </EntityModal>
   );
 }

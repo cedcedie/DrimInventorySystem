@@ -14,6 +14,18 @@ import { ToastProvider } from "@/components/Toast";
 export const metadata: Metadata = {
   title: "DRIM Inventory System",
   description: "Role-based warehouse inventory system",
+  applicationName: "DRIM Inventory System",
+  icons: {
+    icon: "/images/drim-d-transparent.png",
+    apple: "/images/drim-d-transparent.png",
+  },
+  openGraph: {
+    title: "DRIM Inventory System",
+    description: "Role-based warehouse inventory system",
+    siteName: "DRIM Inventory System",
+    type: "website",
+    images: ["/images/drim-d-transparent.png"],
+  },
 };
 
 export default function RootLayout({

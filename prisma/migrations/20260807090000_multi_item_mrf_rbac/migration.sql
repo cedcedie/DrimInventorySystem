@@ -1,4 +1,4 @@
-﻿-- AlterEnum
+-- AlterEnum
 ALTER TYPE "MrfStatus" ADD VALUE 'PARTIAL';
 
 -- AlterTable

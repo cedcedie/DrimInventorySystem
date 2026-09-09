@@ -42,6 +42,7 @@ export const MODULE_ACCESS: Record<Role, string[]> = {
     "activity",
   ],
   TECHNICIAN: ["dashboard", "stock", "activity"],
+  ACCOUNTING: ["dashboard", "purchaseOrders", "purchaseRequests", "activity"],
 };
 
 export function canAccess(role: Role, moduleSegment: string): boolean {

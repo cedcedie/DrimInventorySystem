@@ -15,6 +15,7 @@ enum Role {
   ADMIN
   WAREHOUSE_STAFF
   TECHNICIAN
+  ACCOUNTING
 }
 
 enum UserStatus {

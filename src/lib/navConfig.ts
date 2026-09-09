@@ -97,6 +97,7 @@ export const PERM_SUMMARY: Record<Role, string> = {
   ADMIN: "Stock In · Stock Out · Generate Report",
   WAREHOUSE_STAFF: "Stock In · Stock Out",
   TECHNICIAN: "File Material Request Form (MRF)",
+  ACCOUNTING: "Purchase Requests · Purchase Orders",
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
@@ -104,4 +105,5 @@ export const ROLE_LABELS: Record<Role, string> = {
   ADMIN: "Admin",
   WAREHOUSE_STAFF: "Warehouse Staff",
   TECHNICIAN: "Technician / Engineer",
+  ACCOUNTING: "Accounting",
 };

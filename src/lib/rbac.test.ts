@@ -70,8 +70,22 @@ describe("canAccess", () => {
     expect(canAccess("OWNER", "")).toBe(false);
   });
 
-  it("covers all four roles and no others", () => {
+  it("limits Accounting to dashboard, purchase requests, and purchase orders", () => {
+    expect(canAccess("ACCOUNTING", "dashboard")).toBe(true);
+    expect(canAccess("ACCOUNTING", "purchaseRequests")).toBe(true);
+    expect(canAccess("ACCOUNTING", "purchaseOrders")).toBe(true);
+    expect(canAccess("ACCOUNTING", "activity")).toBe(true);
+
+    expect(canAccess("ACCOUNTING", "inventory")).toBe(false);
+    expect(canAccess("ACCOUNTING", "products")).toBe(false);
+    expect(canAccess("ACCOUNTING", "stock")).toBe(false);
+    expect(canAccess("ACCOUNTING", "reports")).toBe(false);
+    expect(canAccess("ACCOUNTING", "users")).toBe(false);
+  });
+
+  it("covers all five roles and no others", () => {
     expect(Object.keys(MODULE_ACCESS).sort()).toEqual([
+      "ACCOUNTING",
       "ADMIN",
       "OWNER",
       "TECHNICIAN",

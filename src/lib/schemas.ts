@@ -59,7 +59,7 @@ export const userCreateSchema = z.object({
   name: name("Name"),
   username: name("Username", 60),
   password: z.string().min(8, "Password must be at least 8 characters").max(200),
-  role: z.enum(["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"], {
+  role: z.enum(["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN", "ACCOUNTING"], {
     message: "A valid role is required",
   }),
 });
@@ -89,7 +89,7 @@ export const passwordChangeSchema = z
 // Username stays immutable — it's the identity key ActivityLog and technician links resolve against.
 export const userUpdateSchema = z.object({
   name: name("Name"),
-  role: z.enum(["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"], {
+  role: z.enum(["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN", "ACCOUNTING"], {
     message: "A valid role is required",
   }),
   status: z.enum(["ACTIVE", "INACTIVE"], { message: "A valid status is required" }),
@@ -198,5 +198,5 @@ export const manualNotificationSchema = z.object({
   body: z.string().trim().min(1, "Message is required").max(1000, "Message is too long"),
   // Individually-picked users and/or whole roles, merged server-side into a deduplicated list.
   userIds: z.array(id).default([]),
-  roles: z.array(z.enum(["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"])).default([]),
+  roles: z.array(z.enum(["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN", "ACCOUNTING"])).default([]),
 });

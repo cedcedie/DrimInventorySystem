@@ -12,7 +12,7 @@ import { useToast } from "@/components/Toast";
 import { ROLE_LABELS } from "@/lib/navConfig";
 import type { Role } from "@/generated/prisma";
 
-const ROLES: Role[] = ["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN"];
+const ROLES: Role[] = ["OWNER", "ADMIN", "WAREHOUSE_STAFF", "TECHNICIAN", "ACCOUNTING"];
 
 interface UserOption {
   id: string;

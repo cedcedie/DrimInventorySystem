@@ -20,6 +20,7 @@ export const PERMISSION_ROLES = [
   { id: "ADMIN", name: "ADMIN", label: "Admin" },
   { id: "WAREHOUSE_STAFF", name: "WAREHOUSE_STAFF", label: "Warehouse Staff" },
   { id: "TECHNICIAN", name: "TECHNICIAN", label: "Technician" },
+  { id: "ACCOUNTING", name: "ACCOUNTING", label: "Accounting" },
 ] as const;
 
 export interface PermissionSet {
@@ -67,6 +68,16 @@ export function defaultPermissionsFor(roleName: string, module: string): Permiss
       canView: ["dashboard", "mrf"].includes(module),
       canCreate: module === "mrf",
       canEdit: false,
+      canDelete: false,
+      canExport: false,
+    };
+  }
+  if (roleName === "ACCOUNTING") {
+    const canManage = ["purchaseOrders", "purchaseRequests"].includes(module);
+    return {
+      canView: module === "dashboard" || canManage,
+      canCreate: canManage,
+      canEdit: canManage,
       canDelete: false,
       canExport: false,
     };
